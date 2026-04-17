@@ -1,21 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { SearchBar } from '@/components/search/SearchBar';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { MapPin, Building, Calendar, Users, Home, ArrowRight } from 'lucide-react';
+  MapPin, Building, Home, Calendar,
+  ChevronRight, ChevronLeft, Search, RotateCcw,
+} from 'lucide-react';
 import { formatPrice } from '@/lib/formatters';
-import { SectionHeading } from '@/components/home/SectionHeading';
+import { ContactDialog } from '@/components/shared/ContactDialog';
+
+const PAGE_SIZE = 4;
 
 const projects = [
   {
@@ -26,16 +21,17 @@ const projects = [
     thumbnail: '/images/image_data/nha-pho-de-palace-river.jpg',
     status: 'selling',
     type: 'apartment',
-    province: 'Quảng Ngãi',
+    district: 'tp-quang-ngai',
     address: 'Đầu cầu Thạch Bích, TP Quảng Ngãi',
     priceFrom: 4500000000,
     priceTo: 8500000000,
     totalUnits: 256,
     totalBlocks: 2,
     totalFloors: 18,
-    constructionProgress: 75,
     handoverDate: '2025-12-31',
-    description: 'Khu căn hộ cao cấp ven sông Trà Khúc, tầm view đẹp, tiện ích đầy đủ.',
+    description: 'Khu căn hộ cao cấp ven sông Trà Khúc, tầm view đẹp, tiện ích đầy đủ. Vị trí đắc địa ngay đầu cầu Thạch Bích, kết nối giao thông thuận tiện.',
+    area: '2.5 ha',
+    featured: true,
   },
   {
     id: '2',
@@ -45,275 +41,538 @@ const projects = [
     thumbnail: '/images/image_data/Starlight---suc-hut-den-tu-vi-tri-dac-dia-nhat-trung-tam-Quang-Ngai-suc-hut-3-1733900371-424-width1000height563.jpg',
     status: 'upcoming',
     type: 'apartment',
-    province: 'Quảng Ngãi',
+    district: 'tp-quang-ngai',
     address: 'Huỳnh Thúc Kháng, Ngọc Bảo Viên, TP Quảng Ngãi',
     priceFrom: 3200000000,
     priceTo: 6000000000,
     totalUnits: 400,
     totalBlocks: 3,
     totalFloors: 22,
-    constructionProgress: 25,
     handoverDate: '2026-06-30',
-    description: 'Dự án căn hộ cao cấp tại vị trí đắc địa bậc nhất trung tâm Quảng Ngãi.',
+    description: 'Dự án căn hộ cao cấp tại vị trí đắc địa bậc nhất trung tâm Quảng Ngãi, tiện ích hiện đại, không gian sống xanh.',
+    area: '3.2 ha',
+    featured: true,
   },
   {
     id: '3',
-    slug: 'green-park-quang-ngai',
-    name: 'Green Park Quảng Ngãi',
-    developer: 'Vingroup',
-    thumbnail: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&h=400&fit=crop',
+    slug: 'kdc-nghia-giang',
+    name: 'Khu dân cư Nghĩa Giang',
+    developer: 'Công ty TNHH Đầu tư Nghĩa Giang',
+    thumbnail: '/images/image_data/z7727089471705_b45383cbfb0c02dbb327ef0ea9fd2f7e.jpg',
     status: 'selling',
-    type: 'apartment',
-    province: 'Quảng Ngãi',
-    address: 'Đường Trần Kỳ, Tịnh Long, TP Quảng Ngãi',
-    priceFrom: 1800000000,
-    priceTo: 3500000000,
-    totalUnits: 300,
-    totalBlocks: 2,
-    totalFloors: 20,
-    constructionProgress: 60,
-    handoverDate: '2026-03-31',
-    description: 'Khu căn hộ xanh thông minh tại Quảng Ngãi.',
+    type: 'land',
+    district: 'tu-nghia',
+    address: 'Nghĩa Thuận, Tư Nghĩa, Quảng Ngãi',
+    priceFrom: 300000000,
+    priceTo: 800000000,
+    totalUnits: 150,
+    totalBlocks: 1,
+    totalFloors: 1,
+    handoverDate: '2025-06-30',
+    description: 'Khu đất nền phân lô sổ đỏ từng nền, hạ tầng hoàn chỉnh, giá hợp lý, pháp lý rõ ràng.',
+    area: '5 ha',
+    featured: false,
   },
   {
     id: '4',
-    slug: 'metro-point-quang-ngai',
-    name: 'Metro Point Quảng Ngãi',
-    developer: 'Novaland',
-    thumbnail: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=600&h=400&fit=crop',
+    slug: 'nha-pho-phan-dinh-phung',
+    name: 'Nhà phố thương mại Phan Đình Phùng',
+    developer: 'Công ty CP Xây dựng Hoàng Long',
+    thumbnail: '/images/image_data/banner_hero.jpg',
     status: 'selling',
     type: 'townhouse',
-    province: 'Quảng Ngãi',
-    address: 'Đường Quang Trung, Trần Phú, TP Quảng Ngãi',
+    district: 'tp-quang-ngai',
+    address: 'Phan Đình Phùng, TP Quảng Ngãi',
     priceFrom: 4500000000,
     priceTo: 7000000000,
-    totalUnits: 120,
-    totalBlocks: 4,
+    totalUnits: 40,
+    totalBlocks: 1,
     totalFloors: 5,
-    constructionProgress: 100,
-    handoverDate: '2024-06-30',
-    description: 'Shophouse liền kề ga metro tương lai.',
+    handoverDate: '2025-03-31',
+    description: 'Nhà phố thương mại mặt tiền đường lớn, vị trí kinh doanh sầm uất trung tâm TP Quảng Ngãi.',
+    area: '0.8 ha',
+    featured: false,
+  },
+  {
+    id: '5',
+    slug: 'haus-coastal-duc-pho',
+    name: 'Haus Coastal - Đức Phổ',
+    developer: 'Công ty CP BĐS Haus',
+    thumbnail: '/images/image_data/Haus-Coastal.jpg',
+    status: 'upcoming',
+    type: 'villa',
+    district: 'duc-pho',
+    address: 'Ven biển Sa Huỳnh, TX Đức Phổ, Quảng Ngãi',
+    priceFrom: 8000000000,
+    priceTo: 20000000000,
+    totalUnits: 60,
+    totalBlocks: 1,
+    totalFloors: 3,
+    handoverDate: '2027-01-01',
+    description: 'Biệt thự nghỉ dưỡng ven biển Sa Huỳnh, phong cách kiến trúc Địa Trung Hải, không gian sống đẳng cấp.',
+    area: '4 ha',
+    featured: true,
   },
 ];
 
 const statusConfig = {
-  upcoming: { label: 'Sắp mở bán', bg: 'bg-amber-100', text: 'text-amber-700' },
-  selling: { label: 'Đang bán', bg: 'bg-green-100', text: 'text-green-700' },
-  completed: { label: 'Đã bàn giao', bg: 'bg-gray-100', text: 'text-gray-700' },
-  paused: { label: 'Tạm dừng', bg: 'bg-yellow-100', text: 'text-yellow-700' },
+  upcoming: { label: 'Sắp mở bán', bg: 'bg-amber-100', text: 'text-amber-700', dot: 'bg-amber-400' },
+  selling:  { label: 'Đang mở bán', bg: 'bg-green-100', text: 'text-green-700', dot: 'bg-green-500' },
+  completed:{ label: 'Đã bàn giao', bg: 'bg-gray-100',  text: 'text-gray-600',  dot: 'bg-gray-400'  },
+  paused:   { label: 'Tạm dừng',    bg: 'bg-yellow-100',text: 'text-yellow-700',dot: 'bg-yellow-400' },
 };
 
-const typeConfig = {
-  apartment: 'Căn hộ',
+const typeConfig: Record<string, string> = {
+  apartment: 'Căn hộ chung cư',
   villa: 'Biệt thự',
   townhouse: 'Nhà phố',
   commercial: 'Thương mại',
   land: 'Đất nền',
 };
 
-export default function DuAnPage() {
-  const [sortBy, setSortBy] = useState('newest');
-  const [typeFilter, setTypeFilter] = useState('all');
+const districts = [
+  { value: 'all', label: 'Tất cả khu vực' },
+  { value: 'tp-quang-ngai', label: 'TP Quảng Ngãi' },
+  { value: 'tu-nghia', label: 'Tư Nghĩa' },
+  { value: 'son-tinh', label: 'Sơn Tịnh' },
+  { value: 'binh-son', label: 'Bình Sơn' },
+  { value: 'duc-pho', label: 'TX Đức Phổ' },
+  { value: 'mo-duc', label: 'Mộ Đức' },
+  { value: 'minh-long', label: 'Minh Long' },
+];
 
-  const filteredProjects = projects.filter((p) => {
-    if (typeFilter !== 'all' && p.type !== typeFilter) return false;
-    return true;
-  });
+const types = [
+  { value: 'all', label: 'Tất cả loại hình' },
+  { value: 'apartment', label: 'Căn hộ chung cư' },
+  { value: 'villa', label: 'Biệt thự' },
+  { value: 'townhouse', label: 'Nhà phố' },
+  { value: 'land', label: 'Đất nền' },
+  { value: 'commercial', label: 'Thương mại' },
+];
+
+const statuses = [
+  { value: 'all', label: 'Tất cả trạng thái' },
+  { value: 'selling', label: 'Đang mở bán' },
+  { value: 'upcoming', label: 'Sắp mở bán' },
+  { value: 'completed', label: 'Đã bàn giao' },
+];
+
+const priceRanges = [
+  { value: 'all', label: 'Tất cả mức giá' },
+  { value: 'under1b', label: 'Dưới 1 tỷ' },
+  { value: '1b-3b', label: '1 – 3 tỷ' },
+  { value: '3b-5b', label: '3 – 5 tỷ' },
+  { value: 'over5b', label: 'Trên 5 tỷ' },
+];
+
+function matchPrice(priceFrom: number, range: string) {
+  if (range === 'all') return true;
+  if (range === 'under1b') return priceFrom < 1_000_000_000;
+  if (range === '1b-3b')   return priceFrom >= 1_000_000_000 && priceFrom < 3_000_000_000;
+  if (range === '3b-5b')   return priceFrom >= 3_000_000_000 && priceFrom < 5_000_000_000;
+  if (range === 'over5b')  return priceFrom >= 5_000_000_000;
+  return true;
+}
+
+const sliderProjects = projects.filter((p) => p.featured);
+
+export default function DuAnPage() {
+  const [slide, setSlide] = useState(0);
+  const [contactOpen, setContactOpen] = useState(false);
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [districtFilter, setDistrictFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [priceFilter, setPriceFilter] = useState('all');
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+
+  const resetFilters = () => {
+    setTypeFilter('all'); setDistrictFilter('all');
+    setStatusFilter('all'); setPriceFilter('all');
+    setSearch(''); setPage(1);
+  };
+
+  const isDirty = typeFilter !== 'all' || districtFilter !== 'all' || statusFilter !== 'all' || priceFilter !== 'all' || search !== '';
+
+  const filtered = useMemo(() => {
+    return projects.filter((p) => {
+      if (typeFilter !== 'all' && p.type !== typeFilter) return false;
+      if (districtFilter !== 'all' && p.district !== districtFilter) return false;
+      if (statusFilter !== 'all' && p.status !== statusFilter) return false;
+      if (!matchPrice(p.priceFrom, priceFilter)) return false;
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        if (!p.name.toLowerCase().includes(q) && !p.address.toLowerCase().includes(q)) return false;
+      }
+      return true;
+    });
+  }, [typeFilter, districtFilter, statusFilter, priceFilter, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const featured = projects.filter((p) => p.featured).slice(0, 4);
+
+  const prevSlide = () => setSlide((s) => (s - 1 + sliderProjects.length) % sliderProjects.length);
+  const nextSlide = () => setSlide((s) => (s + 1) % sliderProjects.length);
 
   return (
-    <div className="flex flex-col bg-white">
+    <div className="min-h-screen bg-gray-50">
 
-      {/* ══════════════════════════════════
-          HERO SECTION
-      ══════════════════════════════════ */}
-      <section className="relative h-[360px] md:h-[420px] z-10">
-        <div className="absolute inset-0 overflow-hidden">
-          <Image
-            src="/images/image_data/banner_hero.jpg"
-            alt="Dự án bất động sản Quảng Ngãi"
-            fill
-            className="object-cover object-center"
-            priority
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/5" />
+      {/* ══ HERO SLIDER ══ */}
+      <div className="relative w-full h-[320px] md:h-[420px] overflow-hidden bg-gray-900 select-none">
+        {sliderProjects.map((p, i) => (
+          <div
+            key={p.id}
+            className={`absolute inset-0 transition-opacity duration-700 ${i === slide ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
+          >
+            <Image
+              src={p.thumbnail}
+              alt={p.name}
+              fill
+              className="object-cover object-center"
+              priority={i === 0}
+              sizes="100vw"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+
+            {/* Slide content */}
+            <div className="absolute bottom-0 left-0 right-0 px-6 md:px-10 pb-8 md:pb-10 z-10">
+              <div className="max-w-6xl mx-auto">
+                {(() => {
+                  const st = statusConfig[p.status as keyof typeof statusConfig];
+                  return (
+                    <span className={`inline-flex items-center gap-1.5 ${st.bg} ${st.text} text-xs font-semibold px-3 py-1 rounded-full mb-3`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />
+                      {st.label}
+                    </span>
+                  );
+                })()}
+                <h2 className="text-2xl md:text-3xl font-black text-white drop-shadow-lg leading-tight mb-1">
+                  {p.name}
+                </h2>
+                <p className="text-white/80 text-sm flex items-center gap-1">
+                  <MapPin className="h-3.5 w-3.5 shrink-0" />
+                  {p.address}
+                </p>
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {/* Arrows */}
+        <button
+          onClick={prevSlide}
+          className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition-colors"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+        <button
+          onClick={nextSlide}
+          className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition-colors"
+        >
+          <ChevronRight className="h-5 w-5" />
+        </button>
+
+        {/* Dots */}
+        <div className="absolute bottom-3 right-6 md:right-10 z-20 flex items-center gap-1.5">
+          {sliderProjects.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setSlide(i)}
+              className={`rounded-full transition-all ${i === slide ? 'w-5 h-2 bg-white' : 'w-2 h-2 bg-white/50 hover:bg-white/80'}`}
+            />
+          ))}
         </div>
+      </div>
 
-        <div className="absolute inset-0 flex flex-col items-center justify-center px-4 gap-5">
-          <div className="text-center">
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white drop-shadow-xl leading-tight mb-3 tracking-tight">
-              Dự án bất động sản
-              <br />
-              <span className="text-red-400">Quảng Ngãi</span>
-            </h1>
-            <p className="text-white/75 text-sm sm:text-base font-medium tracking-widest uppercase">
-              Những dự án uy tín tại thành phố
+      {/* ══ FILTER BAR ══ */}
+      <div className="bg-gray-50 border-b border-gray-200 sticky top-0 z-30">
+        <div className="max-w-6xl mx-auto px-4 py-3">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-4 py-3 flex flex-wrap gap-3 items-end">
+
+          {/* Search */}
+          <div className="relative min-w-[200px] flex-1 max-w-xs">
+            <label className="text-[10px] text-gray-400 font-medium px-1 mb-0.5 block">Tìm kiếm</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Tên dự án, địa chỉ..."
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-primary text-gray-800 placeholder-gray-400"
+              />
+            </div>
+          </div>
+
+          <div className="w-px h-8 bg-gray-100 hidden sm:block self-end mb-0.5" />
+
+          {/* Khu vực */}
+          <div className="flex flex-col">
+            <label className="text-[10px] text-gray-400 font-medium px-1 mb-0.5">Khu vực</label>
+            <select
+              value={districtFilter}
+              onChange={(e) => { setDistrictFilter(e.target.value); setPage(1); }}
+              className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:border-primary cursor-pointer font-medium min-w-[130px]"
+            >
+              {districts.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
+            </select>
+          </div>
+
+          {/* Loại hình */}
+          <div className="flex flex-col">
+            <label className="text-[10px] text-gray-400 font-medium px-1 mb-0.5">Loại hình</label>
+            <select
+              value={typeFilter}
+              onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}
+              className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:border-primary cursor-pointer font-medium min-w-[130px]"
+            >
+              {types.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+            </select>
+          </div>
+
+          {/* Khoảng giá */}
+          <div className="flex flex-col">
+            <label className="text-[10px] text-gray-400 font-medium px-1 mb-0.5">Khoảng giá</label>
+            <select
+              value={priceFilter}
+              onChange={(e) => { setPriceFilter(e.target.value); setPage(1); }}
+              className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:border-primary cursor-pointer font-medium min-w-[130px]"
+            >
+              {priceRanges.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+            </select>
+          </div>
+
+          {/* Trạng thái */}
+          <div className="flex flex-col">
+            <label className="text-[10px] text-gray-400 font-medium px-1 mb-0.5">Trạng thái</label>
+            <select
+              value={statusFilter}
+              onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+              className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:border-primary cursor-pointer font-medium min-w-[120px]"
+            >
+              {statuses.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+            </select>
+          </div>
+
+          {/* Reset */}
+          <button
+            onClick={resetFilters}
+            disabled={!isDirty}
+            title="Đặt lại bộ lọc"
+            className="p-2 rounded-lg border border-gray-200 text-gray-400 hover:text-primary hover:border-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors self-end"
+          >
+            <RotateCcw className="h-4 w-4" />
+          </button>
+
+          </div>{/* end card */}
+        </div>
+      </div>
+
+      {/* ══ BREADCRUMB ══ */}
+      <div className="max-w-6xl mx-auto px-4 pt-4 pb-1 flex items-center gap-1.5 text-xs text-gray-500">
+        <Link href="/" className="hover:text-primary transition-colors">Trang chủ</Link>
+        <ChevronRight className="h-3 w-3" />
+        <span className="text-gray-800 font-medium">Dự án bất động sản Quảng Ngãi</span>
+      </div>
+
+      {/* ══ MAIN LAYOUT ══ */}
+      <div className="max-w-6xl mx-auto px-4 py-4">
+        <div className="flex gap-6 items-start">
+
+          {/* ── Project list ── */}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm text-gray-500 mb-4">
+              Tìm thấy <span className="font-semibold text-gray-900">{filtered.length}</span> dự án tại Quảng Ngãi
             </p>
-          </div>
 
-          <div className="w-full max-w-2xl bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20 shadow-2xl relative z-50">
-            <SearchBar />
-          </div>
-        </div>
-      </section>
-
-      {/* ══════════════════════════════════
-          PROJECTS LISTING
-      ══════════════════════════════════ */}
-      <section className="py-14 md:py-20 px-4 bg-gray-50 relative z-0">
-        <div className="max-w-6xl mx-auto">
-
-          {/* Header + Filters */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-            <div>
-              <div className="w-8 h-1 bg-primary rounded-full mb-3" />
-              <h2 className="text-xl md:text-2xl font-bold tracking-tight text-gray-900">
-                Tất cả dự án
-              </h2>
-              <p className="text-sm text-gray-400 mt-1">
-                <span className="font-semibold text-gray-600">{filteredProjects.length}</span> dự án tại Quảng Ngãi
-              </p>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <Select value={typeFilter} onValueChange={(v) => v && setTypeFilter(v)}>
-                <SelectTrigger className="w-44">
-                  <SelectValue placeholder="Loại dự án" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tất cả loại</SelectItem>
-                  <SelectItem value="apartment">Căn hộ</SelectItem>
-                  <SelectItem value="villa">Biệt thự</SelectItem>
-                  <SelectItem value="townhouse">Nhà phố</SelectItem>
-                  <SelectItem value="commercial">Thương mại</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={sortBy} onValueChange={(v) => v && setSortBy(v)}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Sắp xếp" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="newest">Mới nhất</SelectItem>
-                  <SelectItem value="price_asc">Giá tăng dần</SelectItem>
-                  <SelectItem value="price_desc">Giá giảm dần</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Projects Grid */}
-          <div className="flex flex-col gap-6">
-            {filteredProjects.map((project) => {
-              const status = statusConfig[project.status as keyof typeof statusConfig];
-              return (
-                <Link key={project.id} href={`/du-an/${project.slug}`}>
-                  <Card className="overflow-hidden hover:shadow-xl transition-shadow group">
-                    <div className="flex flex-col md:flex-row">
+            <div className="flex flex-col gap-4">
+              {paginated.map((project) => {
+                const status = statusConfig[project.status as keyof typeof statusConfig];
+                return (
+                  <Link key={project.id} href={`/du-an/${project.slug}`}>
+                    <article className="bg-white rounded-xl border border-gray-100 overflow-hidden hover:shadow-md hover:border-primary/20 transition-all group flex flex-col sm:flex-row">
                       {/* Thumbnail */}
-                      <div className="relative md:w-80 h-52 md:h-auto shrink-0">
+                      <div className="relative sm:w-60 md:w-72 h-48 sm:h-auto shrink-0">
                         <Image
                           src={project.thumbnail}
                           alt={project.name}
                           fill
                           className="object-cover group-hover:scale-105 transition-transform duration-500"
-                          sizes="(max-width: 768px) 100vw, 320px"
+                          sizes="(max-width: 640px) 100vw, 288px"
                         />
-                        <div className={`absolute top-4 left-4 ${status.bg} ${status.text} text-xs font-semibold px-3 py-1 rounded-full`}>
+                        <div className={`absolute top-3 left-3 flex items-center gap-1.5 ${status.bg} ${status.text} text-xs font-semibold px-2.5 py-1 rounded-full`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
                           {status.label}
-                        </div>
-                        <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm text-gray-700 text-xs font-semibold px-3 py-1 rounded-full">
-                          {typeConfig[project.type as keyof typeof typeConfig]}
                         </div>
                       </div>
 
-                      {/* Content */}
-                      <CardContent className="flex-1 p-6 flex flex-col justify-between">
+                      {/* Info */}
+                      <div className="p-4 md:p-5 flex flex-col justify-between flex-1 gap-3">
                         <div>
-                          <div className="flex items-start justify-between gap-4 mb-3">
-                            <h3 className="text-xl font-bold text-gray-900 group-hover:text-primary transition-colors leading-snug">
+                          <div className="flex items-start gap-2 justify-between mb-1">
+                            <h2 className="text-base md:text-lg font-bold text-gray-900 group-hover:text-primary transition-colors leading-snug line-clamp-2">
                               {project.name}
-                            </h3>
+                            </h2>
+                            <span className="shrink-0 text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md font-medium mt-0.5">
+                              {typeConfig[project.type]}
+                            </span>
                           </div>
-
-                          <div className="flex items-center gap-1.5 text-sm text-gray-500 mb-4">
-                            <MapPin className="h-4 w-4 text-primary shrink-0" />
-                            <span>{project.address}</span>
+                          <div className="flex items-center gap-1 text-xs text-gray-500 mb-2">
+                            <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
+                            <span className="line-clamp-1">{project.address}</span>
                           </div>
-
-                          <p className="text-sm text-gray-500 line-clamp-2 leading-relaxed mb-5">
+                          <p className="text-sm text-gray-500 line-clamp-2 leading-relaxed">
                             {project.description}
                           </p>
-
-                          {/* Stats grid */}
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5">
-                            <div className="flex items-center gap-2 text-sm">
-                              <Building className="h-4 w-4 text-gray-400 shrink-0" />
-                              <span className="text-gray-600">{project.totalBlocks} block</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-sm">
-                              <Home className="h-4 w-4 text-gray-400 shrink-0" />
-                              <span className="text-gray-600">{project.totalUnits} căn</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-sm">
-                              <Calendar className="h-4 w-4 text-gray-400 shrink-0" />
-                              <span className="text-gray-600">
-                                {new Date(project.handoverDate).getFullYear()}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2 text-sm">
-                              <Users className="h-4 w-4 text-gray-400 shrink-0" />
-                              <span className="text-gray-600">{project.developer}</span>
-                            </div>
-                          </div>
-
-                          {/* Progress bar */}
-                          {project.status === 'upcoming' && (
-                            <div className="mb-5">
-                              <div className="flex justify-between text-xs mb-1.5">
-                                <span className="text-gray-500">Tiến độ xây dựng</span>
-                                <span className="font-semibold text-gray-700">{project.constructionProgress}%</span>
-                              </div>
-                              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                                <div
-                                  className="h-full bg-primary rounded-full transition-all"
-                                  style={{ width: `${project.constructionProgress}%` }}
-                                />
-                              </div>
-                            </div>
-                          )}
                         </div>
 
-                        {/* Price */}
-                        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                        <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-gray-500 border-t border-gray-50 pt-3">
+                          <span className="flex items-center gap-1">
+                            <Building className="h-3.5 w-3.5 text-gray-400" />
+                            {project.totalBlocks} block · {project.totalFloors} tầng
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Home className="h-3.5 w-3.5 text-gray-400" />
+                            {project.totalUnits} căn
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3.5 w-3.5 text-gray-400" />
+                            Bàn giao {new Date(project.handoverDate).getFullYear()}
+                          </span>
+                          <span className="text-gray-400">Quy mô {project.area}</span>
+                        </div>
+
+                        <div className="flex items-end justify-between">
                           <div>
-                            <p className="text-xs text-gray-400 mb-0.5">Giá từ</p>
-                            <p className="text-xl font-bold text-cta">
+                            <p className="text-xs text-gray-400">Giá từ</p>
+                            <p className="text-base font-bold text-cta">
                               {formatPrice(project.priceFrom)}
+                              {project.priceTo && (
+                                <span className="text-sm font-normal text-gray-400 ml-1">
+                                  – {formatPrice(project.priceTo)}
+                                </span>
+                              )}
                             </p>
                           </div>
-                          <Button variant="outline" size="sm" className="group/btn">
-                            Xem chi tiết
-                            <ArrowRight className="h-4 w-4 ml-1 group-hover/btn:translate-x-1 transition-transform" />
-                          </Button>
+                          <p className="text-xs text-gray-400 text-right line-clamp-1 max-w-[160px]">
+                            {project.developer}
+                          </p>
                         </div>
-                      </CardContent>
-                    </div>
-                  </Card>
-                </Link>
-              );
-            })}
+                      </div>
+                    </article>
+                  </Link>
+                );
+              })}
+            </div>
+
+            {/* Empty state */}
+            {filtered.length === 0 && (
+              <div className="text-center py-20 bg-white rounded-xl border border-gray-100">
+                <Building className="h-14 w-14 mx-auto text-gray-200 mb-3" />
+                <h3 className="text-base font-semibold text-gray-800 mb-1">Không tìm thấy dự án</h3>
+                <p className="text-sm text-gray-400 mb-4">Thử thay đổi bộ lọc để xem thêm dự án</p>
+                <button onClick={resetFilters} className="text-sm text-primary hover:underline">
+                  Xóa tất cả bộ lọc
+                </button>
+              </div>
+            )}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-1 mt-8">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="flex items-center gap-1 px-3 py-2 rounded-lg text-sm border border-gray-200 bg-white text-gray-600 hover:border-primary hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Trước
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
+                      page === p
+                        ? 'bg-primary text-white'
+                        : 'border border-gray-200 bg-white text-gray-600 hover:border-primary hover:text-primary'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="flex items-center gap-1 px-3 py-2 rounded-lg text-sm border border-gray-200 bg-white text-gray-600 hover:border-primary hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  Sau
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* Empty State */}
-          {filteredProjects.length === 0 && (
-            <div className="text-center py-20 bg-white rounded-2xl">
-              <Building className="h-16 w-16 mx-auto text-gray-200 mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Không tìm thấy dự án</h3>
-              <p className="text-gray-500">Thử thay đổi bộ lọc để xem thêm dự án</p>
+          {/* ── RIGHT SIDEBAR ── */}
+          <aside className="hidden xl:block w-64 shrink-0 space-y-4">
+            {/* Dự án nổi bật */}
+            <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
+                <div className="w-1 h-4 bg-primary rounded-full" />
+                <h3 className="text-sm font-semibold text-gray-800">Dự án nổi bật</h3>
+              </div>
+              <div className="divide-y divide-gray-50">
+                {featured.map((project) => {
+                  const st = statusConfig[project.status as keyof typeof statusConfig];
+                  return (
+                    <Link
+                      key={project.id}
+                      href={`/du-an/${project.slug}`}
+                      className="flex gap-3 p-3 hover:bg-gray-50 transition-colors group"
+                    >
+                      <div className="relative w-20 h-16 shrink-0 rounded-lg overflow-hidden">
+                        <Image
+                          src={project.thumbnail}
+                          alt={project.name}
+                          fill
+                          className="object-cover group-hover:scale-105 transition-transform duration-300"
+                          sizes="80px"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-gray-800 line-clamp-2 group-hover:text-primary transition-colors leading-snug mb-1">
+                          {project.name}
+                        </p>
+                        <p className={`text-xs font-medium ${st.text}`}>{st.label}</p>
+                        <p className="text-xs font-bold text-cta mt-0.5">{formatPrice(project.priceFrom)}</p>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
-          )}
+
+            {/* CTA tư vấn */}
+            <div className="bg-primary rounded-xl p-4 text-white">
+              <h3 className="text-sm font-bold mb-1">Cần tư vấn dự án?</h3>
+              <p className="text-xs text-white/80 mb-3">
+                Liên hệ chuyên viên để được hỗ trợ miễn phí và nhanh nhất
+              </p>
+              <button
+                onClick={() => setContactOpen(true)}
+                className="block w-full text-center bg-white text-primary text-sm font-semibold py-2 rounded-lg hover:bg-primary-light transition-colors"
+              >
+                Liên hệ tôi
+              </button>
+            </div>
+          </aside>
+
         </div>
-      </section>
+      </div>
+
+      <ContactDialog open={contactOpen} onClose={() => setContactOpen(false)} />
     </div>
   );
 }

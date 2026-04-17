@@ -1,351 +1,588 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  MapPin, Building, Calendar, Users, Home, Phone, MessageSquare, 
-  CheckCircle, Clock, Share2, Heart, ArrowLeft, ChevronRight
+import {
+  MapPin, Building, Home, Calendar, CheckCircle,
+  Share2, Heart, ChevronRight,
+  Landmark, Ruler, LayoutGrid,
 } from 'lucide-react';
 import { formatPrice } from '@/lib/formatters';
+import { ContactDialog } from '@/components/shared/ContactDialog';
 
-// Mock project data
 const project = {
   id: '1',
-  slug: 'sea-garden-da-nang',
-  name: 'Sea Garden Đà Nẵng',
-  developer: 'Sun Group',
-  thumbnail: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=1200&h=600&fit=crop',
-  gallery: [
-    'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=1200&h=600&fit=crop',
-    'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=1200&h=600&fit=crop',
-    'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=1200&h=600&fit=crop',
-    'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200&h=600&fit=crop',
-  ],
+  slug: 'de-palace-river-nam-song-tra-khuc',
+  name: 'De Palace River - Nam Sông Trà Khúc',
+  developer: 'Công ty CP Địa Ốc Quảng Ngãi',
   status: 'selling',
   type: 'apartment',
-  province: 'Đà Nẵng',
-  district: 'Sơn Trà',
-  address: 'Đường Võ Nguyên Giáp, Phường Mỹ An, Quận Sơn Trà',
-  description: `
-    Sea Garden Đà Nẵng là dự án căn hộ cao cấp view biển Mỹ Khê, được phát triển bởi Sun Group - một trong những tập đoàn bất động sản hàng đầu Việt Nam.
-
-    **Vị trí đắc địa:**
-    - Cách bãi biển Mỹ Khê 200m
-    - Cách trung tâm thành phố 5 phút
-    - Gần trường quốc tế, bệnh viện
-    - Kết nối giao thông thuận tiện
-
-    **Tiện ích nội khu:**
-    - Hồ bơi vô cực view biển
-    - Phòng gym cao cấp
-    - Khu vui chơi trẻ em
-    - Công viên cây xanh
-    - Bảo vệ 24/7
-    - Camera an ninh
-    - Thang máy tốc độ cao
-    - Bãi đỗ xe thông minh
-  `,
-  priceFrom: 3500000000,
-  priceTo: 8000000000,
-  totalArea: 50000,
-  totalUnits: 500,
-  totalBlocks: 3,
-  totalFloors: 25,
-  totalApartments: 480,
-  constructionProgress: 80,
-  handoverDate: '2024-12-31',
-  legal: 'Đã có phép, sổ đỏ chính chủ',
-  utilities: [
-    { name: 'Hồ bơi', icon: '🏊' },
-    { name: 'Gym', icon: '💪' },
-    { name: 'Bảo vệ', icon: '🔒' },
-    { name: 'Camera', icon: '📹' },
-    { name: 'Thang máy', icon: '🛗' },
-    { name: 'Bãi đỗ', icon: '🚗' },
-    { name: 'Công viên', icon: '🌳' },
-    { name: 'Siêu thị', icon: '🏪' },
+  address: 'Đầu cầu Thạch Bích, TP Quảng Ngãi, Quảng Ngãi',
+  province: 'Quảng Ngãi',
+  district: 'TP Quảng Ngãi',
+  ward: 'Phường Trương Quang Trọng',
+  totalArea: '2.5 ha',
+  totalUnits: 256,
+  totalBlocks: 2,
+  totalFloors: 18,
+  handoverDate: '2025-12-31',
+  priceFrom: 4500000000,
+  priceTo: 8500000000,
+  legal: 'Sổ hồng / Sổ đỏ',
+  constructionProgress: 75,
+  gallery: [
+    '/images/image_data/nha-pho-de-palace-river.jpg',
+    '/images/image_data/Starlight---suc-hut-den-tu-vi-tri-dac-dia-nhat-trung-tam-Quang-Ngai-suc-hut-3-1733900371-424-width1000height563.jpg',
+    '/images/image_data/Haus-Coastal.jpg',
+    '/images/image_data/banner_hero.jpg',
+    '/images/image_data/thi_tran_9b705.jpg',
   ],
-  floorPlan: [
-    { type: '2PN', area: 75, count: 200 },
-    { type: '3PN', area: 95, count: 150 },
-    { type: 'Penthouse', area: 200, count: 10 },
+  overview: `De Palace River là khu căn hộ cao cấp tọa lạc ngay đầu cầu Thạch Bích, ven sông Trà Khúc thơ mộng — vị trí đắc địa bậc nhất TP Quảng Ngãi.
+
+Dự án được phát triển bởi Công ty CP Địa Ốc Quảng Ngãi, đơn vị có bề dày kinh nghiệm phát triển bất động sản tại tỉnh Quảng Ngãi. Với tổng quy mô 2.5 ha, De Palace River gồm 2 block cao 18 tầng, cung cấp 256 căn hộ thiết kế hiện đại, view sông thoáng đãng.
+
+**Vị trí:**
+- Ngay đầu cầu Thạch Bích, cách trung tâm TP 3 phút
+- Cạnh sông Trà Khúc, tầm nhìn panorama
+- Kết nối dễ dàng đến các tuyến đường chính
+
+**Tiện ích nội khu:**
+- Hồ bơi vô cực view sông
+- Phòng gym & spa cao cấp
+- Khu vui chơi trẻ em
+- Sảnh đón 5 sao, bảo vệ 24/7
+- Bãi đỗ xe thông minh`,
+  utilities: [
+    'Hồ bơi', 'Gym & Spa', 'Bảo vệ 24/7', 'Camera an ninh',
+    'Thang máy', 'Bãi đỗ xe', 'Công viên', 'Siêu thị nội khu',
+  ],
+  floorPlans: [
+    { type: '2 phòng ngủ', area: '72m²', count: 120, priceFrom: 4500000000 },
+    { type: '3 phòng ngủ', area: '95m²', count: 100, priceFrom: 6200000000 },
+    { type: 'Penthouse', area: '180m²', count: 36, priceFrom: 8500000000 },
+  ],
+  faq: [
+    {
+      q: 'Giá mua bán dự án De Palace River hiện nay?',
+      a: 'Giá từ 4,5 tỷ đến 8,5 tỷ tùy căn hộ. Liên hệ để nhận bảng giá chi tiết mới nhất.',
+    },
+    {
+      q: 'Địa chỉ dự án De Palace River ở đâu?',
+      a: 'Dự án tọa lạc tại đầu cầu Thạch Bích, TP Quảng Ngãi, tỉnh Quảng Ngãi.',
+    },
+    {
+      q: 'Chủ đầu tư dự án De Palace River là ai?',
+      a: 'Chủ đầu tư là Công ty CP Địa Ốc Quảng Ngãi.',
+    },
+  ],
+  keywords: [
+    'Bán căn hộ De Palace River',
+    'Căn hộ view sông Trà Khúc',
+    'Bán căn hộ TP Quảng Ngãi',
+    'Cho thuê căn hộ Quảng Ngãi',
+    'Căn hộ cao cấp Quảng Ngãi',
+  ],
+  relatedListings: [
+    {
+      id: 'r1',
+      title: 'Bán căn hộ 3PN De Palace River tầng 12 view sông',
+      price: '6,5 tỷ',
+      area: '95m²',
+      address: 'TP Quảng Ngãi, Quảng Ngãi',
+      postedAt: 'Đăng hôm nay',
+      image: '/images/image_data/nha-pho-de-palace-river.jpg',
+      href: '/mua-ban/ban-can-ho-de-palace-river',
+    },
+    {
+      id: 'r2',
+      title: 'Cho thuê căn hộ 2PN De Palace River đầy đủ nội thất',
+      price: '8 triệu/tháng',
+      area: '72m²',
+      address: 'TP Quảng Ngãi, Quảng Ngãi',
+      postedAt: 'Hôm qua',
+      image: '/images/image_data/Haus-Coastal.jpg',
+      href: '/cho-thue/thue-can-ho-de-palace-river',
+    },
+    {
+      id: 'r3',
+      title: 'Bán căn hộ Penthouse De Palace River view toàn thành phố',
+      price: '8,5 tỷ',
+      area: '180m²',
+      address: 'TP Quảng Ngãi, Quảng Ngãi',
+      postedAt: '2 ngày trước',
+      image: '/images/image_data/Starlight---suc-hut-den-tu-vi-tri-dac-dia-nhat-trung-tam-Quang-Ngai-suc-hut-3-1733900371-424-width1000height563.jpg',
+      href: '/mua-ban/ban-penthouse-de-palace-river',
+    },
   ],
   contact: {
-    name: 'Nguyễn Văn A',
-    phone: '0901234567',
-    zalo: '0901234567',
-    avatar: null,
+    name: 'Nguyễn Văn Việt',
+    title: 'Chuyên viên tư vấn dự án',
+    phone: '0905123456',
   },
-  similarProjects: [
-    {
-      id: '2',
-      name: 'Green Park Quảng Ngãi',
-      slug: 'green-park-quang-ngai',
-      thumbnail: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400&h=300&fit=crop',
-      priceFrom: 1800000000,
-    },
-    {
-      id: '3',
-      name: 'Luxury Villa Hội An',
-      slug: 'luxury-villa-hoi-an',
-      thumbnail: 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=400&h=300&fit=crop',
-      priceFrom: 15000000000,
-    },
-  ],
 };
 
 const statusConfig = {
-  upcoming: { label: 'Sắp mở bán', color: 'bg-blue-100 text-blue-700' },
-  selling: { label: 'Đang bán', color: 'bg-green-100 text-green-700' },
-  completed: { label: 'Đã bàn giao', color: 'bg-gray-100 text-gray-700' },
+  upcoming: { label: 'Sắp mở bán', bg: 'bg-amber-100', text: 'text-amber-700' },
+  selling:  { label: 'Đang mở bán', bg: 'bg-green-100', text: 'text-green-700' },
+  completed:{ label: 'Đã bàn giao', bg: 'bg-gray-100',  text: 'text-gray-600'  },
 };
 
+const tabs = [
+  { label: 'Tổng quan', sub: 'Giới thiệu về dự án' },
+  { label: 'Vị trí', sub: 'Bản đồ dự án' },
+  { label: 'Câu hỏi thường gặp', sub: 'Hỗ trợ thắc mắc' },
+];
+
 export default function ProjectDetailPage() {
-  const [currentImage, setCurrentImage] = useState(0);
-  const [isFavorite, setIsFavorite] = useState(false);
+  const [mainImg, setMainImg] = useState(0);
+  const [activeTab, setActiveTab] = useState(0);
+  const [liked, setLiked] = useState(false);
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [contactOpen, setContactOpen] = useState(false);
+  const status = statusConfig[project.status as keyof typeof statusConfig];
 
   return (
     <div className="min-h-screen bg-gray-50">
+
       {/* Breadcrumb */}
-      <div className="bg-white border-b">
-        <div className="container mx-auto px-4 py-3">
-          <nav className="flex items-center gap-2 text-sm text-gray-500">
-            <Link href="/" className="hover:text-blue-600">Trang chủ</Link>
-            <span>/</span>
-            <Link href="/du-an" className="hover:text-blue-600">Dự án</Link>
-            <span>/</span>
-            <span className="text-gray-900">{project.name}</span>
-          </nav>
+      <div className="bg-white border-b border-gray-100">
+        <div className="max-w-6xl mx-auto px-4 py-2.5 flex items-center gap-1.5 text-xs text-gray-500 flex-wrap">
+          <Link href="/" className="hover:text-primary transition-colors">Trang chủ</Link>
+          <ChevronRight className="h-3 w-3" />
+          <Link href="/du-an" className="hover:text-primary transition-colors">Dự án</Link>
+          <ChevronRight className="h-3 w-3" />
+          <Link href="/du-an" className="hover:text-primary transition-colors">Quảng Ngãi</Link>
+          <ChevronRight className="h-3 w-3" />
+          <Link href="/du-an" className="hover:text-primary transition-colors">{project.district}</Link>
+          <ChevronRight className="h-3 w-3" />
+          <span className="text-gray-800 font-medium line-clamp-1">{project.name}</span>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-6">
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
+      <div className="max-w-6xl mx-auto px-4 py-5">
+
+        {/* Title row */}
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div>
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900 leading-tight mb-1">
+              {project.name}
+            </h1>
+            <div className="flex items-center gap-1.5 text-sm text-gray-500">
+              <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
+              <span>{project.address}</span>
+              <Link href="#" className="text-primary font-medium ml-1 hover:underline">Xem bản đồ</Link>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setLiked(!liked)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${liked ? 'border-cta text-cta bg-red-50' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}
+            >
+              <Heart className={`h-4 w-4 ${liked ? 'fill-current' : ''}`} />
+              <span className="hidden sm:inline">Lưu</span>
+            </button>
+            <button className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:border-gray-300 transition-colors">
+              <Share2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Chia sẻ</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="flex gap-6 items-start">
+
+          {/* ── LEFT / MAIN ── */}
+          <div className="flex-1 min-w-0 space-y-5">
+
             {/* Gallery */}
-            <Card>
-              <div className="relative aspect-[16/9]">
-                <img
-                  src={project.gallery[currentImage]}
-                  alt={project.name}
-                  className="w-full h-full object-cover"
-                />
-                <Badge className={`absolute top-4 left-4 ${statusConfig[project.status as keyof typeof statusConfig].color}`}>
-                  {statusConfig[project.status as keyof typeof statusConfig].label}
-                </Badge>
-              </div>
-              
-              {/* Thumbnails */}
-              <div className="p-4">
-                <div className="flex gap-2 overflow-x-auto">
-                  {project.gallery.map((img, index) => (
+            <div className="bg-white rounded-xl overflow-hidden border border-gray-100">
+              <div className="flex gap-1 h-[280px] md:h-[360px]">
+                {/* Main image */}
+                <div className="relative flex-1 overflow-hidden">
+                  <Image
+                    src={project.gallery[mainImg]}
+                    alt={project.name}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, 60vw"
+                    priority
+                  />
+                  <div className={`absolute top-3 left-3 ${status.bg} ${status.text} text-xs font-semibold px-3 py-1 rounded-full`}>
+                    {status.label}
+                  </div>
+                  <div className="absolute bottom-3 right-3 bg-black/50 text-white text-xs px-2.5 py-1 rounded-full">
+                    {mainImg + 1} / {project.gallery.length}
+                  </div>
+                </div>
+                {/* Thumbnails column */}
+                <div className="hidden sm:flex flex-col gap-1 w-32 md:w-40">
+                  {project.gallery.slice(1, 4).map((img, i) => (
                     <button
-                      key={index}
-                      onClick={() => setCurrentImage(index)}
-                      className={`w-20 h-14 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-colors ${
-                        index === currentImage ? 'border-blue-500' : 'border-transparent'
-                      }`}
+                      key={i}
+                      onClick={() => setMainImg(i + 1)}
+                      className={`relative flex-1 overflow-hidden transition-opacity ${mainImg === i + 1 ? 'ring-2 ring-primary' : 'hover:opacity-90'}`}
                     >
-                      <img src={img} alt="" className="w-full h-full object-cover" />
+                      <Image
+                        src={img}
+                        alt=""
+                        fill
+                        className="object-cover"
+                        sizes="160px"
+                      />
+                      {i === 2 && project.gallery.length > 4 && (
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-white text-sm font-semibold">
+                          +{project.gallery.length - 4}
+                        </div>
+                      )}
                     </button>
                   ))}
                 </div>
               </div>
-            </Card>
 
-            {/* Info */}
-            <Card>
-              <CardContent className="p-6">
-                <h1 className="text-2xl font-bold text-gray-900 mb-4">{project.name}</h1>
-                
-                <div className="flex items-center gap-2 text-gray-500 mb-6">
-                  <MapPin className="h-4 w-4" />
-                  <span>{project.address}</span>
-                </div>
+              {/* Thumbnail row mobile */}
+              <div className="flex gap-2 p-3 overflow-x-auto sm:hidden">
+                {project.gallery.map((img, i) => (
+                  <button key={i} onClick={() => setMainImg(i)} className={`relative w-16 h-12 shrink-0 rounded-md overflow-hidden ${mainImg === i ? 'ring-2 ring-primary' : ''}`}>
+                    <Image src={img} alt="" fill className="object-cover" sizes="64px" />
+                  </button>
+                ))}
+              </div>
 
-                {/* Quick Info */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                  <div className="p-3 bg-gray-50 rounded-lg text-center">
-                    <p className="text-2xl font-bold text-gray-900">{project.totalBlocks}</p>
-                    <p className="text-sm text-gray-500">Block</p>
+              {/* Quick stats */}
+              <div className="grid grid-cols-4 divide-x divide-gray-100 border-t border-gray-100">
+                {[
+                  { icon: LayoutGrid, label: 'Diện tích', value: project.totalArea },
+                  { icon: Building, label: 'Block', value: `${project.totalBlocks} block` },
+                  { icon: Home, label: 'Căn hộ', value: `${project.totalUnits} căn` },
+                  { icon: Calendar, label: 'Bàn giao', value: new Date(project.handoverDate).getFullYear().toString() },
+                ].map(({ icon: Icon, label, value }) => (
+                  <div key={label} className="flex flex-col items-center py-3 px-2 text-center">
+                    <Icon className="h-4 w-4 text-primary mb-1" />
+                    <span className="text-xs md:text-sm font-semibold text-gray-800">{value}</span>
+                    <span className="text-[10px] md:text-xs text-gray-400">{label}</span>
                   </div>
-                  <div className="p-3 bg-gray-50 rounded-lg text-center">
-                    <p className="text-2xl font-bold text-gray-900">{project.totalFloors}</p>
-                    <p className="text-sm text-gray-500">Tầng</p>
-                  </div>
-                  <div className="p-3 bg-gray-50 rounded-lg text-center">
-                    <p className="text-2xl font-bold text-gray-900">{project.totalUnits}</p>
-                    <p className="text-sm text-gray-500">Căn hộ</p>
-                  </div>
-                  <div className="p-3 bg-gray-50 rounded-lg text-center">
-                    <p className="text-2xl font-bold text-gray-900">{project.constructionProgress}%</p>
-                    <p className="text-sm text-gray-500">Hoàn thành</p>
-                  </div>
-                </div>
+                ))}
+              </div>
+            </div>
 
-                {/* Price */}
-                <div className="p-4 bg-red-50 rounded-lg mb-6">
-                  <p className="text-sm text-gray-500 mb-1">Giá bán</p>
-                  <p className="text-2xl font-bold text-red-600">
-                    {formatPrice(project.priceFrom)} - {formatPrice(project.priceTo)}
-                  </p>
-                </div>
+            {/* Tab nav */}
+            <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+              <div className="flex border-b border-gray-100 overflow-x-auto">
+                {tabs.map((tab, i) => (
+                  <button
+                    key={tab.label}
+                    onClick={() => setActiveTab(i)}
+                    className={`flex flex-col items-start px-5 py-3 whitespace-nowrap border-b-2 transition-colors ${
+                      activeTab === i
+                        ? 'border-primary text-primary'
+                        : 'border-transparent text-gray-500 hover:text-gray-800'
+                    }`}
+                  >
+                    <span className="text-sm font-semibold">{tab.label}</span>
+                    <span className="text-[11px] text-gray-400 font-normal">{tab.sub}</span>
+                  </button>
+                ))}
+              </div>
 
-                {/* Tabs */}
-                <Tabs defaultValue="overview">
-                  <TabsList>
-                    <TabsTrigger value="overview">Tổng quan</TabsTrigger>
-                    <TabsTrigger value="utilities">Tiện ích</TabsTrigger>
-                    <TabsTrigger value="floorplan">Mặt bằng</TabsTrigger>
-                  </TabsList>
+              <div className="p-5">
 
-                  <TabsContent value="overview" className="mt-4">
-                    <div className="prose prose-sm max-w-none">
-                      <p className="whitespace-pre-line">{project.description}</p>
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="utilities" className="mt-4">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {project.utilities.map((util, index) => (
-                        <div key={index} className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
-                          <span className="text-2xl">{util.icon}</span>
-                          <span className="font-medium">{util.name}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="floorplan" className="mt-4">
-                    <div className="space-y-4">
-                      {project.floorPlan.map((floor, index) => (
-                        <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                          <div>
-                            <p className="font-semibold">{floor.type}</p>
-                            <p className="text-sm text-gray-500">{floor.area}m²</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-bold">{floor.count}</p>
-                            <p className="text-sm text-gray-500">căn</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Contact Card */}
-            <Card className="sticky top-24">
-              <CardContent className="p-6">
-                <h3 className="font-semibold text-gray-900 mb-4">Liên hệ tư vấn</h3>
-                
-                <div className="flex items-center gap-3 mb-4">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={project.contact.avatar || undefined} />
-                    <AvatarFallback>{project.contact.name.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium">{project.contact.name}</p>
-                    <p className="text-sm text-gray-500">Tư vấn dự án</p>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <a href={`tel:${project.contact.phone}`}>
-                    <Button className="w-full gap-2">
-                      <Phone className="h-4 w-4" />
-                      {project.contact.phone}
-                    </Button>
-                  </a>
-                  <a href={`https://zalo.me/${project.contact.zalo}`}>
-                    <Button variant="outline" className="w-full gap-2">
-                      <MessageSquare className="h-4 w-4" />
-                      Zalo
-                    </Button>
-                  </a>
-                </div>
-
-                <div className="mt-4 pt-4 border-t">
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="text-gray-500">Chủ đầu tư</span>
-                    <span className="font-medium">{project.developer}</span>
-                  </div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="text-gray-500">Quy mô</span>
-                    <span className="font-medium">{project.totalArea.toLocaleString()}m²</span>
-                  </div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="text-gray-500">Bàn giao</span>
-                    <span className="font-medium">
-                      {new Date(project.handoverDate).toLocaleDateString('vi-VN')}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Pháp lý</span>
-                    <span className="font-medium text-green-600 flex items-center gap-1">
-                      <CheckCircle className="h-3 w-3" />
-                      {project.legal}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Progress */}
-                <div className="mt-4 pt-4 border-t">
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="text-gray-500">Tiến độ</span>
-                    <span className="font-medium">{project.constructionProgress}%</span>
-                  </div>
-                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-blue-500 rounded-full"
-                      style={{ width: `${project.constructionProgress}%` }}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        {/* Similar Projects */}
-        <div className="mt-12">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Dự án tương tự</h2>
-          <div className="grid md:grid-cols-2 gap-6">
-            {project.similarProjects.map((p) => (
-              <Link key={p.id} href={`/du-an/${p.slug}`}>
-                <Card className="overflow-hidden hover:shadow-lg transition-shadow group">
-                  <div className="flex gap-4 p-4">
-                    <img
-                      src={p.thumbnail}
-                      alt={p.name}
-                      className="w-32 h-24 rounded-lg object-cover"
-                    />
+                {/* Tab 0 — Tổng quan */}
+                {activeTab === 0 && (
+                  <div className="space-y-6">
+                    {/* Thông tin dự án */}
                     <div>
-                      <h3 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
-                        {p.name}
-                      </h3>
-                      <p className="text-sm text-red-600 font-bold mt-1">
-                        Từ {formatPrice(p.priceFrom)}
-                      </p>
+                      <h2 className="text-base font-bold text-gray-900 mb-3">Tổng quan {project.name}</h2>
+                      <div className="grid grid-cols-2 gap-x-8 gap-y-2.5 text-sm mb-5">
+                        {[
+                          ['Chủ đầu tư', project.developer],
+                          ['Loại hình', 'Căn hộ chung cư'],
+                          ['Tổng diện tích', project.totalArea],
+                          ['Số block', `${project.totalBlocks} block`],
+                          ['Số tầng', `${project.totalFloors} tầng`],
+                          ['Số căn hộ', `${project.totalUnits} căn`],
+                          ['Pháp lý', project.legal],
+                          ['Bàn giao', new Date(project.handoverDate).toLocaleDateString('vi-VN')],
+                        ].map(([k, v]) => (
+                          <div key={k} className="flex items-start gap-2">
+                            <span className="text-gray-400 shrink-0 w-28">{k}</span>
+                            <span className="font-medium text-gray-800">{v}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Giá */}
+                      <div className="bg-gray-50 rounded-xl p-4 mb-5">
+                        <p className="text-xs text-gray-400 mb-1">Giá bán</p>
+                        <p className="text-xl font-bold text-cta">
+                          {formatPrice(project.priceFrom)}
+                          <span className="text-base font-normal text-gray-400 mx-2">–</span>
+                          {formatPrice(project.priceTo)}
+                        </p>
+                      </div>
+
+                      {/* Mô tả */}
+                      <div className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">
+                        {project.overview}
+                      </div>
+                    </div>
+
+                    {/* Tiện ích */}
+                    <div>
+                      <h3 className="text-sm font-bold text-gray-900 mb-3">Tiện ích dự án</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {project.utilities.map((u) => (
+                          <span key={u} className="flex items-center gap-1.5 text-xs bg-primary-light text-primary px-3 py-1.5 rounded-lg font-medium">
+                            <CheckCircle className="h-3.5 w-3.5" />
+                            {u}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Mặt bằng */}
+                    <div>
+                      <h3 className="text-sm font-bold text-gray-900 mb-3">Loại căn hộ</h3>
+                      <div className="divide-y divide-gray-50 rounded-xl border border-gray-100 overflow-hidden">
+                        {project.floorPlans.map((fp) => (
+                          <div key={fp.type} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors">
+                            <div className="flex items-center gap-3">
+                              <Ruler className="h-4 w-4 text-gray-400" />
+                              <div>
+                                <p className="text-sm font-semibold text-gray-800">{fp.type}</p>
+                                <p className="text-xs text-gray-400">{fp.area} · {fp.count} căn</p>
+                              </div>
+                            </div>
+                            <p className="text-sm font-bold text-cta">{formatPrice(fp.priceFrom)}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Tiến độ */}
+                    <div>
+                      <h3 className="text-sm font-bold text-gray-900 mb-3">Tiến độ xây dựng</h3>
+                      <div className="flex justify-between text-xs mb-2">
+                        <span className="text-gray-500">Hoàn thành</span>
+                        <span className="font-semibold text-gray-700">{project.constructionProgress}%</span>
+                      </div>
+                      <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-primary rounded-full transition-all"
+                          style={{ width: `${project.constructionProgress}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-gray-400 mt-2">Dự kiến bàn giao: {new Date(project.handoverDate).toLocaleDateString('vi-VN')}</p>
                     </div>
                   </div>
-                </Card>
-              </Link>
-            ))}
+                )}
+
+                {/* Tab 1 — Vị trí */}
+                {activeTab === 1 && (
+                  <div className="space-y-4">
+                    <h2 className="text-base font-bold text-gray-900">Vị trí dự án {project.name}</h2>
+                    <div className="flex items-center gap-1.5 text-sm text-gray-500 mb-3">
+                      <MapPin className="h-4 w-4 text-primary shrink-0" />
+                      <span>{project.address}</span>
+                    </div>
+                    {/* Map placeholder */}
+                    <div className="w-full h-64 bg-gray-100 rounded-xl flex items-center justify-center border border-gray-200">
+                      <div className="text-center text-gray-400">
+                        <Landmark className="h-10 w-10 mx-auto mb-2 opacity-40" />
+                        <p className="text-sm">Bản đồ vị trí dự án</p>
+                        <p className="text-xs mt-1">{project.address}</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 mt-2">
+                      {[
+                        ['Trung tâm TP Quảng Ngãi', '3 km', '5 phút'],
+                        ['Bệnh viện Đa khoa Quảng Ngãi', '2.1 km', '4 phút'],
+                        ['Trường THPT Lê Trung Đình', '1.5 km', '3 phút'],
+                        ['Sân bay Chu Lai', '30 km', '40 phút'],
+                      ].map(([name, dist, time]) => (
+                        <div key={name} className="bg-gray-50 rounded-xl px-4 py-3">
+                          <p className="text-xs font-semibold text-gray-700 line-clamp-1">{name}</p>
+                          <p className="text-xs text-gray-400 mt-0.5">{dist} · {time}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Tab 2 — FAQ */}
+                {activeTab === 2 && (
+                  <div className="space-y-4">
+                    <h2 className="text-base font-bold text-gray-900">Các câu hỏi thường gặp</h2>
+
+                    {/* FAQ list */}
+                    <div className="border border-gray-200 rounded-xl overflow-hidden divide-y divide-gray-100">
+                      {project.faq.map((item, i) => (
+                        <div key={i}>
+                          <button
+                            onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                            className="w-full flex items-start gap-3 px-5 py-4 text-left hover:bg-gray-50 transition-colors"
+                          >
+                            <span className="w-1 h-4 mt-0.5 bg-cta rounded-full shrink-0" />
+                            <span className="flex-1 text-sm font-semibold text-gray-800">{item.q}</span>
+                          </button>
+                          {openFaq === i && (
+                            <div className="px-5 pb-4 text-sm text-gray-600 leading-relaxed border-t border-gray-50">
+                              {item.a}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+
+                      {/* Footer */}
+                      <div className="flex items-center justify-between px-5 py-3 bg-gray-50 flex-wrap gap-3">
+                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                          <span>Những thông tin trên có hữu ích không?</span>
+                          <button className="px-3 py-1 rounded border border-gray-300 text-sm text-gray-700 hover:border-primary hover:text-primary transition-colors">Có</button>
+                          <button className="px-3 py-1 rounded border border-gray-300 text-sm text-gray-700 hover:border-primary hover:text-primary transition-colors">Không</button>
+                        </div>
+                        <button
+                          onClick={() => setContactOpen(true)}
+                          className="text-sm font-semibold text-cta border border-cta px-4 py-1.5 rounded hover:bg-red-50 transition-colors"
+                        >
+                          Đặt câu hỏi về dự án
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Tìm kiếm theo từ khóa */}
+                    <div>
+                      <h3 className="text-sm font-bold text-gray-900 mb-3">Tìm kiếm theo từ khóa</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {project.keywords.map((kw) => (
+                          <Link
+                            key={kw}
+                            href={`/mua-ban?q=${encodeURIComponent(kw)}`}
+                            className="text-sm text-gray-600 bg-gray-100 hover:bg-primary-light hover:text-primary px-4 py-1.5 rounded-full transition-colors"
+                          >
+                            {kw}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Related listings */}
+            <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                <div className="flex items-center gap-2">
+                  <div className="w-1 h-4 bg-primary rounded-full" />
+                  <h3 className="text-sm font-bold text-gray-900">Tin mua bán tại {project.name}</h3>
+                </div>
+                <Link href="/mua-ban" className="text-xs text-primary hover:underline flex items-center gap-0.5">
+                  Xem tất cả <ChevronRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+              <div className="divide-y divide-gray-50">
+                {project.relatedListings.map((item) => (
+                  <Link key={item.id} href={item.href} className="flex gap-3 p-4 hover:bg-gray-50 transition-colors group">
+                    <div className="relative w-24 h-18 shrink-0 rounded-lg overflow-hidden" style={{ height: '72px' }}>
+                      <Image src={item.image} alt={item.title} fill className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="96px" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-800 line-clamp-2 group-hover:text-primary transition-colors leading-snug mb-1">
+                        {item.title}
+                      </p>
+                      <p className="text-sm font-bold text-cta">{item.price} <span className="text-gray-400 font-normal">·</span> <span className="text-gray-500 font-normal">{item.area}</span></p>
+                      <p className="text-xs text-gray-400 mt-0.5">{item.address} · {item.postedAt}</p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+
           </div>
+
+          {/* ── RIGHT SIDEBAR ── */}
+          <aside className="hidden lg:block w-72 xl:w-80 shrink-0 self-start sticky top-4">
+            <div className="space-y-4">
+
+              {/* Contact card */}
+              <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+                <div className="bg-primary px-5 py-4">
+                  <p className="text-white font-semibold text-sm">Liên hệ tư vấn miễn phí</p>
+                  <p className="text-white/80 text-xs mt-0.5">Nhận thông tin chi tiết và các ưu đãi mới nhất của dự án</p>
+                </div>
+
+                <div className="p-4 space-y-3">
+                  <div className="flex items-center gap-3 pb-3 border-b border-gray-50">
+                    <div className="w-10 h-10 rounded-full bg-primary-light flex items-center justify-center text-primary font-bold text-sm shrink-0">
+                      {project.contact.name.split(' ').pop()?.charAt(0)}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-gray-800">{project.contact.name}</p>
+                      <p className="text-xs text-gray-400">{project.contact.title}</p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setContactOpen(true)}
+                    className="flex items-center justify-center gap-2 w-full bg-cta hover:bg-cta-dark text-white text-sm font-semibold py-2.5 rounded-lg transition-colors"
+                  >
+                    Liên hệ tôi
+                  </button>
+                </div>
+              </div>
+
+              {/* Project info card */}
+              <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
+                  <div className="w-1 h-4 bg-primary rounded-full" />
+                  <h3 className="text-sm font-semibold text-gray-800">Thông tin dự án</h3>
+                </div>
+                <div className="px-4 py-3 space-y-3 text-sm">
+                  {[
+                    ['Chủ đầu tư', project.developer],
+                    ['Loại hình', 'Căn hộ chung cư'],
+                    ['Tỉnh / TP', project.province],
+                    ['Quận / Huyện', project.district],
+                    ['Tổng diện tích', project.totalArea],
+                    ['Số căn hộ', `${project.totalUnits} căn`],
+                    ['Pháp lý', project.legal],
+                  ].map(([k, v]) => (
+                    <div key={k} className="flex justify-between gap-2">
+                      <span className="text-gray-400 shrink-0">{k}</span>
+                      <span className="font-medium text-gray-800 text-right">{v}</span>
+                    </div>
+                  ))}
+
+                  <div className="border-t border-gray-50 pt-3">
+                    <p className="text-gray-400 mb-1.5">Giá từ</p>
+                    <p className="text-base font-bold text-cta">{formatPrice(project.priceFrom)}</p>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </aside>
+
         </div>
       </div>
+
+      {/* Mobile sticky CTA — only visible when sidebar is hidden */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 px-4 py-3 flex items-center gap-3">
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold text-gray-800 truncate">{project.name}</p>
+          <p className="text-xs text-cta font-bold">{formatPrice(project.priceFrom)} – {formatPrice(project.priceTo)}</p>
+        </div>
+        <button
+          onClick={() => setContactOpen(true)}
+          className="shrink-0 bg-cta hover:bg-cta-dark text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-colors"
+        >
+          Liên hệ tôi
+        </button>
+      </div>
+
+      {/* Bottom padding so content isn't hidden behind mobile CTA */}
+      <div className="lg:hidden h-20" />
+
+      <ContactDialog open={contactOpen} onClose={() => setContactOpen(false)} projectName={project.name} />
     </div>
   );
 }
