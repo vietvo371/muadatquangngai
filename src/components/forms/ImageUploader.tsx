@@ -13,7 +13,7 @@ import {
 import { Camera, X, GripVertical, Image as ImageIcon, Upload } from 'lucide-react';
 
 interface UploadedImage {
-  id: string;
+  id: string | number;
   url: string;
   is_primary?: boolean;
 }
@@ -74,11 +74,11 @@ export function ImageUploader({
     e.target.value = '';
   };
 
-  const removeImage = (id: string) => {
-    onChange(images.filter((img) => img.id !== id));
+  const removeImage = (id: string | number) => {
+    onChange(images.filter((img) => String(img.id) !== String(id)));
   };
 
-  const setPrimary = (id: string) => {
+  const setPrimary = (id: string | number) => {
     onChange(
       images.map((img) => ({
         ...img,
@@ -103,18 +103,17 @@ export function ImageUploader({
         <p className="text-gray-600 mb-2">
           Kéo thả hình ảnh vào đây hoặc
         </p>
-        <label>
-          <input
-            type="file"
-            multiple
-            accept="image/*"
-            className="hidden"
-            onChange={handleFileSelect}
-          />
-          <Button variant="outline" asChild className="cursor-pointer">
-            <span>Chọn tệp</span>
-          </Button>
-        </label>
+<Button variant="outline" className="cursor-pointer" onClick={() => document.getElementById('file-input')?.click()}>
+                Chọn tệp
+              </Button>
+              <input
+                id="file-input"
+                type="file"
+                multiple
+                accept="image/*"
+                className="hidden"
+                onChange={handleFileSelect}
+              />
         <p className="text-xs text-gray-400 mt-2">
           Tối đa {maxImages} ảnh, định dạng JPG, PNG
         </p>

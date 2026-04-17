@@ -208,7 +208,7 @@ export default function AdminPropertiesPage() {
               </SelectContent>
             </Select>
 
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <Select value={typeFilter} onValueChange={(v) => v && setTypeFilter(v)}>
               <SelectTrigger className="w-40">
                 <SelectValue placeholder="Loại tin" />
               </SelectTrigger>

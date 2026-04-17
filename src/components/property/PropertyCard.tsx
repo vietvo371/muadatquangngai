@@ -11,7 +11,7 @@ interface PropertyCardProps {
     slug: string;
     title: string;
     price: number;
-    priceUnit?: 'total' | 'per_m2' | 'per_month';
+    priceUnit?: string;
     area: number;
     type: string;
     thumbnail?: string;
@@ -19,7 +19,7 @@ interface PropertyCardProps {
     address?: string;
     bedrooms?: number;
     bathrooms?: number;
-    isVip?: 'normal' | 'vip' | 'vip_plus' | 'diamond';
+    isVip?: string;
     user?: {
       name: string;
       avatar?: string | null;
@@ -29,7 +29,7 @@ interface PropertyCardProps {
   variant?: 'default' | 'compact';
 }
 
-const vipConfig = {
+const vipConfig: Record<string, { bg: string; text: string }> = {
   normal: { bg: '', text: '' },
   vip: { bg: 'bg-yellow-100', text: 'text-yellow-700' },
   vip_plus: { bg: 'bg-orange-100', text: 'text-orange-700' },

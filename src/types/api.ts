@@ -2,20 +2,19 @@
 /// <reference types="next/image-types/global" />
 /// <reference types="next/navigation-types/compat/navigation" />
 
-import type { Property, PropertyMedia, PropertyLocation, UserBasic, Feature } from "@/types/property";
-import type { User, UserRole, UserStatus } from "@/types/user";
-import type { SearchFilters } from "@/types/search";
+import type { Property, PropertyMedia, PropertyLocation, Feature, SearchFilters } from "@/types/property";
+import type { User, UserRole, UserStatus, UserBasic } from "@/types/user";
 
 // Re-export types
 export type {
   Property,
   PropertyMedia,
   PropertyLocation,
-  UserBasic,
   Feature,
   User,
   UserRole,
   UserStatus,
+  UserBasic,
   SearchFilters,
 };
 

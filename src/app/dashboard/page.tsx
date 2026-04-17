@@ -27,26 +27,29 @@ const stats = [
 ];
 
 const recentProperties = [
-  { 
-    id: '1', 
-    title: 'Căn hộ cao cấp 2PN view biển', 
-    price: 2800000000, 
+  {
+    id: '1',
+    slug: 'can-ho-cao-cap-2pn-view-bien',
+    title: 'Căn hộ cao cấp 2PN view biển',
+    price: 2800000000,
     status: 'active',
     views: 456,
     createdAt: '2024-01-15'
   },
-  { 
-    id: '2', 
-    title: 'Nhà mặt phố 4 tầng Quang Trung', 
-    price: 6500000000, 
+  {
+    id: '2',
+    slug: 'nha-mat-pho-4-tang-quang-trung',
+    title: 'Nhà mặt phố 4 tầng Quang Trung',
+    price: 6500000000,
     status: 'pending',
     views: 123,
     createdAt: '2024-01-14'
   },
-  { 
-    id: '3', 
-    title: 'Đất nền dự án ven biển 500m2', 
-    price: 1800000000, 
+  {
+    id: '3',
+    slug: 'dat-nen-du-an-ven-bien-500m2',
+    title: 'Đất nền dự án ven biển 500m2',
+    price: 1800000000,
     status: 'active',
     views: 789,
     createdAt: '2024-01-13'

@@ -157,7 +157,7 @@ export default function DuAnPage() {
             </SelectContent>
           </Select>
 
-          <Select value={sortBy} onValueChange={setSortBy}>
+          <Select value={sortBy} onValueChange={(v) => v && setSortBy(v)}>
             <SelectTrigger className="w-40">
               <SelectValue placeholder="Sắp xếp" />
             </SelectTrigger>

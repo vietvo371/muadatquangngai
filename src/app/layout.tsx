@@ -45,7 +45,7 @@ export default function RootLayout({
     <html lang="vi" suppressHydrationWarning>
       <body className={`${inter.variable} font-sans antialiased min-h-screen flex flex-col`}>
         <Providers>
-          <TooltipProvider delayDuration={300}>
+          <TooltipProvider delay={300}>
             {children}
             <Toaster position="top-right" richColors />
           </TooltipProvider>

@@ -50,7 +50,7 @@ export interface Property {
   media: PropertyMedia[];
   features: Feature[];
   location: PropertyLocation;
-  owner: UserBasic;
+  owner: import("@/types/user").UserBasic;
   view_count: number;
   save_count: number;
   is_saved: boolean;
@@ -106,4 +106,32 @@ export interface SearchFilters {
     | "popular";
   page?: number;
   per_page?: number;
+}
+
+export interface PropertyFormData {
+  title: string;
+  description: string;
+  type: PropertyType;
+  category_id: number;
+  province_id: number;
+  district_id: number;
+  ward_id?: number;
+  address: string;
+  price: number;
+  price_unit?: "total" | "per_m2" | "per_month";
+  price_negotiable?: boolean;
+  area: number;
+  floors?: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  parking?: boolean;
+  direction?: Direction;
+  furniture?: Furniture;
+  legal?: LegalStatus;
+  latitude?: number;
+  longitude?: number;
+  road_width?: number;
+  facade?: number;
+  features?: number[];
+  media?: File[];
 }

@@ -1,4 +1,4 @@
-export type UserRole = "user" | "agent" | "agency" | "admin";
+export type UserRole = "user" | "agent" | "agency" | "admin" | "super_admin";
 export type UserStatus = "active" | "inactive" | "banned";
 
 export interface User {

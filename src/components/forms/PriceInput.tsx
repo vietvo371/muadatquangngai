@@ -14,8 +14,8 @@ import {
 interface PriceInputProps {
   value: number;
   onChange: (value: number) => void;
-  unit?: 'total' | 'per_m2' | 'per_month';
-  onUnitChange?: (unit: 'total' | 'per_m2' | 'per_month') => void;
+  unit?: string;
+  onUnitChange?: (unit: string) => void;
   placeholder?: string;
 }
 
@@ -47,7 +47,7 @@ export function PriceInput({
         className="flex-1"
       />
       {onUnitChange ? (
-        <Select value={unit} onValueChange={(v) => onUnitChange(v as any)}>
+        <Select value={unit} onValueChange={(v) => v && onUnitChange && onUnitChange(v)}>
           <SelectTrigger className="w-32">
             <SelectValue />
           </SelectTrigger>

@@ -94,9 +94,9 @@ export function Sidebar({ variant = 'dashboard', collapsed = false, onCollapsedC
           <div className="space-y-1">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = item.exact 
-                ? pathname === item.href 
-                : pathname.startsWith(item.href);
+              const isActive = item.exact
+                ? pathname === item.href
+                : (pathname ? pathname.startsWith(item.href) : false);
               
               return (
                 <Link

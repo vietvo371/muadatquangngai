@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -17,14 +17,13 @@ import {
   RefreshCw,
 } from 'lucide-react';
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<'idle' | 'loading' | 'sent' | 'error'>('idle');
   const [email, setEmail] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
 
-  // Get email from URL params or session
   useEffect(() => {
     if (searchParams) {
       const emailParam = searchParams.get('email');
@@ -34,7 +33,6 @@ export default function VerifyEmailPage() {
     }
   }, [searchParams]);
 
-  // Countdown timer for resend
   useEffect(() => {
     if (resendCooldown > 0) {
       const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
@@ -47,16 +45,14 @@ export default function VerifyEmailPage() {
 
     setStatus('loading');
     try {
-      // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1500));
       setStatus('sent');
-      setResendCooldown(60); // 60 second cooldown
+      setResendCooldown(60);
     } catch {
       setStatus('error');
     }
   };
 
-  // Check if already verified (simulated)
   const isAlreadyVerified = searchParams?.get('verified') === 'true';
 
   if (isAlreadyVerified) {
@@ -93,7 +89,6 @@ export default function VerifyEmailPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Email Input */}
           <div className="space-y-2">
             <Label htmlFor="email">Email đã đăng ký</Label>
             <div className="relative">
@@ -109,7 +104,6 @@ export default function VerifyEmailPage() {
             </div>
           </div>
 
-          {/* Instructions */}
           <div className="bg-blue-50 rounded-lg p-4">
             <h4 className="font-medium text-blue-900 mb-2">Hướng dẫn:</h4>
             <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
@@ -134,7 +128,6 @@ export default function VerifyEmailPage() {
             </div>
           )}
 
-          {/* Resend Button */}
           <Button
             onClick={handleResend}
             disabled={!email || resendCooldown > 0 || status === 'loading'}
@@ -161,7 +154,6 @@ export default function VerifyEmailPage() {
 
           <Separator />
 
-          {/* Help Links */}
           <div className="text-center text-sm text-gray-500 space-y-2">
             <p>
               Không nhận được email? Kiểm tra thư mục spam.
@@ -183,5 +175,26 @@ export default function VerifyEmailPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function VerifyEmailLoading() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+      <Card className="w-full max-w-md">
+        <CardContent className="pt-6 text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-blue-600" />
+          <p className="mt-4 text-gray-500">Đang tải...</p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={<VerifyEmailLoading />}>
+      <VerifyEmailContent />
+    </Suspense>
   );
 }

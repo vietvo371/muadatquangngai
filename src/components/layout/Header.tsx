@@ -43,7 +43,7 @@ export function Header() {
           <nav className="hidden lg:flex items-center flex-1 justify-center">
             {mainNavLinks.map((link) => {
               const isActive = pathname === link.href ||
-                (link.href !== '/' && pathname.startsWith(link.href));
+                (pathname && link.href !== '/' && pathname.startsWith(link.href));
               return (
                 <Link
                   key={link.href}

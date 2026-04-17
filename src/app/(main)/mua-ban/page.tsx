@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { SearchBar } from '@/components/search/SearchBar';
@@ -17,16 +17,12 @@ import {
   Filter, 
   Grid3X3, 
   List, 
-  SlidersHorizontal,
   MapPin,
-  X,
   Home,
   Building,
   Map,
-  ChevronDown
 } from 'lucide-react';
 
-// Mock data
 const mockProperties = [
   {
     id: '1',
@@ -137,15 +133,111 @@ const directions = [
   { value: 'tay_nam', label: 'Tây Nam' },
 ];
 
-export default function PropertyListingPage() {
+function FilterPanel({
+  priceRange,
+  setPriceRange,
+  areaRange,
+  setAreaRange,
+  selectedDirection,
+  setSelectedDirection,
+  minBedrooms,
+  setMinBedrooms,
+}: any) {
+  return (
+    <div className="space-y-6">
+      <div>
+        <Label className="text-sm font-medium mb-3 block">Khoảng giá</Label>
+        <Slider
+          value={priceRange}
+          onValueChange={(v) => v && setPriceRange(v)}
+          min={0}
+          max={20000000000}
+          step={100000000}
+          className="mb-2"
+        />
+        <div className="flex justify-between text-sm text-gray-500">
+          <span>{(priceRange[0] / 1000000).toFixed(0)} triệu</span>
+          <span>{(priceRange[1] / 1000000000).toFixed(1)} tỷ</span>
+        </div>
+      </div>
+
+      <div>
+        <Label className="text-sm font-medium mb-3 block">Diện tích</Label>
+        <Slider
+          value={areaRange}
+          onValueChange={(v) => v && setAreaRange(v)}
+          min={0}
+          max={1000}
+          step={10}
+          className="mb-2"
+        />
+        <div className="flex justify-between text-sm text-gray-500">
+          <span>{areaRange[0]} m²</span>
+          <span>{areaRange[1]} m²</span>
+        </div>
+      </div>
+
+      <div>
+        <Label className="text-sm font-medium mb-3 block">Số phòng ngủ</Label>
+        <div className="flex gap-2">
+          {[0, 1, 2, 3, 4, 5].map((num) => (
+            <button
+              key={num}
+              onClick={() => setMinBedrooms(num)}
+              className={`w-10 h-10 rounded-lg border text-sm font-medium transition-colors ${
+                minBedrooms === num
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              {num === 0 ? 'Tất cả' : `${num}+`}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <Label className="text-sm font-medium mb-3 block">Hướng nhà</Label>
+        <Select value={selectedDirection} onValueChange={(v) => v && setSelectedDirection(v)}>
+          <SelectTrigger>
+            <SelectValue placeholder="Chọn hướng" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tất cả hướng</SelectItem>
+            {directions.map((dir) => (
+              <SelectItem key={dir.value} value={dir.value}>
+                {dir.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div>
+        <Label className="text-sm font-medium mb-3 block">Pháp lý</Label>
+        <div className="space-y-2">
+          {['Sổ đỏ', 'Sổ hồng', 'Hợp đồng mua bán', 'Đang chờ sổ'].map((legal) => (
+            <div key={legal} className="flex items-center gap-2">
+              <Checkbox id={legal} />
+              <Label htmlFor={legal} className="text-sm font-normal cursor-pointer">
+                {legal}
+              </Label>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PropertyListingContent() {
   const searchParams = useSearchParams();
-  const type = searchParams.get('type') || 'sale';
+  const type = searchParams?.get('type') || 'sale';
   
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   
-  // Filter states
   const [priceRange, setPriceRange] = useState([0, 20000000000]);
   const [areaRange, setAreaRange] = useState([0, 1000]);
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -155,10 +247,8 @@ export default function PropertyListingPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Search Section */}
       <section className="bg-white border-b">
         <div className="container mx-auto px-4 py-6">
-          {/* Type Tabs */}
           <div className="flex items-center gap-4 mb-4">
             <Link 
               href="/mua-ban"
@@ -182,14 +272,12 @@ export default function PropertyListingPage() {
             </Link>
           </div>
 
-          {/* Search Bar */}
           <SearchBar variant="listing" />
         </div>
       </section>
 
       <div className="container mx-auto px-4 py-6">
         <div className="flex gap-6">
-          {/* Left Sidebar - Categories */}
           <aside className="hidden lg:block w-64 flex-shrink-0">
             <div className="bg-white rounded-xl shadow-sm p-4">
               <h3 className="font-semibold text-gray-900 mb-4">Danh mục</h3>
@@ -227,13 +315,10 @@ export default function PropertyListingPage() {
             </div>
           </aside>
 
-          {/* Main Content */}
           <main className="flex-1">
-            {/* Toolbar */}
             <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
-                  {/* Mobile Filter Button */}
                   <Sheet open={showFilters} onOpenChange={setShowFilters}>
                     <SheetTrigger asChild>
                       <Button variant="outline" className="lg:hidden gap-2">
@@ -264,7 +349,6 @@ export default function PropertyListingPage() {
                 </div>
 
                 <div className="flex items-center gap-4">
-                  {/* Sort */}
                   <Select value={sortBy} onValueChange={(v) => v && setSortBy(v)}>
                     <SelectTrigger className="w-40">
                       <SelectValue placeholder="Sắp xếp" />
@@ -277,7 +361,6 @@ export default function PropertyListingPage() {
                     </SelectContent>
                   </Select>
 
-                  {/* View Toggle */}
                   <div className="flex gap-1">
                     <Button
                       variant={viewMode === 'grid' ? 'default' : 'outline'}
@@ -298,7 +381,6 @@ export default function PropertyListingPage() {
               </div>
             </div>
 
-            {/* Properties Grid/List */}
             {isLoading ? (
               <div className={viewMode === 'grid' 
                 ? 'grid md:grid-cols-2 xl:grid-cols-3 gap-6'
@@ -331,7 +413,6 @@ export default function PropertyListingPage() {
               </div>
             )}
 
-            {/* Pagination */}
             {mockProperties.length > 0 && (
               <div className="flex justify-center mt-8">
                 <div className="flex gap-2">
@@ -347,7 +428,6 @@ export default function PropertyListingPage() {
             )}
           </main>
 
-          {/* Desktop Filters Sidebar */}
           <aside className="hidden lg:block w-72 flex-shrink-0">
             <div className="bg-white rounded-xl shadow-sm p-4 sticky top-24">
               <div className="flex items-center justify-between mb-4">
@@ -379,105 +459,21 @@ export default function PropertyListingPage() {
   );
 }
 
-// Filter Panel Component
-function FilterPanel({
-  priceRange,
-  setPriceRange,
-  areaRange,
-  setAreaRange,
-  selectedDirection,
-  setSelectedDirection,
-  minBedrooms,
-  setMinBedrooms,
-}: any) {
+function PropertyListingLoading() {
   return (
-    <div className="space-y-6">
-      {/* Price Range */}
-      <div>
-        <Label className="text-sm font-medium mb-3 block">Khoảng giá</Label>
-        <Slider
-          value={priceRange}
-          onValueChange={(v) => v && setPriceRange(v)}
-          min={0}
-          max={20000000000}
-          step={100000000}
-          className="mb-2"
-        />
-        <div className="flex justify-between text-sm text-gray-500">
-          <span>{(priceRange[0] / 1000000).toFixed(0)} triệu</span>
-          <span>{(priceRange[1] / 1000000000).toFixed(1)} tỷ</span>
-        </div>
-      </div>
-
-      {/* Area Range */}
-      <div>
-        <Label className="text-sm font-medium mb-3 block">Diện tích</Label>
-        <Slider
-          value={areaRange}
-          onValueChange={(v) => v && setAreaRange(v)}
-          min={0}
-          max={1000}
-          step={10}
-          className="mb-2"
-        />
-        <div className="flex justify-between text-sm text-gray-500">
-          <span>{areaRange[0]} m²</span>
-          <span>{areaRange[1]} m²</span>
-        </div>
-      </div>
-
-      {/* Bedrooms */}
-      <div>
-        <Label className="text-sm font-medium mb-3 block">Số phòng ngủ</Label>
-        <div className="flex gap-2">
-          {[0, 1, 2, 3, 4, 5].map((num) => (
-            <button
-              key={num}
-              onClick={() => setMinBedrooms(num)}
-              className={`w-10 h-10 rounded-lg border text-sm font-medium transition-colors ${
-                minBedrooms === num
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              {num === 0 ? 'Tất cả' : `${num}+`}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Direction */}
-      <div>
-        <Label className="text-sm font-medium mb-3 block">Hướng nhà</Label>
-        <Select value={selectedDirection} onValueChange={(v) => v && setSelectedDirection(v)}>
-          <SelectTrigger>
-            <SelectValue placeholder="Chọn hướng" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tất cả hướng</SelectItem>
-            {directions.map((dir) => (
-              <SelectItem key={dir.value} value={dir.value}>
-                {dir.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Legal Documents */}
-      <div>
-        <Label className="text-sm font-medium mb-3 block">Pháp lý</Label>
-        <div className="space-y-2">
-          {['Sổ đỏ', 'Sổ hồng', 'Hợp đồng mua bán', 'Đang chờ sổ'].map((legal) => (
-            <div key={legal} className="flex items-center gap-2">
-              <Checkbox id={legal} />
-              <Label htmlFor={legal} className="text-sm font-normal cursor-pointer">
-                {legal}
-              </Label>
-            </div>
-          ))}
-        </div>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="text-center">
+        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+        <p className="text-gray-500">Đang tải...</p>
       </div>
     </div>
+  );
+}
+
+export default function PropertyListingPage() {
+  return (
+    <Suspense fallback={<PropertyListingLoading />}>
+      <PropertyListingContent />
+    </Suspense>
   );
 }

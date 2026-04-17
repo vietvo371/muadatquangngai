@@ -162,7 +162,7 @@ export default function EditPropertyPage({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Loại tin *</Label>
-                <Select value={formData.type} onValueChange={(v) => updateField('type', v)}>
+                <Select value={formData.type} onValueChange={(v) => v && updateField('type', v)}>
                   <SelectTrigger className="mt-1">
                     <SelectValue />
                   </SelectTrigger>
@@ -175,7 +175,7 @@ export default function EditPropertyPage({
 
               <div>
                 <Label>Danh mục *</Label>
-                <Select value={String(formData.category_id)} onValueChange={(v) => updateField('category_id', v)}>
+                <Select value={String(formData.category_id)} onValueChange={(v) => v && updateField('category_id', v)}>
                   <SelectTrigger className="mt-1">
                     <SelectValue />
                   </SelectTrigger>
@@ -257,7 +257,7 @@ export default function EditPropertyPage({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="bedrooms">Số phòng ngủ</Label>
-                <Select value={String(formData.bedrooms)} onValueChange={(v) => updateField('bedrooms', parseInt(v))}>
+                <Select value={String(formData.bedrooms)} onValueChange={(v) => v && updateField('bedrooms', parseInt(v))}>
                   <SelectTrigger className="mt-1">
                     <SelectValue />
                   </SelectTrigger>
@@ -271,7 +271,7 @@ export default function EditPropertyPage({
 
               <div>
                 <Label htmlFor="bathrooms">Số phòng tắm</Label>
-                <Select value={String(formData.bathrooms)} onValueChange={(v) => updateField('bathrooms', parseInt(v))}>
+                <Select value={String(formData.bathrooms)} onValueChange={(v) => v && updateField('bathrooms', parseInt(v))}>
                   <SelectTrigger className="mt-1">
                     <SelectValue />
                   </SelectTrigger>
@@ -287,7 +287,7 @@ export default function EditPropertyPage({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Hướng nhà</Label>
-                <Select value={formData.direction || ''} onValueChange={(v) => updateField('direction', v)}>
+                <Select value={formData.direction || ''} onValueChange={(v) => updateField('direction', v || '')}>
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Chọn hướng" />
                   </SelectTrigger>
@@ -306,7 +306,7 @@ export default function EditPropertyPage({
 
               <div>
                 <Label>Giấy tờ pháp lý</Label>
-                <Select value={formData.legal_doc || ''} onValueChange={(v) => updateField('legal_doc', v)}>
+                <Select value={formData.legal_doc || ''} onValueChange={(v) => updateField('legal_doc', v || '')}>
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Chọn loại giấy tờ" />
                   </SelectTrigger>

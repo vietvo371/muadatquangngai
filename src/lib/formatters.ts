@@ -1,6 +1,6 @@
 export function formatPrice(
   price: number,
-  unit: "total" | "per_m2" | "per_month" = "total"
+  unit?: string
 ): string {
   const billion = 1_000_000_000;
   const million = 1_000_000;

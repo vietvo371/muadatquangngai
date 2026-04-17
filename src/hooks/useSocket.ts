@@ -50,7 +50,7 @@ interface UseSocketReturn {
 // For now, this is a placeholder implementation
 // In production, integrate with Laravel Echo and Pusher/Soketi
 export function useSocket(): UseSocketReturn {
-  const { token, isAuthenticated } = useAuthStore();
+  const { accessToken: token, isAuthenticated } = useAuthStore();
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const callbacksRef = useRef(new Map<string, Set<EventCallback>>());

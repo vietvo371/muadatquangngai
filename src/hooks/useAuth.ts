@@ -4,13 +4,13 @@ import axios from '@/lib/axios';
 import type { User } from '@/types/user';
 
 export function useAuth() {
-  const { 
-    user, 
-    token, 
-    isAuthenticated, 
+  const {
+    user,
+    accessToken: token,
+    isAuthenticated,
     isLoading: storeLoading,
-    setUser, 
-    setToken, 
+    setUser,
+    setToken,
     setLoading,
     login: storeLogin,
     logout: storeLogout,

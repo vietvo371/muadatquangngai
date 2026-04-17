@@ -97,7 +97,7 @@ export function LocationSelect({ value, onChange }: LocationSelectProps) {
         <Select
           value={String(value.province_id)}
           onValueChange={(v) =>
-            onChange({
+            v && onChange({
               province_id: parseInt(v),
               district_id: 0,
               ward_id: 0,
@@ -120,7 +120,7 @@ export function LocationSelect({ value, onChange }: LocationSelectProps) {
         <Select
           value={String(value.district_id)}
           onValueChange={(v) =>
-            onChange({
+            v && onChange({
               ...value,
               district_id: parseInt(v),
               ward_id: 0,
@@ -144,7 +144,7 @@ export function LocationSelect({ value, onChange }: LocationSelectProps) {
         <Select
           value={String(value.ward_id)}
           onValueChange={(v) =>
-            onChange({
+            v && onChange({
               ...value,
               ward_id: parseInt(v),
             })

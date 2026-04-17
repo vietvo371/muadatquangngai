@@ -263,7 +263,7 @@ export default function DangTinPage() {
                   <Label>Danh mục</Label>
                   <Select
                     value={formData.category_id}
-                    onValueChange={(value) => updateFormData({ category_id: value })}
+                    onValueChange={(value) => updateFormData({ category_id: value || '' })}
                   >
                     <SelectTrigger className="mt-1">
                       <SelectValue placeholder="Chọn danh mục" />
@@ -437,7 +437,7 @@ export default function DangTinPage() {
                     <Label>Số phòng ngủ</Label>
                     <Select
                       value={String(formData.bedrooms || 0)}
-                      onValueChange={(value) => updateFormData({ bedrooms: parseInt(value) })}
+                      onValueChange={(value) => updateFormData({ bedrooms: parseInt(value || '0') })}
                     >
                       <SelectTrigger className="mt-1">
                         <SelectValue />
@@ -456,7 +456,7 @@ export default function DangTinPage() {
                     <Label>Số phòng tắm</Label>
                     <Select
                       value={String(formData.bathrooms || 0)}
-                      onValueChange={(value) => updateFormData({ bathrooms: parseInt(value) })}
+                      onValueChange={(value) => updateFormData({ bathrooms: parseInt(value || '0') })}
                     >
                       <SelectTrigger className="mt-1">
                         <SelectValue />
@@ -473,7 +473,7 @@ export default function DangTinPage() {
                     <Label>Hướng nhà</Label>
                     <Select
                       value={formData.direction || ''}
-                      onValueChange={(value) => updateFormData({ direction: value })}
+                      onValueChange={(value) => updateFormData({ direction: value || '' })}
                     >
                       <SelectTrigger className="mt-1">
                         <SelectValue placeholder="Chọn hướng" />
@@ -497,7 +497,7 @@ export default function DangTinPage() {
                   <Label>Tình trạng nội thất</Label>
                   <Select
                     value={formData.furniture || 'none'}
-                    onValueChange={(value) => updateFormData({ furniture: value })}
+                    onValueChange={(value) => updateFormData({ furniture: value || '' })}
                   >
                     <SelectTrigger className="mt-1">
                       <SelectValue />
