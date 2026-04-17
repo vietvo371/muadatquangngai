@@ -6,7 +6,7 @@ import Link from 'next/link';
 import {
   MapPin, Building, Home, Calendar, CheckCircle,
   Share2, Heart, ChevronRight,
-  Landmark, Ruler, LayoutGrid,
+  Ruler, LayoutGrid, GraduationCap, ShoppingCart, Trees, Cross, Clock,
 } from 'lucide-react';
 import { formatPrice } from '@/lib/formatters';
 import { ContactDialog } from '@/components/shared/ContactDialog';
@@ -76,6 +76,27 @@ Dự án được phát triển bởi Công ty CP Địa Ốc Quảng Ngãi, đ�
       a: 'Chủ đầu tư là Công ty CP Địa Ốc Quảng Ngãi.',
     },
   ],
+  mapUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3849.012!2d108.7859137!3d15.1319266!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3169ad3732456f77%3A0xce93b603f79b6e4e!2sDe+Palace+River+-+Nam+S%C3%B4ng+Tr%C3%A0!5e0!3m2!1svi!2svn!4v1700000000000!5m2!1svi!2svn',
+  nearbyPlaces: {
+    school: [
+      { name: 'Trường Tiểu học Trương Quang Trọng', address: 'P. Trương Quang Trọng, TP Quảng Ngãi', dist: '0,8 km', time: '2 phút' },
+      { name: 'THCS Lê Hồng Phong', address: 'P. Nghĩa Lộ, TP Quảng Ngãi', dist: '1,2 km', time: '3 phút' },
+      { name: 'THPT Lê Trung Đình', address: 'P. Nguyễn Nghiêm, TP Quảng Ngãi', dist: '1,5 km', time: '3 phút' },
+      { name: 'Trường Mầm non Hướng Dương', address: 'P. Trương Quang Trọng, TP Quảng Ngãi', dist: '0,5 km', time: '1 phút' },
+    ],
+    supermarket: [
+      { name: 'Co.opmart Quảng Ngãi', address: 'Đường Nguyễn Du, TP Quảng Ngãi', dist: '2,0 km', time: '4 phút' },
+      { name: 'Siêu thị Go! Quảng Ngãi', address: 'Đường Lê Lợi, TP Quảng Ngãi', dist: '2,5 km', time: '5 phút' },
+    ],
+    park: [
+      { name: 'Công viên Thiên Bút', address: 'P. Lê Hồng Phong, TP Quảng Ngãi', dist: '1,8 km', time: '4 phút' },
+      { name: 'Quảng trường Nguyễn Tự Tân', address: 'TP Quảng Ngãi', dist: '2,2 km', time: '5 phút' },
+    ],
+    hospital: [
+      { name: 'Bệnh viện Đa khoa Quảng Ngãi', address: 'Đường Hùng Vương, TP Quảng Ngãi', dist: '2,1 km', time: '4 phút' },
+      { name: 'Bệnh viện Y học cổ truyền QN', address: 'TP Quảng Ngãi', dist: '3,0 km', time: '6 phút' },
+    ],
+  },
   keywords: [
     'Bán căn hộ De Palace River',
     'Căn hộ view sông Trà Khúc',
@@ -133,6 +154,90 @@ const tabs = [
   { label: 'Vị trí', sub: 'Bản đồ dự án' },
   { label: 'Câu hỏi thường gặp', sub: 'Hỗ trợ thắc mắc' },
 ];
+
+type NearbyCategory = 'school' | 'supermarket' | 'park' | 'hospital';
+
+const nearbyTabs: { key: NearbyCategory; label: string; Icon: React.ElementType }[] = [
+  { key: 'school',      label: 'Trường học',  Icon: GraduationCap },
+  { key: 'supermarket', label: 'Siêu thị',    Icon: ShoppingCart  },
+  { key: 'park',        label: 'Công viên',   Icon: Trees         },
+  { key: 'hospital',    label: 'Bệnh viện',   Icon: Cross         },
+];
+
+interface NearbyProject {
+  name: string;
+  address: string;
+  mapUrl: string;
+  nearbyPlaces: Record<NearbyCategory, { name: string; address: string; dist: string; time: string }[]>;
+}
+
+function NearbyTab({ project }: { project: NearbyProject }) {
+  const [cat, setCat] = useState<NearbyCategory>('school');
+  const places = project.nearbyPlaces[cat];
+  return (
+    <div className="space-y-4">
+      <h2 className="text-base font-bold text-gray-900">Vị trí dự án {project.name}</h2>
+      <div className="flex items-center gap-1.5 text-sm text-gray-500">
+        <MapPin className="h-4 w-4 text-primary shrink-0" />
+        <span>{project.address}</span>
+      </div>
+
+      {/* Google Maps iframe */}
+      <div className="w-full h-64 rounded-xl overflow-hidden border border-gray-200">
+        <iframe
+          src={project.mapUrl}
+          width="100%"
+          height="100%"
+          style={{ border: 0 }}
+          allowFullScreen
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+        />
+      </div>
+
+      {/* Category tabs */}
+      <div className="border border-gray-200 rounded-xl overflow-hidden">
+        <div className="flex overflow-x-auto border-b border-gray-100">
+          {nearbyTabs.map(({ key, label, Icon }) => (
+            <button
+              key={key}
+              onClick={() => setCat(key)}
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm whitespace-nowrap border-b-2 transition-colors ${
+                cat === key
+                  ? 'border-primary text-primary font-semibold'
+                  : 'border-transparent text-gray-500 hover:text-gray-800'
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <p className="px-4 py-2 text-xs text-gray-500 bg-gray-50 border-b border-gray-100">
+          Có {places.length} {nearbyTabs.find(t => t.key === cat)?.label.toLowerCase()} trong vòng 5 km
+        </p>
+
+        <div className="divide-y divide-gray-50">
+          {places.map((p) => (
+            <div key={p.name} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors">
+              <div>
+                <p className="text-sm font-semibold text-gray-800">{p.name}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{p.address}</p>
+              </div>
+              <div className="text-right shrink-0 ml-4">
+                <p className="text-sm font-semibold text-gray-700">{p.dist}</p>
+                <p className="text-xs text-gray-400 flex items-center gap-0.5 justify-end">
+                  <Clock className="h-3 w-3" /> {p.time}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function ProjectDetailPage() {
   const [mainImg, setMainImg] = useState(0);
@@ -378,34 +483,7 @@ export default function ProjectDetailPage() {
 
                 {/* Tab 1 — Vị trí */}
                 {activeTab === 1 && (
-                  <div className="space-y-4">
-                    <h2 className="text-base font-bold text-gray-900">Vị trí dự án {project.name}</h2>
-                    <div className="flex items-center gap-1.5 text-sm text-gray-500 mb-3">
-                      <MapPin className="h-4 w-4 text-primary shrink-0" />
-                      <span>{project.address}</span>
-                    </div>
-                    {/* Map placeholder */}
-                    <div className="w-full h-64 bg-gray-100 rounded-xl flex items-center justify-center border border-gray-200">
-                      <div className="text-center text-gray-400">
-                        <Landmark className="h-10 w-10 mx-auto mb-2 opacity-40" />
-                        <p className="text-sm">Bản đồ vị trí dự án</p>
-                        <p className="text-xs mt-1">{project.address}</p>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3 mt-2">
-                      {[
-                        ['Trung tâm TP Quảng Ngãi', '3 km', '5 phút'],
-                        ['Bệnh viện Đa khoa Quảng Ngãi', '2.1 km', '4 phút'],
-                        ['Trường THPT Lê Trung Đình', '1.5 km', '3 phút'],
-                        ['Sân bay Chu Lai', '30 km', '40 phút'],
-                      ].map(([name, dist, time]) => (
-                        <div key={name} className="bg-gray-50 rounded-xl px-4 py-3">
-                          <p className="text-xs font-semibold text-gray-700 line-clamp-1">{name}</p>
-                          <p className="text-xs text-gray-400 mt-0.5">{dist} · {time}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                  <NearbyTab project={project} />
                 )}
 
                 {/* Tab 2 — FAQ */}
