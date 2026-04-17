@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" fill="none">
+  <rect width="80" height="80" rx="20" fill="#F5F3FF"/>
+  <circle cx="40" cy="40" r="20" fill="#7C3AED" opacity="0.1"/>
+  <circle cx="40" cy="40" r="20" stroke="#7C3AED" stroke-width="2.5"/>
+  <circle cx="40" cy="40" r="3" fill="#7C3AED"/>
+  <path d="M40 22v6M40 52v6M22 40h6M52 40h6" stroke="#7C3AED" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M40 28v6" stroke="#7C3AED" stroke-width="3" stroke-linecap="round"/>
+  <path d="M32 32l4 4" stroke="#7C3AED" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+  <path d="M44 36l4-4" stroke="#7C3AED" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+  <!-- needle pointing north-east -->
+  <path d="M40 40L50 30" stroke="#E11D48" stroke-width="3" stroke-linecap="round"/>
+  <path d="M40 40L32 48" stroke="#7C3AED" stroke-width="2.5" stroke-linecap="round" opacity="0.4"/>
+</svg>
