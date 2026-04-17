@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { SearchBar } from '@/components/search/SearchBar';
@@ -13,14 +14,15 @@ import { Label } from '@/components/ui/label';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PropertyCardSkeleton } from '@/components/property/PropertyCardSkeleton';
-import { 
-  Filter, 
-  Grid3X3, 
-  List, 
+import {
+  Filter,
+  Grid3X3,
+  List,
   MapPin,
   Home,
   Building,
   Map,
+  ArrowRight,
 } from 'lucide-react';
 
 const mockProperties = [
@@ -32,8 +34,8 @@ const mockProperties = [
     priceUnit: 'total' as const,
     area: 75,
     type: 'sale' as const,
-    thumbnail: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=600&h=400&fit=crop',
-    location: 'Đà Nẵng, Mỹ An',
+    thumbnail: '/images/image_data/Haus-Coastal.jpg',
+    location: 'Quảng Ngãi, TP Quảng Ngãi',
     bedrooms: 2,
     bathrooms: 2,
     isVip: 'vip' as const,
@@ -47,7 +49,7 @@ const mockProperties = [
     priceUnit: 'total' as const,
     area: 120,
     type: 'sale' as const,
-    thumbnail: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=600&h=400&fit=crop',
+    thumbnail: '/images/image_data/nha-pho-de-palace-river.jpg',
     location: 'Quảng Ngãi, Quảng Phú',
     bedrooms: 5,
     bathrooms: 4,
@@ -62,7 +64,7 @@ const mockProperties = [
     priceUnit: 'total' as const,
     area: 500,
     type: 'sale' as const,
-    thumbnail: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600&h=400&fit=crop',
+    thumbnail: '/images/image_data/shutterstock2065827521lyson-1701400873758.jpg',
     location: 'Quảng Ngãi, Tịnh An',
     bedrooms: 0,
     bathrooms: 0,
@@ -77,8 +79,8 @@ const mockProperties = [
     priceUnit: 'per_month' as const,
     area: 35,
     type: 'rent' as const,
-    thumbnail: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=600&h=400&fit=crop',
-    location: 'Đà Nẵng, Sơn Trà',
+    thumbnail: '/images/image_data/Haus-Coastal.jpg',
+    location: 'Quảng Ngãi, Trần Phú',
     bedrooms: 1,
     bathrooms: 1,
     isVip: 'normal' as const,
@@ -92,8 +94,8 @@ const mockProperties = [
     priceUnit: 'total' as const,
     area: 300,
     type: 'sale' as const,
-    thumbnail: 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=600&h=400&fit=crop',
-    location: 'Đà Nẵng, Sơn Trà',
+    thumbnail: '/images/image_data/nha-pho-de-palace-river.jpg',
+    location: 'Quảng Ngãi, Tịnh Hà',
     bedrooms: 4,
     bathrooms: 5,
     isVip: 'diamond' as const,
@@ -107,7 +109,7 @@ const mockProperties = [
     priceUnit: 'total' as const,
     area: 85,
     type: 'sale' as const,
-    thumbnail: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&h=400&fit=crop',
+    thumbnail: '/images/image_data/Starlight---suc-hut-den-tu-vi-tri-dac-dia-nhat-trung-tam-Quang-Ngai-suc-hut-3-1733900371-424-width1000height563.jpg',
     location: 'Quảng Ngãi, Trần Phú',
     bedrooms: 2,
     bathrooms: 2,
@@ -142,30 +144,39 @@ function FilterPanel({
   setSelectedDirection,
   minBedrooms,
   setMinBedrooms,
-}: any) {
+}: {
+  priceRange: number[];
+  setPriceRange: (v: number[]) => void;
+  areaRange: number[];
+  setAreaRange: (v: number[]) => void;
+  selectedDirection: string;
+  setSelectedDirection: (v: string) => void;
+  minBedrooms: number;
+  setMinBedrooms: (v: number) => void;
+}) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pt-4">
       <div>
-        <Label className="text-sm font-medium mb-3 block">Khoảng giá</Label>
+        <Label className="text-sm font-medium mb-3 block text-gray-700">Khoảng giá</Label>
         <Slider
           value={priceRange}
-          onValueChange={(v) => v && setPriceRange(v)}
+          onValueChange={(v) => v && setPriceRange(v as number[])}
           min={0}
           max={20000000000}
           step={100000000}
           className="mb-2"
         />
         <div className="flex justify-between text-sm text-gray-500">
-          <span>{(priceRange[0] / 1000000).toFixed(0)} triệu</span>
-          <span>{(priceRange[1] / 1000000000).toFixed(1)} tỷ</span>
+          <span>{priceRange[0] === 0 ? '0' : `${(priceRange[0] / 1000000).toFixed(0)} triệu`}</span>
+          <span>{priceRange[1] >= 20000000000 ? '20+ tỷ' : `${(priceRange[1] / 1000000000).toFixed(1)} tỷ`}</span>
         </div>
       </div>
 
       <div>
-        <Label className="text-sm font-medium mb-3 block">Diện tích</Label>
+        <Label className="text-sm font-medium mb-3 block text-gray-700">Diện tích</Label>
         <Slider
           value={areaRange}
-          onValueChange={(v) => v && setAreaRange(v)}
+          onValueChange={(v) => v && setAreaRange(v as number[])}
           min={0}
           max={1000}
           step={10}
@@ -173,12 +184,12 @@ function FilterPanel({
         />
         <div className="flex justify-between text-sm text-gray-500">
           <span>{areaRange[0]} m²</span>
-          <span>{areaRange[1]} m²</span>
+          <span>{areaRange[1] >= 1000 ? '1000+ m²' : `${areaRange[1]} m²`}</span>
         </div>
       </div>
 
       <div>
-        <Label className="text-sm font-medium mb-3 block">Số phòng ngủ</Label>
+        <Label className="text-sm font-medium mb-3 block text-gray-700">Số phòng ngủ</Label>
         <div className="flex gap-2">
           {[0, 1, 2, 3, 4, 5].map((num) => (
             <button
@@ -186,8 +197,8 @@ function FilterPanel({
               onClick={() => setMinBedrooms(num)}
               className={`w-10 h-10 rounded-lg border text-sm font-medium transition-colors ${
                 minBedrooms === num
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'border-gray-200 hover:border-gray-300'
+                  ? 'bg-primary text-white border-primary'
+                  : 'border-gray-200 hover:border-primary text-gray-600'
               }`}
             >
               {num === 0 ? 'Tất cả' : `${num}+`}
@@ -197,7 +208,7 @@ function FilterPanel({
       </div>
 
       <div>
-        <Label className="text-sm font-medium mb-3 block">Hướng nhà</Label>
+        <Label className="text-sm font-medium mb-3 block text-gray-700">Hướng nhà</Label>
         <Select value={selectedDirection} onValueChange={(v) => v && setSelectedDirection(v)}>
           <SelectTrigger>
             <SelectValue placeholder="Chọn hướng" />
@@ -214,12 +225,12 @@ function FilterPanel({
       </div>
 
       <div>
-        <Label className="text-sm font-medium mb-3 block">Pháp lý</Label>
+        <Label className="text-sm font-medium mb-3 block text-gray-700">Pháp lý</Label>
         <div className="space-y-2">
           {['Sổ đỏ', 'Sổ hồng', 'Hợp đồng mua bán', 'Đang chờ sổ'].map((legal) => (
             <div key={legal} className="flex items-center gap-2">
               <Checkbox id={legal} />
-              <Label htmlFor={legal} className="text-sm font-normal cursor-pointer">
+              <Label htmlFor={legal} className="text-sm font-normal cursor-pointer text-gray-600">
                 {legal}
               </Label>
             </div>
@@ -233,11 +244,11 @@ function FilterPanel({
 function PropertyListingContent() {
   const searchParams = useSearchParams();
   const type = searchParams?.get('type') || 'sale';
-  
+
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  
+
   const [priceRange, setPriceRange] = useState([0, 20000000000]);
   const [areaRange, setAreaRange] = useState([0, 1000]);
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -246,225 +257,269 @@ function PropertyListingContent() {
   const [sortBy, setSortBy] = useState('newest');
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <section className="bg-white border-b">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center gap-4 mb-4">
-            <Link 
+    <div className="flex flex-col bg-white">
+
+      {/* ══════════════════════════════════
+          HERO + TABS
+      ══════════════════════════════════ */}
+      <section className="relative z-10">
+        <div className="absolute inset-0 overflow-hidden h-[280px] md:h-[340px]">
+          <Image
+            src="/images/image_data/banner_hero.jpg"
+            alt="Mua bán bất động sản Quảng Ngãi"
+            fill
+            className="object-cover object-center"
+            priority
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/10" />
+        </div>
+
+        <div className="relative z-10 max-w-6xl mx-auto px-4 pt-8 pb-6">
+          {/* Tabs */}
+          <div className="flex items-center gap-2 mb-5">
+            <Link
               href="/mua-ban"
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                type === 'sale' 
-                  ? 'bg-blue-600 text-white' 
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${
+                type === 'sale'
+                  ? 'bg-cta text-white shadow-lg'
+                  : 'bg-white/15 backdrop-blur-sm border border-white/25 text-white hover:bg-white/25'
               }`}
             >
               Mua bán
             </Link>
-            <Link 
+            <Link
               href="/cho-thue"
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                type === 'rent' 
-                  ? 'bg-blue-600 text-white' 
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${
+                type === 'rent'
+                  ? 'bg-cta text-white shadow-lg'
+                  : 'bg-white/15 backdrop-blur-sm border border-white/25 text-white hover:bg-white/25'
               }`}
             >
               Cho thuê
             </Link>
           </div>
 
-          <SearchBar variant="listing" />
+          {/* Search */}
+          <div className="w-full max-w-2xl bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20 shadow-2xl">
+            <SearchBar />
+          </div>
         </div>
       </section>
 
-      <div className="container mx-auto px-4 py-6">
-        <div className="flex gap-6">
-          <aside className="hidden lg:block w-64 flex-shrink-0">
-            <div className="bg-white rounded-xl shadow-sm p-4">
-              <h3 className="font-semibold text-gray-900 mb-4">Danh mục</h3>
-              <div className="space-y-2">
-                <button
-                  onClick={() => setSelectedCategory('all')}
-                  className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors ${
-                    selectedCategory === 'all' 
-                      ? 'bg-blue-50 text-blue-700' 
-                      : 'hover:bg-gray-50'
-                  }`}
-                >
-                  <span>Tất cả</span>
-                  <Badge variant="secondary">{mockProperties.length}</Badge>
-                </button>
-                {categories.map((cat) => {
-                  const Icon = cat.icon;
-                  return (
-                    <button
-                      key={cat.id}
-                      onClick={() => setSelectedCategory(cat.id)}
-                      className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors ${
-                        selectedCategory === cat.id 
-                          ? 'bg-blue-50 text-blue-700' 
-                          : 'hover:bg-gray-50'
-                      }`}
-                    >
-                      <Icon className="h-5 w-5" />
-                      <span className="flex-1 text-left">{cat.name}</span>
-                      <Badge variant="secondary">{cat.count}</Badge>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </aside>
-
-          <main className="flex-1">
-            <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <Sheet open={showFilters} onOpenChange={setShowFilters}>
-                    <SheetTrigger asChild>
-                      <Button variant="outline" className="lg:hidden gap-2">
-                        <Filter className="h-4 w-4" />
-                        Bộ lọc
-                      </Button>
-                    </SheetTrigger>
-                    <SheetContent side="left" className="w-80">
-                      <SheetHeader>
-                        <SheetTitle>Bộ lọc</SheetTitle>
-                      </SheetHeader>
-                      <FilterPanel 
-                        priceRange={priceRange}
-                        setPriceRange={setPriceRange}
-                        areaRange={areaRange}
-                        setAreaRange={setAreaRange}
-                        selectedDirection={selectedDirection}
-                        setSelectedDirection={setSelectedDirection}
-                        minBedrooms={minBedrooms}
-                        setMinBedrooms={setMinBedrooms}
-                      />
-                    </SheetContent>
-                  </Sheet>
-
-                  <p className="text-sm text-gray-500">
-                    <span className="font-semibold text-gray-900">{mockProperties.length}</span> tin đăng
-                  </p>
+      {/* ══════════════════════════════════
+          LISTING BODY
+      ══════════════════════════════════ */}
+      <section className="py-10 px-4 bg-gray-50 relative z-0 flex-1">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex gap-8">
+            {/* Left sidebar - Categories */}
+            <aside className="hidden lg:block w-60 shrink-0">
+              <div className="bg-white rounded-2xl shadow-sm p-4 sticky top-24">
+                <h3 className="font-bold text-gray-900 mb-4 text-sm uppercase tracking-wide">Danh mục</h3>
+                <div className="space-y-1">
+                  <button
+                    onClick={() => setSelectedCategory('all')}
+                    className={`w-full flex items-center justify-between p-3 rounded-xl text-sm font-medium transition-colors ${
+                      selectedCategory === 'all'
+                        ? 'bg-primary-light text-primary'
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span>Tất cả</span>
+                    <Badge variant="secondary" className="text-xs">{mockProperties.length}</Badge>
+                  </button>
+                  {categories.map((cat) => {
+                    const Icon = cat.icon;
+                    return (
+                      <button
+                        key={cat.id}
+                        onClick={() => setSelectedCategory(cat.id)}
+                        className={`w-full flex items-center gap-3 p-3 rounded-xl text-sm font-medium transition-colors ${
+                          selectedCategory === cat.id
+                            ? 'bg-primary-light text-primary'
+                            : 'text-gray-600 hover:bg-gray-50'
+                        }`}
+                      >
+                        <Icon className="h-4 w-4 shrink-0" />
+                        <span className="flex-1 text-left">{cat.name}</span>
+                        <Badge variant="secondary" className="text-xs">{cat.count}</Badge>
+                      </button>
+                    );
+                  })}
                 </div>
+              </div>
+            </aside>
 
-                <div className="flex items-center gap-4">
-                  <Select value={sortBy} onValueChange={(v) => v && setSortBy(v)}>
-                    <SelectTrigger className="w-40">
-                      <SelectValue placeholder="Sắp xếp" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="newest">Mới nhất</SelectItem>
-                      <SelectItem value="price_asc">Giá thấp → cao</SelectItem>
-                      <SelectItem value="price_desc">Giá cao → thấp</SelectItem>
-                      <SelectItem value="area_asc">Diện tích tăng dần</SelectItem>
-                    </SelectContent>
-                  </Select>
+            {/* Main content */}
+            <main className="flex-1 min-w-0">
+              {/* Toolbar */}
+              <div className="bg-white rounded-2xl shadow-sm p-4 mb-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <Sheet open={showFilters} onOpenChange={setShowFilters}>
+                      <SheetTrigger asChild>
+                        <Button variant="outline" className="lg:hidden gap-2 border-primary text-primary hover:bg-primary-light">
+                          <Filter className="h-4 w-4" />
+                          Bộ lọc
+                        </Button>
+                      </SheetTrigger>
+                      <SheetContent side="left" className="w-80">
+                        <SheetHeader>
+                          <SheetTitle>Bộ lọc</SheetTitle>
+                        </SheetHeader>
+                        <FilterPanel
+                          priceRange={priceRange}
+                          setPriceRange={setPriceRange}
+                          areaRange={areaRange}
+                          setAreaRange={setAreaRange}
+                          selectedDirection={selectedDirection}
+                          setSelectedDirection={setSelectedDirection}
+                          minBedrooms={minBedrooms}
+                          setMinBedrooms={setMinBedrooms}
+                        />
+                      </SheetContent>
+                    </Sheet>
 
-                  <div className="flex gap-1">
-                    <Button
-                      variant={viewMode === 'grid' ? 'default' : 'outline'}
-                      size="icon"
-                      onClick={() => setViewMode('grid')}
-                    >
-                      <Grid3X3 className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant={viewMode === 'list' ? 'default' : 'outline'}
-                      size="icon"
-                      onClick={() => setViewMode('list')}
-                    >
-                      <List className="h-4 w-4" />
-                    </Button>
+                    <p className="text-sm text-gray-500">
+                      <span className="font-semibold text-gray-900">{mockProperties.length}</span> tin đăng
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <Select value={sortBy} onValueChange={(v) => v && setSortBy(v)}>
+                      <SelectTrigger className="w-44">
+                        <SelectValue placeholder="Sắp xếp" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="newest">Mới nhất</SelectItem>
+                        <SelectItem value="price_asc">Giá thấp → cao</SelectItem>
+                        <SelectItem value="price_desc">Giá cao → thấp</SelectItem>
+                        <SelectItem value="area_asc">Diện tích tăng dần</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    <div className="flex gap-1 border border-gray-200 rounded-lg p-1">
+                      <button
+                        onClick={() => setViewMode('grid')}
+                        className={`p-1.5 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-primary text-white' : 'text-gray-400 hover:text-gray-600'}`}
+                      >
+                        <Grid3X3 className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => setViewMode('list')}
+                        className={`p-1.5 rounded-md transition-colors ${viewMode === 'list' ? 'bg-primary text-white' : 'text-gray-400 hover:text-gray-600'}`}
+                      >
+                        <List className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {isLoading ? (
-              <div className={viewMode === 'grid' 
-                ? 'grid md:grid-cols-2 xl:grid-cols-3 gap-6'
-                : 'space-y-4'
-              }>
-                {[...Array(6)].map((_, i) => (
-                  <PropertyCardSkeleton key={i} variant={viewMode} />
-                ))}
-              </div>
-            ) : mockProperties.length === 0 ? (
-              <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-                <div className="w-16 h-16 mx-auto rounded-full bg-gray-100 flex items-center justify-center mb-4">
-                  <MapPin className="h-8 w-8 text-gray-400" />
+              {/* Properties */}
+              {isLoading ? (
+                <div className={viewMode === 'grid'
+                  ? 'grid md:grid-cols-2 xl:grid-cols-2 gap-6'
+                  : 'space-y-4'
+                }>
+                  {[...Array(6)].map((_, i) => (
+                    <PropertyCardSkeleton key={i} variant={viewMode} />
+                  ))}
                 </div>
-                <h3 className="font-semibold text-gray-900 mb-2">Không tìm thấy tin đăng</h3>
-                <p className="text-gray-500 mb-4">Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm</p>
-                <Button variant="outline">Xóa bộ lọc</Button>
-              </div>
-            ) : viewMode === 'grid' ? (
-              <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {mockProperties.map((property) => (
-                  <PropertyCard key={property.id} property={property} />
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {mockProperties.map((property) => (
-                  <PropertyCard key={property.id} property={property} />
-                ))}
-              </div>
-            )}
-
-            {mockProperties.length > 0 && (
-              <div className="flex justify-center mt-8">
-                <div className="flex gap-2">
-                  <Button variant="outline" disabled>←</Button>
-                  <Button variant="outline" className="bg-blue-600 text-white hover:bg-blue-700">1</Button>
-                  <Button variant="outline">2</Button>
-                  <Button variant="outline">3</Button>
-                  <Button variant="outline">...</Button>
-                  <Button variant="outline">10</Button>
-                  <Button variant="outline">→</Button>
+              ) : mockProperties.length === 0 ? (
+                <div className="bg-white rounded-2xl shadow-sm p-16 text-center">
+                  <div className="w-16 h-16 mx-auto rounded-full bg-gray-50 flex items-center justify-center mb-4">
+                    <MapPin className="h-8 w-8 text-gray-300" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900 mb-2">Không tìm thấy tin đăng</h3>
+                  <p className="text-gray-500 mb-4">Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm</p>
+                  <Button variant="outline" className="border-primary text-primary hover:bg-primary-light">
+                    Xóa bộ lọc
+                  </Button>
                 </div>
-              </div>
-            )}
-          </main>
+              ) : viewMode === 'grid' ? (
+                <div className="grid md:grid-cols-2 gap-6">
+                  {mockProperties.map((property) => (
+                    <PropertyCard key={property.id} property={property} />
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {mockProperties.map((property) => (
+                    <PropertyCard key={property.id} property={property} />
+                  ))}
+                </div>
+              )}
 
-          <aside className="hidden lg:block w-72 flex-shrink-0">
-            <div className="bg-white rounded-xl shadow-sm p-4 sticky top-24">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-gray-900">Bộ lọc</h3>
-                <Button variant="ghost" size="sm" className="text-blue-600">
-                  Xóa tất cả
+              {/* Pagination */}
+              {mockProperties.length > 0 && (
+                <div className="flex justify-center mt-10">
+                  <div className="flex gap-1.5">
+                    <Button variant="outline" size="icon" className="w-9 h-9" disabled>
+                      <ArrowRight className="h-4 w-4 rotate-180" />
+                    </Button>
+                    <Button className="w-9 h-9 bg-primary hover:bg-primary/90 text-white">1</Button>
+                    <Button variant="outline" className="w-9 h-9">2</Button>
+                    <Button variant="outline" className="w-9 h-9">3</Button>
+                    <Button variant="outline" className="w-9 h-9">...</Button>
+                    <Button variant="outline" className="w-9 h-9">10</Button>
+                    <Button variant="outline" size="icon" className="w-9 h-9">
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </main>
+
+            {/* Right sidebar - Filters */}
+            <aside className="hidden lg:block w-72 shrink-0">
+              <div className="bg-white rounded-2xl shadow-sm p-5 sticky top-24">
+                <div className="flex items-center justify-between mb-5">
+                  <h3 className="font-bold text-gray-900 text-sm uppercase tracking-wide">Bộ lọc</h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-primary text-xs h-7 px-2"
+                  >
+                    Xóa tất cả
+                  </Button>
+                </div>
+
+                <FilterPanel
+                  priceRange={priceRange}
+                  setPriceRange={setPriceRange}
+                  areaRange={areaRange}
+                  setAreaRange={setAreaRange}
+                  selectedDirection={selectedDirection}
+                  setSelectedDirection={setSelectedDirection}
+                  minBedrooms={minBedrooms}
+                  setMinBedrooms={setMinBedrooms}
+                />
+
+                <Button className="w-full mt-5 bg-primary hover:bg-primary/90">
+                  Áp dụng bộ lọc
                 </Button>
               </div>
-              
-              <FilterPanel 
-                priceRange={priceRange}
-                setPriceRange={setPriceRange}
-                areaRange={areaRange}
-                setAreaRange={setAreaRange}
-                selectedDirection={selectedDirection}
-                setSelectedDirection={setSelectedDirection}
-                minBedrooms={minBedrooms}
-                setMinBedrooms={setMinBedrooms}
-              />
-
-              <Button className="w-full mt-4 bg-blue-600 hover:bg-blue-700">
-                Áp dụng bộ lọc
-              </Button>
-            </div>
-          </aside>
+            </aside>
+          </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }
 
 function PropertyListingLoading() {
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="text-center">
-        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-        <p className="text-gray-500">Đang tải...</p>
+    <div className="flex flex-col bg-white min-h-screen">
+      <div className="h-[280px] bg-gray-200 animate-pulse" />
+      <div className="py-10 px-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <PropertyCardSkeleton key={i} />
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

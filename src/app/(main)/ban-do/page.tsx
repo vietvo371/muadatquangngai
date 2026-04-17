@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -24,58 +25,60 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
-  Home,
-  Filter,
+  Layers,
+  Locate,
 } from 'lucide-react';
 import { formatPrice } from '@/lib/formatters';
 
-// Mock property data for map markers
 const propertiesOnMap = [
   {
-    id: 1,
-    title: 'Căn hộ cao cấp 2PN view biển',
-    price: 3500000000,
+    id: '1',
+    title: 'Căn hộ cao cấp 2PN view biển Mỹ Khê',
+    price: 2800000000,
     area: 75,
-    lat: 16.0544,
-    lng: 108.2022,
-    thumbnail: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=100',
-    slug: 'can-ho-cao-cap-2pn-view-bien',
+    lat: 15.12,
+    lng: 108.80,
+    thumbnail: '/images/image_data/Haus-Coastal.jpg',
+    slug: 'can-ho-cao-cap-2pn-view-bien-my-khe',
     type: 'apartment',
-    address: 'Đà Nẵng',
+    address: 'TP Quảng Ngãi',
+    location: 'Quảng Ngãi, TP Quảng Ngãi',
   },
   {
-    id: 2,
-    title: 'Nhà phố 3 tầng mặt tiền',
-    price: 4500000000,
+    id: '2',
+    title: 'Nhà mặt phố 3 tầng mặt tiền Quang Trung',
+    price: 6500000000,
     area: 120,
-    lat: 16.0604,
-    lng: 108.2092,
-    thumbnail: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=100',
-    slug: 'nha-pho-3-tang-mat-tien',
+    lat: 15.13,
+    lng: 108.81,
+    thumbnail: '/images/image_data/nha-pho-de-palace-river.jpg',
+    slug: 'nha-mat-pho-3-tang-mat-tien-quang-trung',
     type: 'townhouse',
-    address: 'Hải Châu, Đà Nẵng',
+    address: 'Quang Trung, TP Quảng Ngãi',
+    location: 'Quảng Ngãi, Trần Phú',
   },
   {
-    id: 3,
-    title: 'Đất nền KDC An Phú Quý',
+    id: '3',
+    title: 'Đất nền dự án ven biển Lý Sơn 500m2',
     price: 1800000000,
-    area: 200,
-    lat: 16.0484,
-    lng: 108.1922,
-    thumbnail: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=100',
-    slug: 'dat-nen-kdc-an-phu-quy',
+    area: 500,
+    lat: 15.48,
+    lng: 109.12,
+    thumbnail: '/images/image_data/shutterstock2065827521lyson-1701400873758.jpg',
+    slug: 'dat-nen-du-an-ven-bien-ly-son-500m2',
     type: 'land',
-    address: 'Quảng Ngãi',
+    address: 'Lý Sơn, Quảng Ngãi',
+    location: 'Quảng Ngãi, Lý Sơn',
   },
 ];
 
+type ViewMode = 'map' | 'list' | 'split';
+
 export default function MapSearchPage() {
-  const [viewMode, setViewMode] = useState<'map' | 'list' | 'split'>('split');
+  const [viewMode, setViewMode] = useState<ViewMode>('split');
   const [selectedProperty, setSelectedProperty] = useState<typeof propertiesOnMap[0] | null>(null);
   const [showFilters, setShowFilters] = useState(false);
-  const mapRef = useRef<HTMLDivElement>(null);
 
-  // Filter state
   const [filters, setFilters] = useState({
     type: 'all',
     province: 'all',
@@ -86,30 +89,33 @@ export default function MapSearchPage() {
     bedrooms: 'all',
   });
 
-  const toggleViewMode = () => {
-    const modes: Array<'map' | 'list' | 'split'> = ['map', 'list', 'split'];
-    const currentIndex = modes.indexOf(viewMode);
-    setViewMode(modes[(currentIndex + 1) % modes.length]);
+  const cycleViewMode = () => {
+    const modes: ViewMode[] = ['split', 'map', 'list'];
+    const idx = modes.indexOf(viewMode);
+    setViewMode(modes[(idx + 1) % modes.length]);
   };
 
   return (
-    <div className="h-[calc(100vh-64px)] flex flex-col">
-      {/* Search Bar */}
-      <div className="bg-white border-b p-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center gap-4">
+    <div className="flex flex-col" style={{ height: 'calc(100vh - 64px)' }}>
+
+      {/* ══════════════════════════════════
+          SEARCH BAR
+      ══════════════════════════════════ */}
+      <div className="bg-white border-b px-4 py-3 shrink-0">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex items-center gap-3">
             {/* Search Input */}
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
-                placeholder="Tìm kiếm bất động sản..."
-                className="pl-9"
+                placeholder="Tìm kiếm bất động sản trên bản đồ..."
+                className="pl-10 h-10 rounded-xl bg-gray-50 border-gray-200 focus:bg-white"
               />
             </div>
 
-            {/* Quick Filters */}
+            {/* Quick Selects */}
             <Select value={filters.type} onValueChange={(v) => setFilters({ ...filters, type: v || 'all' })}>
-              <SelectTrigger className="w-40">
+              <SelectTrigger className="w-36 h-10">
                 <SelectValue placeholder="Loại BĐS" />
               </SelectTrigger>
               <SelectContent>
@@ -122,15 +128,15 @@ export default function MapSearchPage() {
             </Select>
 
             <Select value={filters.province} onValueChange={(v) => setFilters({ ...filters, province: v || 'all' })}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Tỉnh/TP" />
+              <SelectTrigger className="w-40 h-10">
+                <SelectValue placeholder="Khu vực" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tất cả</SelectItem>
-                <SelectItem value="dn">Đà Nẵng</SelectItem>
-                <SelectItem value="hcm">TP. HCM</SelectItem>
-                <SelectItem value="hn">Hà Nội</SelectItem>
-                <SelectItem value="qn">Quảng Nam</SelectItem>
+                <SelectItem value="all">Tất cả khu vực</SelectItem>
+                <SelectItem value="qn">TP Quảng Ngãi</SelectItem>
+                <SelectItem value="ls">Lý Sơn</SelectItem>
+                <SelectItem value="md">Mộ Đức</SelectItem>
+                <SelectItem value="bs">Bình Sơn</SelectItem>
               </SelectContent>
             </Select>
 
@@ -138,7 +144,7 @@ export default function MapSearchPage() {
               variant="outline"
               size="icon"
               onClick={() => setShowFilters(!showFilters)}
-              className={showFilters ? 'bg-blue-50' : ''}
+              className={`h-10 w-10 shrink-0 border-primary text-primary hover:bg-primary-light ${showFilters ? 'bg-primary text-white hover:bg-primary' : ''}`}
             >
               <SlidersHorizontal className="h-4 w-4" />
             </Button>
@@ -146,57 +152,63 @@ export default function MapSearchPage() {
             <Button
               variant="outline"
               size="icon"
-              onClick={toggleViewMode}
+              onClick={cycleViewMode}
+              className="h-10 w-10 shrink-0 border-gray-300"
             >
+              {viewMode === 'split' && <Layers className="h-4 w-4" />}
               {viewMode === 'map' && <List className="h-4 w-4" />}
               {viewMode === 'list' && <MapIcon className="h-4 w-4" />}
-              {viewMode === 'split' && (
-                <div className="flex">
-                  <MapIcon className="h-3 w-3" />
-                  <List className="h-3 w-3" />
-                </div>
-              )}
             </Button>
           </div>
 
           {/* Advanced Filters */}
           {showFilters && (
-            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="mt-3 p-4 bg-gray-50 rounded-xl">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <div>
-                  <Label>Giá tối thiểu</Label>
+                  <Label className="text-xs font-medium text-gray-500 mb-1 block">Giá tối thiểu</Label>
                   <Input
                     type="number"
                     placeholder="0"
                     value={filters.minPrice}
                     onChange={(e) => setFilters({ ...filters, minPrice: e.target.value })}
-                    className="mt-1"
+                    className="h-9 rounded-lg"
                   />
                 </div>
                 <div>
-                  <Label>Giá tối đa</Label>
+                  <Label className="text-xs font-medium text-gray-500 mb-1 block">Giá tối đa</Label>
                   <Input
                     type="number"
                     placeholder="10 tỷ"
                     value={filters.maxPrice}
                     onChange={(e) => setFilters({ ...filters, maxPrice: e.target.value })}
-                    className="mt-1"
+                    className="h-9 rounded-lg"
                   />
                 </div>
                 <div>
-                  <Label>Diện tích tối thiểu</Label>
+                  <Label className="text-xs font-medium text-gray-500 mb-1 block">Diện tích tối thiểu</Label>
                   <Input
                     type="number"
                     placeholder="0 m²"
                     value={filters.minArea}
                     onChange={(e) => setFilters({ ...filters, minArea: e.target.value })}
-                    className="mt-1"
+                    className="h-9 rounded-lg"
                   />
                 </div>
                 <div>
-                  <Label>Số phòng ngủ</Label>
+                  <Label className="text-xs font-medium text-gray-500 mb-1 block">Diện tích tối đa</Label>
+                  <Input
+                    type="number"
+                    placeholder="1000 m²"
+                    value={filters.maxArea}
+                    onChange={(e) => setFilters({ ...filters, maxArea: e.target.value })}
+                    className="h-9 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs font-medium text-gray-500 mb-1 block">Phòng ngủ</Label>
                   <Select value={filters.bedrooms} onValueChange={(v) => setFilters({ ...filters, bedrooms: v || 'all' })}>
-                    <SelectTrigger className="mt-1">
+                    <SelectTrigger className="h-9 rounded-lg">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -214,16 +226,23 @@ export default function MapSearchPage() {
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* ══════════════════════════════════
+          MAIN CONTENT
+      ══════════════════════════════════ */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Property List - Left Panel */}
+
+        {/* ── Property List Panel ── */}
         {viewMode !== 'map' && (
-          <div className={`${viewMode === 'split' ? 'w-[400px]' : 'w-full'} bg-white border-r overflow-y-auto`}>
+          <div className={`${viewMode === 'split' ? 'w-[400px]' : 'w-full'} bg-gray-50 overflow-y-auto border-r shrink-0`}>
             <div className="p-4">
+              {/* Header */}
               <div className="flex items-center justify-between mb-4">
-                <p className="text-sm text-gray-500">{propertiesOnMap.length} bất động sản</p>
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">{propertiesOnMap.length} bất động sản</p>
+                  <p className="text-xs text-gray-400">trên bản đồ</p>
+                </div>
                 <Select defaultValue="newest">
-                  <SelectTrigger className="w-32">
+                  <SelectTrigger className="w-32 h-8 text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -235,13 +254,16 @@ export default function MapSearchPage() {
                 </Select>
               </div>
 
-              <div className={`grid gap-4 ${viewMode === 'list' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
+              {/* Cards */}
+              <div className={`space-y-3 ${viewMode === 'list' ? 'grid md:grid-cols-2 lg:grid-cols-3' : ''}`}>
                 {propertiesOnMap.map((property) => (
                   <div
                     key={property.id}
                     onClick={() => setSelectedProperty(property)}
-                    className={`cursor-pointer transition-all ${
-                      selectedProperty?.id === property.id ? 'ring-2 ring-blue-500 rounded-lg' : ''
+                    className={`cursor-pointer transition-all rounded-xl ${
+                      selectedProperty?.id === property.id
+                        ? 'ring-2 ring-primary rounded-xl'
+                        : ''
                     }`}
                   >
                     <PropertyCard
@@ -252,11 +274,11 @@ export default function MapSearchPage() {
                         price: property.price,
                         area: property.area,
                         thumbnail: property.thumbnail,
-                        address: property.address,
-                        type: property.type,
+                        location: property.location,
+                        type: property.type as 'sale',
                         bedrooms: property.type !== 'land' ? 2 : undefined,
                       }}
-                      variant="compact"
+                      variant={viewMode === 'split' ? 'compact' : 'default'}
                     />
                   </div>
                 ))}
@@ -265,80 +287,122 @@ export default function MapSearchPage() {
           </div>
         )}
 
-        {/* Map - Right Panel */}
+        {/* ── Map Panel ── */}
         {viewMode !== 'list' && (
-          <div className={`${viewMode === 'split' ? 'flex-1' : 'flex-1'} relative bg-gray-100`} ref={mapRef}>
-            {/* Map Placeholder */}
-            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-blue-50 to-green-50">
-              <div className="text-center">
-                <MapIcon className="h-16 w-16 mx-auto text-gray-300 mb-4" />
-                <p className="text-gray-500 mb-2">Bản đồ tương tác</p>
-                <p className="text-sm text-gray-400">
-                  Tích hợp Google Maps / Mapbox / Leaflet
+          <div className="flex-1 relative bg-gray-100">
+
+            {/* Map placeholder */}
+            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/5 to-primary/10">
+              <div className="text-center max-w-sm">
+                <div className="w-20 h-20 mx-auto rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                  <MapIcon className="h-10 w-10 text-primary/40" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-700 mb-2">Bản đồ tương tác</h3>
+                <p className="text-sm text-gray-400 mb-5 leading-relaxed">
+                  Tích hợp Google Maps / Mapbox để hiển thị vị trí bất động sản trên bản đồ
                 </p>
-                <div className="mt-4 flex gap-2 justify-center">
+
+                {/* Property markers */}
+                <div className="flex flex-wrap gap-2 justify-center">
                   {propertiesOnMap.map((p) => (
                     <Badge
                       key={p.id}
                       variant={selectedProperty?.id === p.id ? 'default' : 'outline'}
-                      className="cursor-pointer"
+                      className={`cursor-pointer px-3 py-1.5 text-xs ${
+                        selectedProperty?.id === p.id
+                          ? 'bg-primary'
+                          : 'text-primary border-primary hover:bg-primary-light'
+                      }`}
                       onClick={() => setSelectedProperty(p)}
                     >
                       {formatPrice(p.price)}
                     </Badge>
                   ))}
                 </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-5 border-primary text-primary hover:bg-primary-light gap-1.5"
+                >
+                  <Locate className="h-3.5 w-3.5" />
+                  Tìm vị trí hiện tại
+                </Button>
               </div>
             </div>
 
-            {/* Map Controls */}
-            <div className="absolute top-4 right-4 flex flex-col gap-2">
-              <Button size="icon" variant="secondary">
+            {/* Map controls */}
+            <div className="absolute top-4 right-4 flex flex-col gap-1.5">
+              <Button size="icon" variant="secondary" className="h-9 w-9 shadow-md bg-white hover:bg-gray-50">
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <Button size="icon" variant="secondary">
+              <Button size="icon" variant="secondary" className="h-9 w-9 shadow-md bg-white hover:bg-gray-50">
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
 
+            {/* Legend */}
+            <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur-sm rounded-xl shadow-md px-3 py-2 flex items-center gap-4 text-xs">
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-full bg-cta" />
+                <span className="text-gray-600">Mua bán</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-full bg-primary" />
+                <span className="text-gray-600">Cho thuê</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-full bg-amber-400" />
+                <span className="text-gray-600">Dự án</span>
+              </div>
+            </div>
+
             {/* Selected Property Popup */}
             {selectedProperty && (
-              <div className="absolute bottom-4 left-4 right-4 md:left-auto md:w-80">
-                <Card className="shadow-lg">
-                  <CardContent className="p-4">
-                    <div className="flex gap-3">
-                      <img
+              <div className="absolute bottom-4 right-4 w-80 bg-white rounded-2xl shadow-2xl overflow-hidden">
+                <Card className="border-0 shadow-none">
+                  <CardContent className="p-0">
+                    {/* Image */}
+                    <div className="relative h-36">
+                      <Image
                         src={selectedProperty.thumbnail}
-                        alt=""
-                        className="w-20 h-16 rounded-lg object-cover"
+                        alt={selectedProperty.title}
+                        fill
+                        className="object-cover"
+                        sizes="320px"
                       />
-                      <div className="flex-1">
-                        <h3 className="font-semibold line-clamp-1">{selectedProperty.title}</h3>
-                        <p className="text-sm text-gray-500 flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {selectedProperty.address}
-                        </p>
-                        <div className="flex items-center justify-between mt-1">
-                          <span className="text-red-600 font-semibold">
-                            {formatPrice(selectedProperty.price)}
-                          </span>
-                          <span className="text-sm text-gray-500">{selectedProperty.area}m²</span>
-                        </div>
-                      </div>
                       <Button
                         size="icon"
-                        variant="ghost"
-                        className="h-8 w-8"
+                        variant="secondary"
+                        className="absolute top-2 right-2 h-7 w-7 shadow-md bg-white/90 hover:bg-white"
                         onClick={() => setSelectedProperty(null)}
                       >
-                        <X className="h-4 w-4" />
+                        <X className="h-3.5 w-3.5" />
                       </Button>
+                      <Badge className="absolute top-2 left-2 bg-primary text-white text-xs">
+                        {selectedProperty.type === 'apartment' ? 'Căn hộ' : selectedProperty.type === 'land' ? 'Đất nền' : 'Nhà phố'}
+                      </Badge>
                     </div>
-                    <Link href={`/mua-ban/${selectedProperty.slug}`}>
-                      <Button className="w-full mt-3" size="sm">
-                        Xem chi tiết
-                      </Button>
-                    </Link>
+
+                    {/* Info */}
+                    <div className="p-4">
+                      <h3 className="font-bold text-gray-900 text-sm line-clamp-2 mb-1.5 leading-snug">
+                        {selectedProperty.title}
+                      </h3>
+                      <div className="flex items-center gap-1 text-xs text-gray-500 mb-3">
+                        <MapPin className="h-3 w-3 text-gray-400 shrink-0" />
+                        <span>{selectedProperty.address}</span>
+                      </div>
+                      <div className="flex items-center justify-between mb-4">
+                        <p className="text-base font-bold text-cta">{formatPrice(selectedProperty.price)}</p>
+                        <p className="text-sm text-gray-500">{selectedProperty.area}m²</p>
+                      </div>
+                      <Link href={`/mua-ban/${selectedProperty.slug}`}>
+                        <Button className="w-full bg-primary hover:bg-primary/90 text-sm h-9">
+                          Xem chi tiết
+                        </Button>
+                      </Link>
+                    </div>
                   </CardContent>
                 </Card>
               </div>
