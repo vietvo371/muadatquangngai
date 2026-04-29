@@ -37,7 +37,7 @@ export function MapPicker({
   const initMap = useCallback(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
 
-    const initialCenter = value ? [value.lat, value.lng] : center;
+    const initialCenter: [number, number] = value ? [value.lat, value.lng] : center;
     const map = L.map(mapRef.current).setView(initialCenter, 15);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {

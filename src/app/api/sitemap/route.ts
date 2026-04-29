@@ -22,7 +22,7 @@ export async function GET() {
     console.error('Sitemap fetch error:', error);
   }
 
-  const staticPages = [
+  const staticPages: Array<{ url: string; lastmod?: string; priority: string; changefreq: string }> = [
     { url: '/', priority: '1.0', changefreq: 'daily' },
     { url: '/mua-ban', priority: '0.9', changefreq: 'daily' },
     { url: '/cho-thue', priority: '0.9', changefreq: 'daily' },

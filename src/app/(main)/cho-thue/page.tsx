@@ -121,19 +121,17 @@ function PropertyListingContent() {
       {/* ══════════════════════════════════
           SECTION 1 — HERO
       ══════════════════════════════════ */}
-      <section className="relative z-10">
-        {/* Hero image */}
-        <div className="absolute inset-0 overflow-hidden h-[380px] md:h-[440px]">
-          <Image
-            src="/images/image_data/banner_hero.jpg"
-            alt="Cho thuê bất động sản Quảng Ngãi"
-            fill
-            className="object-cover object-center"
-            priority
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/40 to-black/10" />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/20 via-transparent to-transparent" />
-        </div>
+      <section className="relative z-10 h-[380px] md:h-[440px]">
+        {/* Hero image — no overflow-hidden so SearchBar dropdown renders on top */}
+        <Image
+          src="/images/image_data/banner_hero.jpg"
+          alt="Cho thuê bất động sản Quảng Ngãi"
+          fill
+          className="object-cover object-center"
+          priority
+        />
+        {/* Gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/40 to-black/10 pointer-events-none" />
 
         <div className="relative z-10 max-w-6xl mx-auto px-4 pt-10 pb-8 md:pt-12 md:pb-10 flex flex-col items-center gap-5">
 

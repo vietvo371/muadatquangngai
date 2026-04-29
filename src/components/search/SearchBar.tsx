@@ -40,7 +40,6 @@ export function SearchBar({ variant = 'hero', className }: SearchBarProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Debounced search
   useEffect(() => {
     if (keyword.length < 2) {
       setSuggestions([]);
@@ -50,11 +49,6 @@ export function SearchBar({ variant = 'hero', className }: SearchBarProps) {
     const timer = setTimeout(async () => {
       setIsLoading(true);
       try {
-        // TODO: Call API for suggestions
-        // const response = await api.get('/search/suggest', { params: { keyword } });
-        // setSuggestions(response.data);
-        
-        // Mock suggestions for now
         setSuggestions([
           { type: 'location', text: `${keyword} - Quảng Ngãi`, data: { province_id: 1 } },
           { type: 'location', text: `${keyword} - Đà Nẵng`, data: { province_id: 2 } },
@@ -71,14 +65,12 @@ export function SearchBar({ variant = 'hero', className }: SearchBarProps) {
     return () => clearTimeout(timer);
   }, [keyword]);
 
-  // Close suggestions on click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setShowSuggestions(false);
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
@@ -86,7 +78,6 @@ export function SearchBar({ variant = 'hero', className }: SearchBarProps) {
   const handleSearch = (searchKeyword?: string) => {
     const query = searchKeyword || keyword;
     if (!query.trim()) return;
-    
     setShowSuggestions(false);
     router.push(`/tim-kiem?q=${encodeURIComponent(query)}`);
   };
@@ -94,7 +85,6 @@ export function SearchBar({ variant = 'hero', className }: SearchBarProps) {
   const handleSuggestionClick = (suggestion: SearchSuggestion) => {
     setKeyword(suggestion.text);
     setShowSuggestions(false);
-    
     if (suggestion.type === 'location') {
       const params = new URLSearchParams();
       if (suggestion.data?.province_id) params.set('province_id', String(suggestion.data.province_id));
@@ -109,26 +99,21 @@ export function SearchBar({ variant = 'hero', className }: SearchBarProps) {
 
   const getSuggestionIcon = (type: string) => {
     switch (type) {
-      case 'location':
-        return <MapPin className="h-4 w-4 text-gray-400" />;
-      case 'property':
-        return <Building2 className="h-4 w-4 text-blue-500" />;
-      case 'project':
-        return <Clock className="h-4 w-4 text-green-500" />;
-      default:
-        return <Search className="h-4 w-4 text-gray-400" />;
+      case 'location': return <MapPin className="h-4 w-4 text-gray-400" />;
+      case 'property': return <Building2 className="h-4 w-4 text-primary" />;
+      case 'project': return <Clock className="h-4 w-4 text-primary" />;
+      default: return <Search className="h-4 w-4 text-gray-400" />;
     }
   };
 
   const isHero = variant === 'hero';
-  const isHeader = variant === 'header';
 
   return (
     <div ref={containerRef} className={cn('relative', className)}>
       {/* Search Input */}
       <div
         className={cn(
-          'relative flex items-center bg-white rounded-xl',
+          'relative flex items-center bg-white rounded-xl overflow-visible',
           isHero ? 'shadow-xl' : 'border shadow-sm',
           isHero ? 'h-14' : 'h-11'
         )}
@@ -163,7 +148,7 @@ export function SearchBar({ variant = 'hero', className }: SearchBarProps) {
           size={isHero ? 'default' : 'sm'}
           className={cn(
             'm-1 rounded-lg',
-            isHero ? 'bg-blue-600 hover:bg-blue-700 h-10 px-6' : 'bg-blue-600 hover:bg-blue-700'
+            isHero ? 'bg-primary hover:bg-primary/90 h-10 px-6' : 'bg-primary hover:bg-primary/90'
           )}
         >
           Tìm kiếm
@@ -173,7 +158,6 @@ export function SearchBar({ variant = 'hero', className }: SearchBarProps) {
       {/* Suggestions Dropdown */}
       {showSuggestions && (suggestions.length > 0 || popularSearches.length > 0) && (
         <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border overflow-hidden z-50">
-          {/* Suggestions */}
           {suggestions.length > 0 && (
             <div className="p-2">
               <p className="px-3 py-1 text-xs font-medium text-gray-500 uppercase">
@@ -183,7 +167,7 @@ export function SearchBar({ variant = 'hero', className }: SearchBarProps) {
                 <button
                   key={index}
                   onClick={() => handleSuggestionClick(suggestion)}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 rounded-lg text-left"
+                  className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-primary-light hover:text-primary rounded-lg text-left transition-colors"
                 >
                   {getSuggestionIcon(suggestion.type)}
                   <span className="text-gray-700">{suggestion.text}</span>
@@ -196,7 +180,6 @@ export function SearchBar({ variant = 'hero', className }: SearchBarProps) {
             </div>
           )}
 
-          {/* Popular Searches */}
           {!keyword && (
             <div className="p-2 border-t">
               <p className="px-3 py-1 text-xs font-medium text-gray-500 uppercase">
@@ -216,16 +199,15 @@ export function SearchBar({ variant = 'hero', className }: SearchBarProps) {
             </div>
           )}
 
-          {/* Quick Links */}
           <div className="p-2 border-t bg-gray-50">
             <div className="flex items-center gap-2">
-              <a href="/mua-ban" className="px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-lg">
+              <a href="/mua-ban" className="px-3 py-1.5 text-sm text-primary hover:bg-primary-light rounded-lg">
                 Mua bán
               </a>
-              <a href="/cho-thue" className="px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-lg">
+              <a href="/cho-thue" className="px-3 py-1.5 text-sm text-primary hover:bg-primary-light rounded-lg">
                 Cho thuê
               </a>
-              <a href="/du-an" className="px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-lg">
+              <a href="/du-an" className="px-3 py-1.5 text-sm text-primary hover:bg-primary-light rounded-lg">
                 Dự án
               </a>
             </div>

@@ -36,6 +36,8 @@ import {
   Trash2,
   CheckCircle,
   XCircle,
+  AlertTriangle,
+  Edit,
 } from 'lucide-react';
 import { formatPrice, formatDate } from '@/lib/formatters';
 
