@@ -149,7 +149,7 @@ export default function MessagesPage() {
                       </AvatarFallback>
                     </Avatar>
                     {conversation.participant.is_agent && (
-                      <div className="absolute -bottom-1 -right-1 bg-blue-500 text-white rounded-full p-0.5">
+                      <div className="absolute -bottom-1 -right-1 bg-primary text-white rounded-full p-0.5">
                         <Star className="h-3 w-3 fill-current" />
                       </div>
                     )}
@@ -192,7 +192,7 @@ export default function MessagesPage() {
                   {/* Unread badge */}
                   {conversation.unread_count > 0 && (
                     <div className="flex-shrink-0">
-                      <Badge variant="default" className="bg-blue-500">
+                      <Badge variant="default" className="bg-primary">
                         {conversation.unread_count}
                       </Badge>
                     </div>

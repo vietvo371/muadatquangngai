@@ -134,7 +134,7 @@ export default function AgentProfilePage({
         <div className="max-w-5xl mx-auto px-4 py-8">
           {/* Breadcrumb */}
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-6">
-            <Link href="/moi-gioi" className="hover:text-blue-600 flex items-center gap-1">
+            <Link href="/moi-gioi" className="hover:text-primary flex items-center gap-1">
               <ChevronLeft className="h-4 w-4" />
               Danh sách môi giới
             </Link>
@@ -151,7 +151,7 @@ export default function AgentProfilePage({
                   </AvatarFallback>
                 </Avatar>
                 {agent.verified && (
-                  <div className="absolute -bottom-2 -right-2 bg-blue-500 text-white rounded-full p-2">
+                  <div className="absolute -bottom-2 -right-2 bg-primary text-white rounded-full p-2">
                     <ShieldCheck className="h-4 w-4" />
                   </div>
                 )}

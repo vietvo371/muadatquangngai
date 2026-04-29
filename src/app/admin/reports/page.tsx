@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/ui/status-badge';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -101,12 +102,6 @@ const typeConfig = {
   spam: { label: 'Spam', color: 'bg-orange-100 text-orange-700', icon: Flag },
   inappropriate: { label: 'Không phù hợp', color: 'bg-yellow-100 text-yellow-700', icon: AlertTriangle },
   fraud: { label: 'Lừa đảo', color: 'bg-purple-100 text-purple-700', icon: User },
-};
-
-const statusConfig = {
-  pending: { label: 'Chờ xử lý', color: 'bg-yellow-100 text-yellow-700' },
-  resolved: { label: 'Đã xử lý', color: 'bg-green-100 text-green-700' },
-  dismissed: { label: 'Bác bỏ', color: 'bg-gray-100 text-gray-700' },
 };
 
 export default function AdminReportsPage() {
@@ -266,9 +261,7 @@ export default function AdminReportsPage() {
                   <Badge className={typeConfig[selectedReport.type as keyof typeof typeConfig].color}>
                     {typeConfig[selectedReport.type as keyof typeof typeConfig].label}
                   </Badge>
-                  <Badge variant="outline" className={statusConfig[selectedReport.status as keyof typeof statusConfig].color}>
-                    {statusConfig[selectedReport.status as keyof typeof statusConfig].label}
-                  </Badge>
+                  <StatusBadge status={selectedReport.status as 'pending' | 'resolved' | 'dismissed'} />
                 </div>
                 <p className="font-medium">{selectedReport.reason}</p>
                 <p className="text-sm text-gray-600">{selectedReport.description}</p>
@@ -341,7 +334,7 @@ export default function AdminReportsPage() {
                     onChange={(e) => setResolutionNote(e.target.value)}
                     placeholder="Ghi chú xử lý..."
                     rows={3}
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary"
                   />
                 </>
               )}
@@ -431,7 +424,6 @@ function ReportList({
             <TableBody>
               {reports.map((report) => {
                 const type = typeConfig[report.type as keyof typeof typeConfig];
-                const status = statusConfig[report.status as keyof typeof statusConfig];
 
                 return (
                   <TableRow key={report.id}>
@@ -453,9 +445,7 @@ function ReportList({
                       )}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className={status.color}>
-                        {status.label}
-                      </Badge>
+                      <StatusBadge status={report.status as 'pending' | 'resolved' | 'dismissed'} />
                     </TableCell>
                     <TableCell>
                       {formatDistanceToNow(new Date(report.created_at))}

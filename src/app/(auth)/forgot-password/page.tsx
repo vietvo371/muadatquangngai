@@ -55,7 +55,7 @@ export default function ForgotPasswordPage() {
               Không nhận được email? Kiểm tra thư mục spam hoặc{' '}
               <button
                 onClick={() => setIsSent(false)}
-                className="text-blue-600 hover:underline"
+                className="text-primary hover:underline"
               >
                 thử lại
               </button>
@@ -77,8 +77,8 @@ export default function ForgotPasswordPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Lock className="h-6 w-6 text-blue-600" />
+          <div className="w-12 h-12 bg-primary-light rounded-full flex items-center justify-center mx-auto mb-4">
+            <Lock className="h-6 w-6 text-primary" />
           </div>
           <CardTitle className="text-2xl">Quên mật khẩu</CardTitle>
           <CardDescription>
@@ -125,7 +125,7 @@ export default function ForgotPasswordPage() {
 
           <p className="text-center text-sm text-gray-500">
             Nhớ mật khẩu?{' '}
-            <Link href="/login" className="text-blue-600 hover:underline font-medium">
+            <Link href="/login" className="text-primary hover:underline font-medium">
               Đăng nhập
             </Link>
           </p>

@@ -17,8 +17,8 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { StatusBadge } from '@/components/ui/status-badge';
 import { 
   Select, 
   SelectContent, 
@@ -91,14 +91,6 @@ const mockProperties = [
     createdAt: '2024-01-12',
   },
 ];
-
-const statusConfig = {
-  active: { label: 'Đang hiển thị', color: 'bg-green-100 text-green-700' },
-  pending: { label: 'Chờ duyệt', color: 'bg-yellow-100 text-yellow-700' },
-  inactive: { label: 'Tạm ẩn', color: 'bg-gray-100 text-gray-600' },
-  rejected: { label: 'Từ chối', color: 'bg-red-100 text-red-700' },
-  expired: { label: 'Hết hạn', color: 'bg-red-100 text-red-700' },
-};
 
 export default function PropertyManagementPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -236,9 +228,7 @@ export default function PropertyManagementPage() {
       ) : (
         <Card>
           <div className="divide-y">
-            {filteredProperties.map((property) => {
-              const status = statusConfig[property.status as keyof typeof statusConfig];
-              return (
+            {filteredProperties.map((property) => (
                 <div
                   key={property.id}
                   className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors"
@@ -263,11 +253,11 @@ export default function PropertyManagementPage() {
                     <div className="flex items-center gap-2">
                       <Link
                         href={`/dashboard/quan-ly-tin/${property.id}/edit`}
-                        className="font-medium text-gray-900 hover:text-blue-600 truncate"
+                        className="font-medium text-gray-900 hover:text-primary truncate"
                       >
                         {property.title}
                       </Link>
-                      <Badge className={status.color}>{status.label}</Badge>
+                      <StatusBadge status={property.status as 'active' | 'pending' | 'inactive' | 'rejected' | 'expired'} />
                       {property.isVip !== 'normal' && (
                         <Badge variant="outline" className="text-yellow-600 border-yellow-300">
                           {property.isVip === 'vip' && 'VIP'}
@@ -313,8 +303,7 @@ export default function PropertyManagementPage() {
                     </Button>
                   </div>
                 </div>
-              );
-            })}
+            ))}
           </div>
         </Card>
       )}

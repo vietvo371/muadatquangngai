@@ -131,15 +131,15 @@ export default function NapTienPage() {
       </div>
 
       {/* Promotional Banner */}
-      <Card className="bg-gradient-to-r from-blue-600 to-purple-600 border-0 mb-8">
+      <Card className="bg-gradient-to-r from-primary to-primary-dark border-0 mb-8">
         <CardContent className="p-6 text-white">
           <div className="flex items-center gap-4">
             <Gift className="h-12 w-12" />
             <div>
               <h3 className="text-xl font-bold">Giảm 25% gói VIP 30 ngày!</h3>
-              <p className="text-blue-100">Chỉ còn 1,500,000đ - Tiết kiệm 500,000đ</p>
+              <p className="text-white/80">Chỉ còn 1,500,000đ - Tiết kiệm 500,000đ</p>
             </div>
-            <Badge className="ml-auto bg-white text-blue-600">Có hạn sử dụng</Badge>
+            <Badge className="ml-auto bg-white text-primary">Có hạn sử dụng</Badge>
           </div>
         </CardContent>
       </Card>
@@ -154,7 +154,7 @@ export default function NapTienPage() {
                 key={pkg.id}
                 className={`cursor-pointer transition-all ${
                   selectedPackage === pkg.id
-                    ? 'border-blue-500 ring-2 ring-blue-500'
+                    ? 'border-primary ring-2 ring-primary'
                     : 'hover:border-gray-300'
                 } ${pkg.popular ? 'relative' : ''}`}
                 onClick={() => setSelectedPackage(pkg.id)}
@@ -216,7 +216,7 @@ export default function NapTienPage() {
                       />
                       <Label
                         htmlFor={method.id}
-                        className="flex items-center gap-4 p-4 border rounded-lg cursor-pointer hover:bg-gray-50 peer-data-[state=checked]:border-blue-500 peer-data-[state=checked]:bg-blue-50 transition-colors"
+                        className="flex items-center gap-4 p-4 border rounded-lg cursor-pointer hover:bg-gray-50 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary-light transition-colors"
                       >
                         <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
                           <Icon className="h-5 w-5 text-gray-600" />
@@ -265,7 +265,7 @@ export default function NapTienPage() {
 
               <Button
                 onClick={handlePayment}
-                className="w-full mt-6 bg-blue-600 hover:bg-blue-700"
+                className="w-full mt-6 bg-primary hover:bg-primary-dark"
                 size="lg"
               >
                 <ShieldCheck className="h-4 w-4 mr-2" />
@@ -274,9 +274,9 @@ export default function NapTienPage() {
 
               <p className="text-xs text-gray-500 text-center mt-4">
                 Bằng việc thanh toán, bạn đồng ý với{' '}
-                <a href="/terms" className="text-blue-600 hover:underline">Điều khoản sử dụng</a>
+                <a href="/terms" className="text-primary hover:underline">Điều khoản sử dụng</a>
                 {' '}và{' '}
-                <a href="/privacy" className="text-blue-600 hover:underline">Chính sách bảo mật</a>
+                <a href="/privacy" className="text-primary hover:underline">Chính sách bảo mật</a>
               </p>
             </CardContent>
           </Card>

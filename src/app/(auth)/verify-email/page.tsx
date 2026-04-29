@@ -80,8 +80,8 @@ function VerifyEmailContent() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Mail className="h-6 w-6 text-blue-600" />
+          <div className="w-12 h-12 bg-primary-light rounded-full flex items-center justify-center mx-auto mb-4">
+            <Mail className="h-6 w-6 text-primary" />
           </div>
           <CardTitle className="text-2xl">Xác thực email</CardTitle>
           <CardDescription>
@@ -104,9 +104,9 @@ function VerifyEmailContent() {
             </div>
           </div>
 
-          <div className="bg-blue-50 rounded-lg p-4">
-            <h4 className="font-medium text-blue-900 mb-2">Hướng dẫn:</h4>
-            <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+          <div className="bg-primary-light rounded-lg p-4">
+            <h4 className="font-medium text-gray-900 mb-2">Hướng dẫn:</h4>
+            <ol className="text-sm text-gray-700 space-y-1 list-decimal list-inside">
               <li>Mở email từ BatDongSan</li>
               <li>Tìm email có tiêu đề "Xác thực email của bạn"</li>
               <li>Nhấp vào nút "Xác thực email"</li>
@@ -160,7 +160,7 @@ function VerifyEmailContent() {
             </p>
             <p>
               Email sai?{' '}
-              <Link href="/register" className="text-blue-600 hover:underline">
+              <Link href="/register" className="text-primary hover:underline">
                 Đăng ký lại
               </Link>
             </p>
@@ -183,7 +183,7 @@ function VerifyEmailLoading() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <Card className="w-full max-w-md">
         <CardContent className="pt-6 text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto text-blue-600" />
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
           <p className="mt-4 text-gray-500">Đang tải...</p>
         </CardContent>
       </Card>

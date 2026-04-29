@@ -114,8 +114,8 @@ export default function LoginPhonePage() {
   return (
     <div className="bg-white rounded-2xl shadow-lg p-8">
       <div className="text-center mb-8">
-        <div className="w-16 h-16 mx-auto rounded-full bg-blue-50 flex items-center justify-center mb-4">
-          <Phone className="h-8 w-8 text-blue-600" />
+        <div className="w-16 h-16 mx-auto rounded-full bg-primary-light flex items-center justify-center mb-4">
+          <Phone className="h-8 w-8 text-primary" />
         </div>
         <h1 className="text-2xl font-bold text-gray-900">
           {step === 'phone' ? 'Đăng nhập bằng SMS' : 'Nhập mã xác thực'}
@@ -155,7 +155,7 @@ export default function LoginPhonePage() {
 
           <Button 
             onClick={handleSendOtp} 
-            className="w-full h-12 bg-blue-600 hover:bg-blue-700"
+            className="w-full h-12 bg-primary hover:bg-primary-dark"
             disabled={isLoading || phone.length < 10}
           >
             {isLoading ? (
@@ -189,7 +189,7 @@ export default function LoginPhonePage() {
 
           <Button 
             onClick={() => handleVerifyOtp()} 
-            className="w-full h-12 bg-blue-600 hover:bg-blue-700"
+            className="w-full h-12 bg-primary hover:bg-primary-dark"
             disabled={isLoading || otp.join('').length !== 6}
           >
             {isLoading ? (
@@ -211,7 +211,7 @@ export default function LoginPhonePage() {
             ) : (
               <button
                 onClick={handleResendOtp}
-                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                className="text-sm text-primary hover:text-primary-dark font-medium"
               >
                 Gửi lại mã xác thực
               </button>
@@ -249,7 +249,7 @@ export default function LoginPhonePage() {
       {/* Register Link */}
       <p className="text-center text-sm text-gray-500 mt-6">
         Chưa có tài khoản?{' '}
-        <Link href="/register" className="text-blue-600 hover:text-blue-700 font-medium">
+        <Link href="/register" className="text-primary hover:text-primary-dark font-medium">
           Đăng ký ngay
         </Link>
       </p>

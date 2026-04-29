@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/ui/status-badge';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -115,12 +116,6 @@ const properties = [
   },
 ];
 
-const statusConfig = {
-  active: { label: 'Đang đăng', color: 'bg-green-100 text-green-700' },
-  pending: { label: 'Chờ duyệt', color: 'bg-yellow-100 text-yellow-700' },
-  inactive: { label: 'Đã ẩn', color: 'bg-gray-100 text-gray-700' },
-  expired: { label: 'Hết hạn', color: 'bg-red-100 text-red-700' },
-};
 
 const verificationConfig = {
   verified: { label: 'Đã xác minh', color: 'bg-green-100 text-green-700', icon: CheckCircle },
@@ -238,7 +233,6 @@ export default function AdminPropertiesPage() {
             </TableHeader>
             <TableBody>
               {filteredProperties.map((property) => {
-                const status = statusConfig[property.status as keyof typeof statusConfig];
                 const verification = verificationConfig[property.verification_status as keyof typeof verificationConfig];
                 const VerificationIcon = verification.icon;
 
@@ -267,7 +261,7 @@ export default function AdminPropertiesPage() {
                       <p className="font-medium">{property.user.name}</p>
                     </TableCell>
                     <TableCell>
-                      <Badge className={status.color}>{status.label}</Badge>
+                      <StatusBadge status={property.status as 'active' | 'pending' | 'inactive' | 'expired'} />
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
@@ -280,7 +274,7 @@ export default function AdminPropertiesPage() {
                     <TableCell>{formatDate(property.created_at)}</TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
+                        <DropdownMenuTrigger>
                           <Button size="icon" variant="ghost">
                             <MoreVertical className="h-4 w-4" />
                           </Button>
@@ -346,7 +340,7 @@ export default function AdminPropertiesPage() {
               onChange={(e) => setRejectReason(e.target.value)}
               placeholder="Lý do từ chối..."
               rows={4}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
             />
           </div>
           <DialogFooter>

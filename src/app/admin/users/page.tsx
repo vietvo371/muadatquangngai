@@ -105,14 +105,14 @@ const users = [
 
 const roleConfig = {
   admin: { label: 'Quản trị', color: 'bg-purple-100 text-purple-700' },
-  agent: { label: 'Môi giới', color: 'bg-blue-100 text-blue-700' },
+  agent: { label: 'Môi giới', color: 'bg-primary-light text-primary' },
   user: { label: 'Người dùng', color: 'bg-gray-100 text-gray-700' },
 };
 
 const statusConfig = {
-  active: { label: 'Hoạt động', color: 'bg-green-100 text-green-700' },
-  inactive: { label: 'Khóa', color: 'bg-red-100 text-red-700' },
-  banned: { label: 'Cấm', color: 'bg-gray-100 text-gray-700' },
+  active: { label: 'Hoạt động', className: 'bg-green-100 text-green-700' },
+  inactive: { label: 'Khóa', className: 'bg-red-100 text-red-700' },
+  banned: { label: 'Cấm', className: 'bg-gray-100 text-gray-700' },
 };
 
 export default function AdminUsersPage() {
@@ -184,7 +184,7 @@ export default function AdminUsersPage() {
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <p className="text-3xl font-bold text-blue-600">{agentCount}</p>
+            <p className="text-3xl font-bold text-primary">{agentCount}</p>
             <p className="text-sm text-gray-500">Môi giới</p>
           </CardContent>
         </Card>
@@ -295,7 +295,7 @@ export default function AdminUsersPage() {
                       <Badge className={role.color}>{role.label}</Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className={status.color}>
+                      <Badge variant="outline" className={status.className}>
                         {status.label}
                       </Badge>
                     </TableCell>
@@ -303,7 +303,7 @@ export default function AdminUsersPage() {
                     <TableCell>{formatDate(user.created_at)}</TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
+                        <DropdownMenuTrigger>
                           <Button size="icon" variant="ghost">
                             <MoreVertical className="h-4 w-4" />
                           </Button>
@@ -323,7 +323,7 @@ export default function AdminUsersPage() {
                           <DropdownMenuSeparator />
                           {user.role !== 'admin' && (
                             <DropdownMenuItem onClick={() => handleChangeRole(user, 'agent')}>
-                              <Shield className="h-4 w-4 mr-2 text-blue-600" />
+                              <Shield className="h-4 w-4 mr-2 text-primary" />
                               Phân quyền Môi giới
                             </DropdownMenuItem>
                           )}
@@ -422,7 +422,7 @@ export default function AdminUsersPage() {
               onChange={(e) => setBanReason(e.target.value)}
               placeholder="Lý do khóa tài khoản..."
               rows={4}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
             />
           </div>
           <DialogFooter>

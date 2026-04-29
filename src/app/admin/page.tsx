@@ -1,5 +1,7 @@
 'use client';
 
+import { StatusBadge } from '@/components/ui/status-badge';
+
 export default function AdminDashboardPage() {
   return (
     <div className="space-y-6">
@@ -41,11 +43,7 @@ export default function AdminDashboardPage() {
                   <p className="font-medium text-gray-900">{item.title}</p>
                   <p className="text-sm text-gray-500">{item.time}</p>
                 </div>
-                <span className={`px-2 py-1 rounded text-xs ${
-                  item.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                }`}>
-                  {item.status === 'active' ? 'Đã duyệt' : 'Chờ duyệt'}
-                </span>
+                <StatusBadge status={item.status === 'active' ? 'approved' : 'pending'} />
               </div>
             ))}
           </div>
@@ -64,9 +62,7 @@ export default function AdminDashboardPage() {
                   <p className="font-medium text-gray-900">{item.title}</p>
                   <p className="text-sm text-gray-500">{item.time}</p>
                 </div>
-                <span className="bg-red-100 text-red-700 px-2 py-1 rounded text-xs">
-                  {item.count} mới
-                </span>
+                <StatusBadge status="rejected" label={`${item.count} mới`} />
               </div>
             ))}
           </div>

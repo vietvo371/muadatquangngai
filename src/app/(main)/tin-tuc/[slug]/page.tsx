@@ -166,9 +166,9 @@ export default function BlogDetailPage({
         <div className="max-w-4xl mx-auto px-4 py-8">
           {/* Breadcrumb */}
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
-            <Link href="/" className="hover:text-blue-600">Trang chủ</Link>
+            <Link href="/" className="hover:text-primary">Trang chủ</Link>
             <ChevronRight className="h-4 w-4" />
-            <Link href="/tin-tuc" className="hover:text-blue-600">Tin tức</Link>
+            <Link href="/tin-tuc" className="hover:text-primary">Tin tức</Link>
             <ChevronRight className="h-4 w-4" />
             <span className="text-gray-900 line-clamp-1">{blogPost.title}</span>
           </div>
@@ -309,7 +309,7 @@ export default function BlogDetailPage({
                     <Badge variant="secondary" className="mb-2 text-xs">
                       {post.category}
                     </Badge>
-                    <h3 className="font-semibold line-clamp-2 hover:text-blue-600">
+                    <h3 className="font-semibold line-clamp-2 hover:text-primary">
                       {post.title}
                     </h3>
                     <p className="text-sm text-gray-500 mt-2">
@@ -336,7 +336,7 @@ export default function BlogDetailPage({
                 onChange={(e) => setNewComment(e.target.value)}
                 placeholder="Viết bình luận..."
                 rows={3}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary resize-none"
               />
               <div className="flex justify-end mt-3">
                 <Button>Đăng bình luận</Button>

@@ -114,7 +114,7 @@ export default function RegisterPage() {
           onClick={() => handleOAuthRegister('facebook')}
           className="h-11"
         >
-          <svg className="h-5 w-5 mr-2 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+          <svg className="h-5 w-5 mr-2 text-primary" fill="currentColor" viewBox="0 0 24 24">
             <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
           </svg>
           Facebook
@@ -220,21 +220,21 @@ export default function RegisterPage() {
             id="terms"
             checked={acceptTerms}
             onChange={(e) => setAcceptTerms(e.target.checked)}
-            className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
           />
           <label htmlFor="terms" className="text-sm text-gray-600">
             Tôi đã đọc và đồng ý với{' '}
-            <Link href="/dieu-khoan" className="text-blue-600 hover:underline">
+            <Link href="/dieu-khoan" className="text-primary hover:underline">
               Điều khoản sử dụng
             </Link>{' '}
             và{' '}
-            <Link href="/chinh-sach" className="text-blue-600 hover:underline">
+            <Link href="/chinh-sach" className="text-primary hover:underline">
               Chính sách bảo mật
             </Link>
           </label>
         </div>
 
-        <Button type="submit" className="w-full h-11 bg-blue-600 hover:bg-blue-700" disabled={isLoading}>
+        <Button type="submit" className="w-full h-11 bg-primary hover:bg-primary-dark" disabled={isLoading}>
           {isLoading ? (
             <>
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -249,7 +249,7 @@ export default function RegisterPage() {
       {/* Login Link */}
       <p className="text-center text-sm text-gray-500 mt-6">
         Đã có tài khoản?{' '}
-        <Link href="/login" className="text-blue-600 hover:text-blue-700 font-medium">
+        <Link href="/login" className="text-primary hover:text-primary-dark font-medium">
           Đăng nhập ngay
         </Link>
       </p>

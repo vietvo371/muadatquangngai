@@ -217,7 +217,7 @@ export default function ProfilePage() {
                       value={profileForm.bio}
                       onChange={(e) => setProfileForm({...profileForm, bio: e.target.value})}
                       rows={4}
-                      className="mt-1 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="mt-1 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
                       placeholder="Chia sẻ về bản thân..."
                     />
                   </div>
@@ -304,7 +304,7 @@ export default function ProfilePage() {
                       {[
                         { name: 'VIP', price: '500,000', color: 'bg-yellow-500', duration: '7 ngày' },
                         { name: 'VIP+', price: '1,500,000', color: 'bg-orange-500', duration: '30 ngày' },
-                        { name: 'Diamond', price: '3,000,000', color: 'bg-gradient-to-r from-blue-600 to-purple-600', duration: '30 ngày' },
+                        { name: 'Diamond', price: '3,000,000', color: 'bg-gradient-to-r from-primary to-primary-dark', duration: '30 ngày' },
                       ].map((pkg) => (
                         <Card key={pkg.name} className="relative overflow-hidden">
                           {pkg.name === 'VIP+' && (

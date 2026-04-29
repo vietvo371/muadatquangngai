@@ -198,3 +198,10 @@
 .nav-underline.active::after {
   transform: scaleX(1);
 }
+
+/* Ring */
+.ring-primary { --tw-ring-color: var(--brand-primary); }
+
+/* Focus states */
+.focus\:ring-primary:focus { --tw-ring-color: var(--brand-primary); }
+.focus\:border-primary:focus { border-color: var(--brand-primary); }

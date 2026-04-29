@@ -6,11 +6,9 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { SearchBar } from '@/components/search/SearchBar';
 import { PropertyCard } from '@/components/property/PropertyCard';
+import { FilterPanel } from '@/components/filters/FilterPanel';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Slider } from '@/components/ui/slider';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PropertyCardSkeleton } from '@/components/property/PropertyCardSkeleton';
@@ -94,109 +92,6 @@ const categories = [
   { id: 'van-phong', name: 'Văn phòng', icon: Map, count: 89 },
   { id: 'mat-bang', name: 'Mặt bằng', icon: Map, count: 156 },
 ];
-
-const directions = [
-  { value: 'dong', label: 'Đông' },
-  { value: 'tay', label: 'Tây' },
-  { value: 'nam', label: 'Nam' },
-  { value: 'bac', label: 'Bắc' },
-  { value: 'dong_bac', label: 'Đông Bắc' },
-  { value: 'dong_nam', label: 'Đông Nam' },
-  { value: 'tay_bac', label: 'Tây Bắc' },
-  { value: 'tay_nam', label: 'Tây Nam' },
-];
-
-function FilterPanel({
-  priceRange,
-  setPriceRange,
-  areaRange,
-  setAreaRange,
-  selectedDirection,
-  setSelectedDirection,
-  minBedrooms,
-  setMinBedrooms,
-}: {
-  priceRange: number[];
-  setPriceRange: (v: number[]) => void;
-  areaRange: number[];
-  setAreaRange: (v: number[]) => void;
-  selectedDirection: string;
-  setSelectedDirection: (v: string) => void;
-  minBedrooms: number;
-  setMinBedrooms: (v: number) => void;
-}) {
-  return (
-    <div className="space-y-6 pt-4">
-      <div>
-        <Label className="text-sm font-medium mb-3 block text-gray-700">Khoảng giá / tháng</Label>
-        <Slider
-          value={priceRange}
-          onValueChange={(v) => v && setPriceRange(v as number[])}
-          min={0}
-          max={100000000}
-          step={500000}
-          className="mb-2"
-        />
-        <div className="flex justify-between text-sm text-gray-500">
-          <span>{priceRange[0] === 0 ? '0' : `${(priceRange[0] / 1000000).toFixed(1)} triệu`}</span>
-          <span>{priceRange[1] >= 100000000 ? '100+ triệu' : `${(priceRange[1] / 1000000).toFixed(0)} triệu`}</span>
-        </div>
-      </div>
-
-      <div>
-        <Label className="text-sm font-medium mb-3 block text-gray-700">Diện tích</Label>
-        <Slider
-          value={areaRange}
-          onValueChange={(v) => v && setAreaRange(v as number[])}
-          min={0}
-          max={500}
-          step={10}
-          className="mb-2"
-        />
-        <div className="flex justify-between text-sm text-gray-500">
-          <span>{areaRange[0]} m²</span>
-          <span>{areaRange[1] >= 500 ? '500+ m²' : `${areaRange[1]} m²`}</span>
-        </div>
-      </div>
-
-      <div>
-        <Label className="text-sm font-medium mb-3 block text-gray-700">Số phòng ngủ</Label>
-        <div className="flex gap-2">
-          {[0, 1, 2, 3, 4].map((num) => (
-            <button
-              key={num}
-              onClick={() => setMinBedrooms(num)}
-              className={`w-10 h-10 rounded-lg border text-sm font-medium transition-colors ${
-                minBedrooms === num
-                  ? 'bg-primary text-white border-primary'
-                  : 'border-gray-200 hover:border-primary text-gray-600'
-              }`}
-            >
-              {num === 0 ? 'Tất cả' : `${num}+`}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <Label className="text-sm font-medium mb-3 block text-gray-700">Hướng nhà</Label>
-        <Select value={selectedDirection} onValueChange={(v) => v && setSelectedDirection(v)}>
-          <SelectTrigger>
-            <SelectValue placeholder="Chọn hướng" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tất cả hướng</SelectItem>
-            {directions.map((dir) => (
-              <SelectItem key={dir.value} value={dir.value}>
-                {dir.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-    </div>
-  );
-}
 
 function PropertyListingContent() {
   const searchParams = useSearchParams();
@@ -325,14 +220,15 @@ function PropertyListingContent() {
                           <SheetTitle>Bộ lọc</SheetTitle>
                         </SheetHeader>
                         <FilterPanel
+                          type="rent"
                           priceRange={priceRange}
-                          setPriceRange={setPriceRange}
+                          onPriceRangeChange={setPriceRange}
                           areaRange={areaRange}
-                          setAreaRange={setAreaRange}
+                          onAreaRangeChange={setAreaRange}
                           selectedDirection={selectedDirection}
-                          setSelectedDirection={setSelectedDirection}
+                          onDirectionChange={setSelectedDirection}
                           minBedrooms={minBedrooms}
-                          setMinBedrooms={setMinBedrooms}
+                          onBedroomsChange={setMinBedrooms}
                         />
                       </SheetContent>
                     </Sheet>
@@ -442,14 +338,15 @@ function PropertyListingContent() {
                 </div>
 
                 <FilterPanel
+                  type="rent"
                   priceRange={priceRange}
-                  setPriceRange={setPriceRange}
+                  onPriceRangeChange={setPriceRange}
                   areaRange={areaRange}
-                  setAreaRange={setAreaRange}
+                  onAreaRangeChange={setAreaRange}
                   selectedDirection={selectedDirection}
-                  setSelectedDirection={setSelectedDirection}
+                  onDirectionChange={setSelectedDirection}
                   minBedrooms={minBedrooms}
-                  setMinBedrooms={setMinBedrooms}
+                  onBedroomsChange={setMinBedrooms}
                 />
 
                 <Button className="w-full mt-5 bg-primary hover:bg-primary/90">

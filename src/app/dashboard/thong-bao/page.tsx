@@ -79,7 +79,7 @@ const notifications = [
 ];
 
 const typeConfig = {
-  property: { icon: Home, color: 'bg-blue-100 text-blue-600' },
+  property: { icon: Home, color: 'bg-primary-light text-primary' },
   message: { icon: MessageSquare, color: 'bg-green-100 text-green-600' },
   system: { icon: Bell, color: 'bg-yellow-100 text-yellow-600' },
   review: { icon: Star, color: 'bg-purple-100 text-purple-600' },
@@ -275,7 +275,7 @@ function NotificationList({
                     <div>
                       <h4 className={`font-medium ${isUnread ? 'text-gray-900' : 'text-gray-700'}`}>
                         {notification.title}
-                        {isUnread && <span className="ml-2 text-blue-500">●</span>}
+                        {isUnread && <span className="ml-2 text-primary">●</span>}
                       </h4>
                       <p className="text-sm text-gray-500 mt-1 line-clamp-2">
                         {notification.content}
@@ -287,7 +287,7 @@ function NotificationList({
 
                     {/* Actions */}
                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
+                      <DropdownMenuTrigger>
                         <Button size="icon" variant="ghost" className="h-8 w-8">
                           <MoreVertical className="h-4 w-4" />
                         </Button>

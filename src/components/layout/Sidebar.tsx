@@ -22,7 +22,9 @@ import {
   FileText,
   Users,
   AlertTriangle,
-  Package
+  Package,
+  Star,
+  Landmark
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores/authStore';
@@ -45,8 +47,10 @@ const adminNavItems = [
   { href: '/admin/properties', label: 'Quản lý tin', icon: Building2 },
   { href: '/admin/users', label: 'Quản lý users', icon: Users },
   { href: '/admin/categories', label: 'Danh mục', icon: Package },
+  { href: '/admin/packages', label: 'Gói VIP', icon: Star },
+  { href: '/admin/projects', label: 'Dự án', icon: Landmark },
+  { href: '/admin/transactions', label: 'Giao dịch', icon: CreditCard },
   { href: '/admin/reports', label: 'Báo cáo', icon: AlertTriangle },
-  { href: '/admin/verifications', label: 'Xác thực', icon: Shield },
 ];
 
 interface SidebarProps {

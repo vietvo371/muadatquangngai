@@ -12,7 +12,7 @@ export default async function AuthLayout({
       <header className="bg-white border-b">
         <div className="container mx-auto px-4 py-4">
           <a href="/" className="flex items-center gap-2 w-fit">
-            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center">
+            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center">
               <span className="text-white font-bold text-xl">B</span>
             </div>
             <span className="font-bold text-xl text-gray-900">BatDongSan</span>

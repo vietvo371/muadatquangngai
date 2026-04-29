@@ -186,7 +186,7 @@ export default function DangTinPage() {
                       isCompleted
                         ? 'bg-green-500 text-white'
                         : isActive
-                        ? 'bg-blue-600 text-white'
+                        ? 'bg-primary text-white'
                         : 'bg-gray-200 text-gray-500'
                     }`}
                   >
@@ -234,7 +234,7 @@ export default function DangTinPage() {
                       onClick={() => updateFormData({ type: 'sale', category_id: '' })}
                       className={`flex-1 p-4 border-2 rounded-lg text-center transition-colors ${
                         formData.type === 'sale'
-                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          ? 'border-primary bg-primary-light text-primary'
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
@@ -247,7 +247,7 @@ export default function DangTinPage() {
                       onClick={() => updateFormData({ type: 'rent', category_id: '' })}
                       className={`flex-1 p-4 border-2 rounded-lg text-center transition-colors ${
                         formData.type === 'rent'
-                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          ? 'border-primary bg-primary-light text-primary'
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >

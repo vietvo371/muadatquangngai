@@ -100,12 +100,12 @@ const property = {
     facebook: 'https://facebook.com/nguyenvana',
   },
   features: [
-    { id: 1, name: 'Hồ bơi', icon: '🏊' },
-    { id: 2, name: 'Gym', icon: '💪' },
-    { id: 3, name: 'Bảo vệ 24/7', icon: '🔒' },
-    { id: 4, name: 'Camera', icon: '📹' },
-    { id: 5, name: 'Thang máy', icon: '🛗' },
-    { id: 6, name: 'Điều hòa', icon: '❄️' },
+    { id: 1, name: 'Hồ bơi' },
+    { id: 2, name: 'Gym' },
+    { id: 3, name: 'Bảo vệ 24/7' },
+    { id: 4, name: 'Camera' },
+    { id: 5, name: 'Thang máy' },
+    { id: 6, name: 'Điều hòa' },
   ],
 };
 
@@ -180,11 +180,11 @@ export default function PropertyDetailPage({ params }: { params: { slug: string 
       <div className="bg-white border-b">
         <div className="container mx-auto px-4 py-3">
           <nav className="flex items-center gap-2 text-sm text-gray-500">
-            <Link href="/" className="hover:text-blue-600">Trang chủ</Link>
+            <Link href="/" className="hover:text-primary">Trang chủ</Link>
             <span>/</span>
-            <Link href="/mua-ban" className="hover:text-blue-600">Mua bán</Link>
+            <Link href="/mua-ban" className="hover:text-primary">Mua bán</Link>
             <span>/</span>
-            <Link href={`/mua-ban/${property.category.slug}`} className="hover:text-blue-600">
+            <Link href={`/mua-ban/${property.category.slug}`} className="hover:text-primary">
               {property.category.name}
             </Link>
             <span>/</span>
@@ -219,7 +219,7 @@ export default function PropertyDetailPage({ params }: { params: { slug: string 
                       {property.isVip === 'diamond' && '★ VIP'}
                     </Badge>
                   )}
-                  <Badge className={property.type === 'sale' ? 'bg-blue-600' : 'bg-green-600'}>
+                  <Badge className={property.type === 'sale' ? 'bg-primary' : 'bg-green-600'}>
                     {property.type === 'sale' ? 'Bán' : 'Cho thuê'}
                   </Badge>
                 </div>
@@ -273,7 +273,7 @@ export default function PropertyDetailPage({ params }: { params: { slug: string 
                       key={image.id}
                       onClick={() => setCurrentImageIndex(index)}
                       className={`w-20 h-14 rounded-lg overflow-hidden flex-shrink-0 border-2 transition-colors ${
-                        index === currentImageIndex ? 'border-blue-600' : 'border-transparent'
+                        index === currentImageIndex ? 'border-primary' : 'border-transparent'
                       }`}
                     >
                       <img src={image.url} alt="" className="w-full h-full object-cover" />
@@ -372,9 +372,9 @@ export default function PropertyDetailPage({ params }: { params: { slug: string 
                     <h2 className="font-semibold text-gray-900 mb-3">Tiện ích</h2>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                       {property.features.map((feature) => (
-                        <div key={feature.id} className="flex items-center gap-2 text-sm">
-                          <span>{feature.icon}</span>
-                          <span>{feature.name}</span>
+                        <div key={feature.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                          <CheckCircle className="h-4 w-4 text-primary flex-shrink-0" />
+                          <span className="text-sm">{feature.name}</span>
                         </div>
                       ))}
                     </div>
@@ -436,7 +436,7 @@ export default function PropertyDetailPage({ params }: { params: { slug: string 
                 {/* Contact Buttons */}
                 <div className="space-y-3">
                   <a href={`tel:${property.user.phone}`}>
-                    <Button className="w-full bg-blue-600 hover:bg-blue-700 gap-2">
+                    <Button className="w-full bg-primary hover:bg-primary-dark gap-2">
                       <Phone className="h-4 w-4" />
                       {property.user.phone}
                     </Button>

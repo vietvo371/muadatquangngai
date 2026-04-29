@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useAuthStore } from '@/stores/authStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/ui/status-badge';
 import { 
   Building2, 
   Eye, 
@@ -20,7 +20,7 @@ import {
 
 // Mock data for dashboard
 const stats = [
-  { label: 'Tin đăng', value: 5, icon: Building2, color: 'text-blue-600', bg: 'bg-blue-50' },
+  { label: 'Tin đăng', value: 5, icon: Building2, color: 'text-primary', bg: 'bg-primary-light' },
   { label: 'Lượt xem', value: 1234, icon: Eye, color: 'text-green-600', bg: 'bg-green-50' },
   { label: 'Tin đã lưu', value: 12, icon: Heart, color: 'text-red-600', bg: 'bg-red-50' },
   { label: 'Tin nhắn', value: 3, icon: MessageSquare, color: 'text-purple-600', bg: 'bg-purple-50' },
@@ -55,13 +55,6 @@ const recentProperties = [
     createdAt: '2024-01-13'
   },
 ];
-
-const statusConfig = {
-  active: { label: 'Đang hiển thị', color: 'bg-green-100 text-green-700' },
-  pending: { label: 'Chờ duyệt', color: 'bg-yellow-100 text-yellow-700' },
-  inactive: { label: 'Tạm ẩn', color: 'bg-gray-100 text-gray-600' },
-  expired: { label: 'Hết hạn', color: 'bg-red-100 text-red-700' },
-};
 
 export default function DashboardPage() {
   const { user } = useAuthStore();
@@ -126,22 +119,20 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {recentProperties.map((property) => {
-                  const status = statusConfig[property.status as keyof typeof statusConfig];
-                  return (
-                    <div 
+                {recentProperties.map((property) => (
+                    <div
                       key={property.id}
                       className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                     >
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <Link 
+                          <Link
                             href={`/mua-ban/${property.slug || property.id}`}
-                            className="font-medium text-gray-900 hover:text-blue-600 truncate"
+                            className="font-medium text-gray-900 hover:text-primary truncate"
                           >
                             {property.title}
                           </Link>
-                          <Badge className={status.color}>{status.label}</Badge>
+                          <StatusBadge status={property.status as 'active' | 'pending' | 'inactive' | 'expired'} />
                         </div>
                         <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
                           <span>{(property.price / 1000000).toFixed(0)} triệu</span>
@@ -161,8 +152,7 @@ export default function DashboardPage() {
                         </Button>
                       </Link>
                     </div>
-                  );
-                })}
+                ))}
               </div>
             </CardContent>
           </Card>
@@ -171,17 +161,17 @@ export default function DashboardPage() {
         {/* Quick Actions & Balance */}
         <div className="space-y-6">
           {/* Balance Card */}
-          <Card className="bg-gradient-to-br from-blue-600 to-blue-700 text-white">
+          <Card className="bg-gradient-to-br from-primary to-primary-dark text-white">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <span className="text-blue-100">Số dư tài khoản</span>
-                <CreditCard className="h-5 w-5 text-blue-200" />
+                <span className="text-white/80">Số dư tài khoản</span>
+                <CreditCard className="h-5 w-5 text-white/70" />
               </div>
               <p className="text-3xl font-bold mb-1">
                 {user?.balance?.toLocaleString('vi-VN') || '0'} đ
               </p>
               <Link href="/dashboard/nap-tien">
-                <Button size="sm" className="mt-4 bg-white text-blue-700 hover:bg-blue-50">
+                <Button size="sm" className="mt-4 bg-white text-primary hover:bg-primary-light">
                   <CreditCard className="h-4 w-4 mr-2" />
                   Nạp tiền
                 </Button>

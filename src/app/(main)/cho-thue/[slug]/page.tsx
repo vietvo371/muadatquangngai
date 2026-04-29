@@ -53,14 +53,14 @@ const property = {
   province: 'TP. Hồ Chí Minh',
   description: `Cho thuê căn hộ cao cấp 2 phòng ngủ tại Sunrise City, Quận 7.
 
-🏠 **Thông tin căn hộ:**
+**Thông tin căn hộ:**
 - Diện tích: 65m²
 - 2 phòng ngủ, 1 phòng tắm
 - Full nội thất cao cấp
 - View thành phố đẹp
 - Tầng 15/25 tầng
 
-🛋️ **Nội thất bao gồm:**
+**Nội thất bao gồm:**
 - Sofa da cao cấp
 - Tivi 55 inch
 - Điều hòa 2 chiều
@@ -68,16 +68,16 @@ const property = {
 - Bếp từ, máy hút mùi
 - Giường ngủ 1m6, tủ quần áo
 
-🚗 **Tiện ích:**
+**Tiện ích:**
 - Hồ bơi, phòng gym miễn phí
 - An ninh 24/7
 - Bãi đỗ xe rộng rãi
 - Gần trường học, bệnh viện
 
-💰 **Giá thuê:** 15 triệu/tháng
-⚠️ Chưa bao gồm: điện, nước, internet, phí quản lý 3.5 triệu/tháng
+**Giá thuê:** 15 triệu/tháng
+Chưa bao gồm: điện, nước, internet, phí quản lý 3.5 triệu/tháng
 
-📞 Liên hệ để xem nhà!`,
+Liên hệ để xem nhà!`,
   images: [
     { id: 1, url: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=1200', is_primary: true },
     { id: 2, url: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=1200', is_primary: false },
@@ -203,11 +203,11 @@ export default function RentDetailPage() {
         <div className="max-w-7xl mx-auto px-4 py-4">
           {/* Breadcrumb */}
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
-            <Link href="/cho-thue" className="hover:text-blue-600">
+            <Link href="/cho-thue" className="hover:text-primary">
               Cho thuê
             </Link>
             <ChevronRight className="h-4 w-4" />
-            <Link href="/cho-thue/can-ho" className="hover:text-blue-600">
+            <Link href="/cho-thue/can-ho" className="hover:text-primary">
               Căn hộ
             </Link>
             <ChevronRight className="h-4 w-4" />
@@ -248,7 +248,7 @@ export default function RentDetailPage() {
               <button
                 key={image.id}
                 className={`relative flex-shrink-0 w-24 h-16 rounded-lg overflow-hidden ${
-                  index === 0 ? 'ring-2 ring-blue-500' : ''
+                  index === 0 ? 'ring-2 ring-primary' : ''
                 }`}
                 onClick={() => {
                   setCurrentImageIndex(index);
@@ -437,7 +437,7 @@ export default function RentDetailPage() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-semibold">Tin tương tự</h3>
-                  <Link href="/cho-thue" className="text-sm text-blue-600 hover:underline flex items-center gap-1">
+                  <Link href="/cho-thue" className="text-sm text-primary hover:underline flex items-center gap-1">
                     Xem thêm
                     <ArrowRight className="h-3 w-3" />
                   </Link>

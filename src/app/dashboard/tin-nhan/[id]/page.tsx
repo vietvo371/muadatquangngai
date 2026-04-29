@@ -158,7 +158,7 @@ export default function ConversationPage({
       case 'delivered':
         return <CheckCheck className="h-3 w-3 text-gray-400" />;
       case 'read':
-        return <CheckCheck className="h-3 w-3 text-blue-500" />;
+        return <CheckCheck className="h-3 w-3 text-primary" />;
       default:
         return null;
     }
@@ -205,7 +205,7 @@ export default function ConversationPage({
             </Link>
 
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+              <DropdownMenuTrigger>
                 <Button size="icon" variant="ghost">
                   <MoreVertical className="h-4 w-4" />
                 </Button>
@@ -269,7 +269,7 @@ export default function ConversationPage({
                 <div
                   className={`px-4 py-2 rounded-2xl ${
                     isMe
-                      ? 'bg-blue-600 text-white rounded-br-md'
+                      ? 'bg-primary text-white rounded-br-md'
                       : 'bg-gray-100 text-gray-900 rounded-bl-md'
                   }`}
                 >
@@ -312,7 +312,7 @@ export default function ConversationPage({
             onClick={sendMessage}
             disabled={!newMessage.trim()}
             size="icon"
-            className="bg-blue-600 hover:bg-blue-700"
+            className="bg-primary hover:bg-primary-dark"
           >
             <Send className="h-4 w-4" />
           </Button>

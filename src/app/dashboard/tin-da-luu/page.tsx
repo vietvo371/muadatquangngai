@@ -172,7 +172,7 @@ export default function SavedPage() {
               {/* Menu */}
               <div className="absolute top-3 right-3 z-10">
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
+                  <DropdownMenuTrigger>
                     <Button size="icon" variant="secondary" className="h-8 w-8 rounded-full bg-white">
                       <MoreVertical className="h-4 w-4" />
                     </Button>
