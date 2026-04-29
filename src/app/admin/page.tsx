@@ -1,8 +1,17 @@
 'use client';
 
+import { Building2, Users, AlertTriangle, BarChart3 } from 'lucide-react';
+import { StatsGrid } from '@/components/admin';
 import { StatusBadge } from '@/components/ui/status-badge';
 
 export default function AdminDashboardPage() {
+  const stats = [
+    { label: 'Tin đăng', value: '1,234', change: '+12%', icon: Building2 },
+    { label: 'Người dùng', value: '5,678', change: '+8%', icon: Users },
+    { label: 'Tin chờ duyệt', value: '89', change: '-5%', icon: AlertTriangle },
+    { label: 'Báo cáo', value: '12', change: '-20%', icon: BarChart3 },
+  ];
+
   return (
     <div className="space-y-6">
       <div>
@@ -11,22 +20,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: 'Tin đăng', value: '1,234', change: '+12%', color: 'blue' },
-          { label: 'Người dùng', value: '5,678', change: '+8%', color: 'green' },
-          { label: 'Tin chờ duyệt', value: '89', change: '-5%', color: 'yellow' },
-          { label: 'Báo cáo', value: '12', change: '-20%', color: 'red' },
-        ].map((stat) => (
-          <div key={stat.label} className="bg-white p-6 rounded-xl shadow-sm">
-            <p className="text-sm text-gray-500">{stat.label}</p>
-            <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
-            <p className={`text-sm mt-1 ${stat.change.startsWith('+') ? 'text-green-600' : 'text-red-600'}`}>
-              {stat.change} so với tháng trước
-            </p>
-          </div>
-        ))}
-      </div>
+      <StatsGrid stats={stats} />
 
       {/* Recent Activity */}
       <div className="grid lg:grid-cols-2 gap-6">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { packageApi, Package } from '@/lib/admin-api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,6 +20,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { toast } from 'sonner';
 import { formatPrice } from '@/lib/formatters';
 
@@ -63,9 +70,9 @@ export default function AdminPackagesPage() {
     }
   };
 
-  useState(() => {
+  useEffect(() => {
     loadPackages();
-  });
+  }, []);
 
   const handleSubmit = async () => {
     try {
@@ -256,15 +263,19 @@ export default function AdminPackagesPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium">Loại</label>
-                <select
-                  className="w-full h-10 px-3 border rounded-md"
+                <Select
                   value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value as typeof formData.type })}
+                  onValueChange={(v) => setFormData({ ...formData, type: v as typeof formData.type })}
                 >
-                  <option value="vip">VIP</option>
-                  <option value="vip_plus">VIP+</option>
-                  <option value="diamond">Diamond</option>
-                </select>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="vip">VIP</SelectItem>
+                    <SelectItem value="vip_plus">VIP+</SelectItem>
+                    <SelectItem value="diamond">Diamond</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div>

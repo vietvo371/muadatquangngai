@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { categoryApi, Category } from '@/lib/admin-api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,9 +48,9 @@ export default function AdminCategoriesPage() {
     }
   };
 
-  useState(() => {
+  useEffect(() => {
     loadCategories();
-  });
+  }, []);
 
   const handleSubmit = async () => {
     try {
@@ -130,7 +130,7 @@ export default function AdminCategoriesPage() {
         </Button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm">
+      <div className="bg-white rounded-xl shadow-sm overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>

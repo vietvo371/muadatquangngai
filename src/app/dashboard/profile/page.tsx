@@ -308,7 +308,7 @@ export default function ProfilePage() {
                       ].map((pkg) => (
                         <Card key={pkg.name} className="relative overflow-hidden">
                           {pkg.name === 'VIP+' && (
-                            <div className="absolute top-0 left-0 right-0 bg-orange-500 text-white text-xs py-1 text-center">
+                            <div className="absolute top-0 left-0 right-0 bg-cta text-white text-xs py-1 text-center">
                               Phổ biến
                             </div>
                           )}

@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { transactionApi, Transaction } from '@/lib/admin-api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { FilterBar } from '@/components/admin';
 import {
   Table,
   TableBody,
@@ -20,6 +21,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { toast } from 'sonner';
 import { formatPrice } from '@/lib/formatters';
 
@@ -88,10 +96,10 @@ export default function AdminTransactionsPage() {
     }
   };
 
-  useState(() => {
+  useEffect(() => {
     loadTransactions();
     loadStats();
-  });
+  }, []);
 
   const handleFilter = () => {
     loadTransactions(1);
@@ -167,40 +175,38 @@ export default function AdminTransactionsPage() {
       )}
 
       {/* Filters */}
-      <div className="flex gap-4 items-end">
-        <div>
-          <label className="text-sm font-medium">Trạng thái</label>
-          <select
-            className="w-full h-10 px-3 border rounded-md mt-1"
-            value={filters.status}
-            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-          >
-            <option value="">Tất cả</option>
-            <option value="pending">Chờ duyệt</option>
-            <option value="success">Thành công</option>
-            <option value="failed">Thất bại</option>
-            <option value="refunded">Đã hoàn tiền</option>
-          </select>
-        </div>
-        <div>
-          <label className="text-sm font-medium">Loại</label>
-          <select
-            className="w-full h-10 px-3 border rounded-md mt-1"
-            value={filters.type}
-            onChange={(e) => setFilters({ ...filters, type: e.target.value })}
-          >
-            <option value="">Tất cả</option>
-            <option value="deposit">Nạp tiền</option>
-            <option value="purchase">Mua gói VIP</option>
-          </select>
-        </div>
-        <Button variant="outline" onClick={handleFilter}>
-          Lọc
-        </Button>
-      </div>
+      <FilterBar
+        filters={[
+          {
+            name: 'status',
+            placeholder: 'Trạng thái',
+            type: 'select',
+            value: filters.status,
+            onChange: (v) => setFilters({ ...filters, status: v }),
+            options: [
+              { value: 'pending', label: 'Chờ duyệt' },
+              { value: 'success', label: 'Thành công' },
+              { value: 'failed', label: 'Thất bại' },
+              { value: 'refunded', label: 'Đã hoàn tiền' },
+            ],
+          },
+          {
+            name: 'type',
+            placeholder: 'Loại',
+            type: 'select',
+            value: filters.type,
+            onChange: (v) => setFilters({ ...filters, type: v }),
+            options: [
+              { value: 'deposit', label: 'Nạp tiền' },
+              { value: 'purchase', label: 'Mua gói VIP' },
+            ],
+          },
+        ]}
+        onSearch={handleFilter}
+      />
 
       {/* Table */}
-      <div className="bg-white rounded-xl shadow-sm">
+      <div className="bg-white rounded-xl shadow-sm overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>

@@ -171,8 +171,8 @@ export default function DangTinPage() {
       </div>
 
       {/* Step Indicator */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
+      <div className="mb-8 overflow-x-auto pb-2">
+        <div className="flex items-start justify-between min-w-[600px] sm:min-w-0">
           {steps.map((step, index) => {
             const Icon = step.icon;
             const isActive = currentStep === step.id;
@@ -204,10 +204,9 @@ export default function DangTinPage() {
                 </div>
                 {index < steps.length - 1 && (
                   <div
-                    className={`w-full h-1 mx-4 ${
+                    className={`flex-1 h-1 mx-2 ${
                       isCompleted ? 'bg-green-500' : 'bg-gray-200'
                     }`}
-                    style={{ minWidth: '60px', maxWidth: '120px' }}
                   />
                 )}
               </div>
@@ -228,7 +227,7 @@ export default function DangTinPage() {
                 {/* Type */}
                 <div className="mb-6">
                   <Label className="mb-2 block">Loại tin đăng</Label>
-                  <div className="flex gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <button
                       type="button"
                       onClick={() => updateFormData({ type: 'sale', category_id: '' })}
@@ -426,8 +425,7 @@ export default function DangTinPage() {
                     value={formData.area || ''}
                     onChange={(e) => updateFormData({ area: parseInt(e.target.value) || 0 })}
                     placeholder="VD: 75"
-                    className="mt-1"
-                    style={{ maxWidth: '200px' }}
+                    className="mt-1 w-full max-w-[200px]"
                   />
                 </div>
 
@@ -559,7 +557,7 @@ export default function DangTinPage() {
           <Button
             onClick={handleSubmit}
             disabled={!canProceed() || isSubmitting}
-            className="gap-2 bg-orange-500 hover:bg-orange-600"
+            className="gap-2 bg-cta hover:bg-cta-dark"
           >
             {isSubmitting ? (
               <>

@@ -6,14 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { StatusBadge } from '@/components/ui/status-badge';
-import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { FilterBar } from '@/components/admin';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,17 +31,11 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
-  Search,
-  Filter,
   MoreVertical,
   Eye,
-  Edit,
   Trash2,
   CheckCircle,
   XCircle,
-  AlertTriangle,
-  Home,
-  Image as ImageIcon,
 } from 'lucide-react';
 import { formatPrice, formatDate } from '@/lib/formatters';
 
@@ -175,47 +162,42 @@ export default function AdminPropertiesPage() {
       </div>
 
       {/* Filters */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-wrap gap-4">
-            <div className="flex-1 min-w-[200px]">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Tìm kiếm tin đăng..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-            </div>
-
-            <Select value={statusFilter} onValueChange={(v) => v && setStatusFilter(v)}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Trạng thái" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả trạng thái</SelectItem>
-                <SelectItem value="active">Đang đăng</SelectItem>
-                <SelectItem value="pending">Chờ duyệt</SelectItem>
-                <SelectItem value="inactive">Đã ẩn</SelectItem>
-                <SelectItem value="expired">Hết hạn</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={typeFilter} onValueChange={(v) => v && setTypeFilter(v)}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Loại tin" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả loại</SelectItem>
-                <SelectItem value="sale">Mua bán</SelectItem>
-                <SelectItem value="rent">Cho thuê</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+      <FilterBar
+        filters={[
+          {
+            name: 'search',
+            type: 'search',
+            value: searchQuery,
+            onChange: setSearchQuery,
+          },
+          {
+            name: 'status',
+            placeholder: 'Trạng thái',
+            type: 'select',
+            value: statusFilter,
+            onChange: setStatusFilter,
+            options: [
+              { value: 'active', label: 'Đang đăng' },
+              { value: 'pending', label: 'Chờ duyệt' },
+              { value: 'inactive', label: 'Đã ẩn' },
+              { value: 'expired', label: 'Hết hạn' },
+            ],
+          },
+          {
+            name: 'type',
+            placeholder: 'Loại tin',
+            type: 'select',
+            value: typeFilter,
+            onChange: setTypeFilter,
+            options: [
+              { value: 'sale', label: 'Mua bán' },
+              { value: 'rent', label: 'Cho thuê' },
+            ],
+          },
+        ]}
+        onSearch={() => {}}
+        searchPlaceholder="Tìm kiếm tin đăng..."
+      />
 
       {/* Table */}
       <Card>

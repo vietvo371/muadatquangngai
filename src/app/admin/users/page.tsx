@@ -48,8 +48,12 @@ import {
   XCircle,
   Mail,
   Phone,
+  Users,
+  UserCheck,
+  UserX,
 } from 'lucide-react';
 import { formatDate } from '@/lib/formatters';
+import { StatsGrid } from '@/components/admin';
 
 // Mock users
 const users = [
@@ -175,34 +179,14 @@ export default function AdminUsersPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4 text-center">
-            <p className="text-3xl font-bold text-gray-900">{users.length}</p>
-            <p className="text-sm text-gray-500">Tổng người dùng</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <p className="text-3xl font-bold text-primary">{agentCount}</p>
-            <p className="text-sm text-gray-500">Môi giới</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <p className="text-3xl font-bold text-gray-600">{userCount}</p>
-            <p className="text-sm text-gray-500">Người dùng</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <p className="text-3xl font-bold text-red-600">
-              {users.filter(u => u.status === 'inactive' || u.status === 'banned').length}
-            </p>
-            <p className="text-sm text-gray-500">Bị khóa/Cấm</p>
-          </CardContent>
-        </Card>
-      </div>
+      <StatsGrid
+        stats={[
+          { label: 'Tổng người dùng', value: users.length, icon: Users },
+          { label: 'Môi giới', value: agentCount, icon: UserCheck },
+          { label: 'Người dùng', value: userCount, icon: Users },
+          { label: 'Bị khóa/Cấm', value: users.filter(u => u.status === 'inactive' || u.status === 'banned').length, icon: UserX },
+        ]}
+      />
 
       {/* Filters */}
       <Card>

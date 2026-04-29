@@ -43,6 +43,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { formatDate, formatDistanceToNow } from '@/lib/formatters';
+import { StatsGrid } from '@/components/admin';
 
 // Mock reports
 const reports = [
@@ -154,27 +155,14 @@ export default function AdminReportsPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4">
-        {Object.entries(typeConfig).map(([type, config]) => {
-          const count = reports.filter(r => r.type === type && r.status === 'pending').length;
-          const Icon = config.icon;
-          return (
-            <Card key={type}>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${config.color}`}>
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{count}</p>
-                    <p className="text-sm text-gray-500">{config.label}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      <StatsGrid
+        stats={[
+          { label: 'Tin giả', value: reports.filter(r => r.type === 'fake' && r.status === 'pending').length, icon: XCircle },
+          { label: 'Spam', value: reports.filter(r => r.type === 'spam' && r.status === 'pending').length, icon: Flag },
+          { label: 'Không phù hợp', value: reports.filter(r => r.type === 'inappropriate' && r.status === 'pending').length, icon: AlertTriangle },
+          { label: 'Lừa đảo', value: reports.filter(r => r.type === 'fraud' && r.status === 'pending').length, icon: User },
+        ]}
+      />
 
       {/* Tabs */}
       <Tabs defaultValue="all">

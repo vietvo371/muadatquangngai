@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { projectApi, Project } from '@/lib/admin-api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -55,9 +55,9 @@ export default function AdminProjectsPage() {
     }
   };
 
-  useState(() => {
+  useEffect(() => {
     loadProjects();
-  });
+  }, []);
 
   const handleSearch = () => {
     loadProjects(1);
@@ -128,7 +128,7 @@ export default function AdminProjectsPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl shadow-sm">
+      <div className="bg-white rounded-xl shadow-sm overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>

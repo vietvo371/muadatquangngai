@@ -21,9 +21,9 @@ import {
 // Mock data for dashboard
 const stats = [
   { label: 'Tin đăng', value: 5, icon: Building2, color: 'text-primary', bg: 'bg-primary-light' },
-  { label: 'Lượt xem', value: 1234, icon: Eye, color: 'text-green-600', bg: 'bg-green-50' },
-  { label: 'Tin đã lưu', value: 12, icon: Heart, color: 'text-red-600', bg: 'bg-red-50' },
-  { label: 'Tin nhắn', value: 3, icon: MessageSquare, color: 'text-purple-600', bg: 'bg-purple-50' },
+  { label: 'Lượt xem', value: 1234, icon: Eye, color: 'text-primary', bg: 'bg-primary-light' },
+  { label: 'Tin đã lưu', value: 12, icon: Heart, color: 'text-primary', bg: 'bg-primary-light' },
+  { label: 'Tin nhắn', value: 3, icon: MessageSquare, color: 'text-primary', bg: 'bg-primary-light' },
 ];
 
 const recentProperties = [
@@ -72,7 +72,7 @@ export default function DashboardPage() {
           </p>
         </div>
         <Link href="/dashboard/dang-tin">
-          <Button className="bg-orange-500 hover:bg-orange-600">
+          <Button className="bg-cta hover:bg-cta-dark">
             <Plus className="h-4 w-4 mr-2" />
             Đăng tin mới
           </Button>
@@ -213,17 +213,17 @@ export default function DashboardPage() {
           </Card>
 
           {/* Upgrade to VIP CTA */}
-          <Card className="border-orange-200 bg-orange-50">
+          <Card className="border-red-200 bg-red-50">
             <CardContent className="p-6 text-center">
-              <div className="w-12 h-12 mx-auto rounded-full bg-orange-100 flex items-center justify-center mb-3">
-                <TrendingUp className="h-6 w-6 text-orange-600" />
+              <div className="w-12 h-12 mx-auto rounded-full bg-red-100 flex items-center justify-center mb-3">
+                <TrendingUp className="h-6 w-6 text-red-600" />
               </div>
               <h3 className="font-semibold text-gray-900 mb-1">Nâng cấp VIP</h3>
               <p className="text-sm text-gray-600 mb-4">
                 Giúp tin đăng của bạn nổi bật hơn và tiếp cận nhiều khách hàng hơn
               </p>
               <Link href="/dashboard/profile?tab=vip">
-                <Button className="bg-orange-500 hover:bg-orange-600">
+                <Button className="bg-cta hover:bg-cta-dark">
                   Xem các gói VIP
                 </Button>
               </Link>

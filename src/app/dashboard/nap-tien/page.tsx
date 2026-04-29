@@ -160,7 +160,7 @@ export default function NapTienPage() {
                 onClick={() => setSelectedPackage(pkg.id)}
               >
                 {pkg.popular && (
-                  <Badge className="absolute -top-3 left-4 bg-orange-500">Phổ biến</Badge>
+                  <Badge className="absolute -top-3 left-4 bg-cta">Phổ biến</Badge>
                 )}
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between">
