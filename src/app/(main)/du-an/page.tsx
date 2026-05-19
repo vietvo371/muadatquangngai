@@ -4,10 +4,15 @@ import { useState, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
-  MapPin, Building, Home, Calendar,
-  ChevronRight, ChevronLeft, Search, RotateCcw,
+  MapPin,
+  Building,
+  ChevronRight,
+  ChevronLeft,
+  Search,
+  RotateCcw,
 } from 'lucide-react';
 import { formatPrice } from '@/lib/formatters';
+import { ProjectListCard } from '@/components/project/ProjectListCard';
 import { ContactDialog } from '@/components/shared/ContactDialog';
 
 const PAGE_SIZE = 4;
@@ -238,7 +243,7 @@ export default function DuAnPage() {
 
             {/* Slide content */}
             <div className="absolute bottom-0 left-0 right-0 px-6 md:px-10 pb-8 md:pb-10 z-10">
-              <div className="max-w-6xl mx-auto">
+              <div className="max-w-[1152px] mx-auto">
                 {(() => {
                   const st = statusConfig[p.status as keyof typeof statusConfig];
                   return (
@@ -287,8 +292,8 @@ export default function DuAnPage() {
       </div>
 
       {/* ══ FILTER BAR ══ */}
-      <div className="bg-gray-50 border-b border-gray-200 sticky top-0 z-30">
-        <div className="max-w-6xl mx-auto px-4 py-3">
+      <div className="sticky top-[60px] z-30 border-b border-gray-200 bg-gray-50">
+        <div className="max-w-[1152px] mx-auto px-4 py-3">
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-4 py-3 flex flex-wrap gap-3 items-end">
 
           {/* Search */}
@@ -371,14 +376,14 @@ export default function DuAnPage() {
       </div>
 
       {/* ══ BREADCRUMB ══ */}
-      <div className="max-w-6xl mx-auto px-4 pt-4 pb-1 flex items-center gap-1.5 text-xs text-gray-500">
+      <div className="max-w-[1152px] mx-auto px-4 pt-4 pb-1 flex items-center gap-1.5 text-xs text-gray-500">
         <Link href="/" className="hover:text-primary transition-colors">Trang chủ</Link>
         <ChevronRight className="h-3 w-3" />
         <span className="text-gray-800 font-medium">Dự án bất động sản Quảng Ngãi</span>
       </div>
 
       {/* ══ MAIN LAYOUT ══ */}
-      <div className="max-w-6xl mx-auto px-4 py-4">
+      <div className="max-w-[1152px] mx-auto px-4 py-4">
         <div className="flex gap-6 items-start">
 
           {/* ── Project list ── */}
@@ -388,83 +393,14 @@ export default function DuAnPage() {
             </p>
 
             <div className="flex flex-col gap-4">
-              {paginated.map((project) => {
-                const status = statusConfig[project.status as keyof typeof statusConfig];
-                return (
-                  <Link key={project.id} href={`/du-an/${project.slug}`}>
-                    <article className="bg-white rounded-xl border border-gray-100 overflow-hidden hover:shadow-md hover:border-primary/20 transition-all group flex flex-col sm:flex-row">
-                      {/* Thumbnail */}
-                      <div className="relative sm:w-60 md:w-72 h-48 sm:h-auto shrink-0">
-                        <Image
-                          src={project.thumbnail}
-                          alt={project.name}
-                          fill
-                          className="object-cover group-hover:scale-105 transition-transform duration-500"
-                          sizes="(max-width: 640px) 100vw, 288px"
-                        />
-                        <div className={`absolute top-3 left-3 flex items-center gap-1.5 ${status.bg} ${status.text} text-xs font-semibold px-2.5 py-1 rounded-full`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
-                          {status.label}
-                        </div>
-                      </div>
-
-                      {/* Info */}
-                      <div className="p-4 md:p-5 flex flex-col justify-between flex-1 gap-3">
-                        <div>
-                          <div className="flex items-start gap-2 justify-between mb-1">
-                            <h2 className="text-base md:text-lg font-bold text-gray-900 group-hover:text-primary transition-colors leading-snug line-clamp-2">
-                              {project.name}
-                            </h2>
-                            <span className="shrink-0 text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md font-medium mt-0.5">
-                              {typeConfig[project.type]}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1 text-xs text-gray-500 mb-2">
-                            <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
-                            <span className="line-clamp-1">{project.address}</span>
-                          </div>
-                          <p className="text-sm text-gray-500 line-clamp-2 leading-relaxed">
-                            {project.description}
-                          </p>
-                        </div>
-
-                        <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-gray-500 border-t border-gray-50 pt-3">
-                          <span className="flex items-center gap-1">
-                            <Building className="h-3.5 w-3.5 text-gray-400" />
-                            {project.totalBlocks} block · {project.totalFloors} tầng
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Home className="h-3.5 w-3.5 text-gray-400" />
-                            {project.totalUnits} căn
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-3.5 w-3.5 text-gray-400" />
-                            Bàn giao {new Date(project.handoverDate).getFullYear()}
-                          </span>
-                          <span className="text-gray-400">Quy mô {project.area}</span>
-                        </div>
-
-                        <div className="flex items-end justify-between">
-                          <div>
-                            <p className="text-xs text-gray-400">Giá từ</p>
-                            <p className="text-base font-bold text-cta">
-                              {formatPrice(project.priceFrom)}
-                              {project.priceTo && (
-                                <span className="text-sm font-normal text-gray-400 ml-1">
-                                  – {formatPrice(project.priceTo)}
-                                </span>
-                              )}
-                            </p>
-                          </div>
-                          <p className="text-xs text-gray-400 text-right line-clamp-1 max-w-[160px]">
-                            {project.developer}
-                          </p>
-                        </div>
-                      </div>
-                    </article>
-                  </Link>
-                );
-              })}
+              {paginated.map((project) => (
+                <ProjectListCard
+                  key={project.id}
+                  project={project}
+                  status={statusConfig[project.status as keyof typeof statusConfig]}
+                  typeLabel={typeConfig[project.type]}
+                />
+              ))}
             </div>
 
             {/* Empty state */}
@@ -546,7 +482,7 @@ export default function DuAnPage() {
                           {project.name}
                         </p>
                         <p className={`text-xs font-medium ${st.text}`}>{st.label}</p>
-                        <p className="text-xs font-bold text-cta mt-0.5">{formatPrice(project.priceFrom)}</p>
+                        <p className="mt-0.5 text-xs font-bold text-primary">{formatPrice(project.priceFrom)}</p>
                       </div>
                     </Link>
                   );

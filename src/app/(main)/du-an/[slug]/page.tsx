@@ -252,7 +252,7 @@ export default function ProjectDetailPage() {
 
       {/* Breadcrumb */}
       <div className="bg-white border-b border-gray-100">
-        <div className="max-w-6xl mx-auto px-4 py-2.5 flex items-center gap-1.5 text-xs text-gray-500 flex-wrap">
+        <div className="max-w-[1152px] mx-auto px-4 py-2.5 flex items-center gap-1.5 text-xs text-gray-500 flex-wrap">
           <Link href="/" className="hover:text-primary transition-colors">Trang chủ</Link>
           <ChevronRight className="h-3 w-3" />
           <Link href="/du-an" className="hover:text-primary transition-colors">Dự án</Link>
@@ -265,7 +265,7 @@ export default function ProjectDetailPage() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 py-5">
+      <div className="max-w-[1152px] mx-auto px-4 py-5">
 
         {/* Title row */}
         <div className="flex items-start justify-between gap-4 mb-4">
@@ -282,7 +282,7 @@ export default function ProjectDetailPage() {
           <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => setLiked(!liked)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${liked ? 'border-cta text-cta bg-red-50' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}
+              className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${liked ? 'border-primary/20 bg-primary-light text-primary' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}
             >
               <Heart className={`h-4 w-4 ${liked ? 'fill-current' : ''}`} />
               <span className="hidden sm:inline">Lưu</span>
@@ -418,7 +418,7 @@ export default function ProjectDetailPage() {
                       {/* Giá */}
                       <div className="bg-gray-50 rounded-xl p-4 mb-5">
                         <p className="text-xs text-gray-400 mb-1">Giá bán</p>
-                        <p className="text-xl font-bold text-cta">
+                        <p className="text-xl font-bold text-primary">
                           {formatPrice(project.priceFrom)}
                           <span className="text-base font-normal text-gray-400 mx-2">–</span>
                           {formatPrice(project.priceTo)}
@@ -457,7 +457,7 @@ export default function ProjectDetailPage() {
                                 <p className="text-xs text-gray-400">{fp.area} · {fp.count} căn</p>
                               </div>
                             </div>
-                            <p className="text-sm font-bold text-cta">{formatPrice(fp.priceFrom)}</p>
+                            <p className="text-sm font-bold text-primary">{formatPrice(fp.priceFrom)}</p>
                           </div>
                         ))}
                       </div>
@@ -499,7 +499,7 @@ export default function ProjectDetailPage() {
                             onClick={() => setOpenFaq(openFaq === i ? null : i)}
                             className="w-full flex items-start gap-3 px-5 py-4 text-left hover:bg-gray-50 transition-colors"
                           >
-                            <span className="w-1 h-4 mt-0.5 bg-cta rounded-full shrink-0" />
+                            <span className="w-1 h-4 mt-0.5 bg-primary rounded-full shrink-0" />
                             <span className="flex-1 text-sm font-semibold text-gray-800">{item.q}</span>
                           </button>
                           {openFaq === i && (
@@ -519,7 +519,7 @@ export default function ProjectDetailPage() {
                         </div>
                         <button
                           onClick={() => setContactOpen(true)}
-                          className="text-sm font-semibold text-cta border border-cta px-4 py-1.5 rounded hover:bg-red-50 transition-colors"
+                          className="text-sm font-semibold text-primary border border-primary px-4 py-1.5 rounded hover:bg-primary-light transition-colors"
                         >
                           Đặt câu hỏi về dự án
                         </button>
@@ -567,7 +567,7 @@ export default function ProjectDetailPage() {
                       <p className="text-sm font-medium text-gray-800 line-clamp-2 group-hover:text-primary transition-colors leading-snug mb-1">
                         {item.title}
                       </p>
-                      <p className="text-sm font-bold text-cta">{item.price} <span className="text-gray-400 font-normal">·</span> <span className="text-gray-500 font-normal">{item.area}</span></p>
+                      <p className="text-sm font-bold text-primary">{item.price} <span className="text-gray-400 font-normal">·</span> <span className="text-gray-500 font-normal">{item.area}</span></p>
                       <p className="text-xs text-gray-400 mt-0.5">{item.address} · {item.postedAt}</p>
                     </div>
                   </Link>
@@ -578,7 +578,7 @@ export default function ProjectDetailPage() {
           </div>
 
           {/* ── RIGHT SIDEBAR ── */}
-          <aside className="hidden lg:block w-72 xl:w-80 shrink-0 self-start sticky top-4">
+          <aside className="sticky top-[76px] hidden w-72 shrink-0 self-start lg:block xl:w-80">
             <div className="space-y-4">
 
               {/* Contact card */}
@@ -601,7 +601,7 @@ export default function ProjectDetailPage() {
 
                   <button
                     onClick={() => setContactOpen(true)}
-                    className="flex items-center justify-center gap-2 w-full bg-cta hover:bg-cta-dark text-white text-sm font-semibold py-2.5 rounded-lg transition-colors"
+                    className="flex items-center justify-center gap-2 w-full bg-primary hover:bg-primary-dark text-white text-sm font-semibold py-2.5 rounded-lg transition-colors"
                   >
                     Liên hệ tôi
                   </button>
@@ -632,7 +632,7 @@ export default function ProjectDetailPage() {
 
                   <div className="border-t border-gray-50 pt-3">
                     <p className="text-gray-400 mb-1.5">Giá từ</p>
-                    <p className="text-base font-bold text-cta">{formatPrice(project.priceFrom)}</p>
+                    <p className="text-base font-bold text-primary">{formatPrice(project.priceFrom)}</p>
                   </div>
                 </div>
               </div>
@@ -647,11 +647,11 @@ export default function ProjectDetailPage() {
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 px-4 py-3 flex items-center gap-3">
         <div className="flex-1 min-w-0">
           <p className="text-xs font-semibold text-gray-800 truncate">{project.name}</p>
-          <p className="text-xs text-cta font-bold">{formatPrice(project.priceFrom)} – {formatPrice(project.priceTo)}</p>
+          <p className="text-xs text-primary font-bold">{formatPrice(project.priceFrom)} – {formatPrice(project.priceTo)}</p>
         </div>
         <button
           onClick={() => setContactOpen(true)}
-          className="shrink-0 bg-cta hover:bg-cta-dark text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-colors"
+          className="shrink-0 bg-primary hover:bg-primary-dark text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-colors"
         >
           Liên hệ tôi
         </button>

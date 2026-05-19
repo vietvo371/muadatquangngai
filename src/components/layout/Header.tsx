@@ -24,7 +24,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white shadow-sm">
-<div className="max-w-7xl mx-auto px-4">
+<div className="mx-auto max-w-[1152px] px-4 sm:px-6">
         <div className="flex h-[60px] items-center justify-between gap-4">
 
           {/* Logo */}
@@ -48,9 +48,9 @@ export function Header() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`relative px-4 py-[18px] text-sm font-semibold transition-colors whitespace-nowrap group ${
+                  className={`group relative inline-flex h-[60px] items-center whitespace-nowrap rounded-t-md px-4 text-sm font-semibold transition-colors ${
                     isActive
-                      ? 'text-primary'
+                      ? 'bg-primary-light text-primary'
                       : 'text-gray-700 hover:text-primary'
                   }`}
                 >
@@ -70,7 +70,7 @@ export function Header() {
               <Link href="/dashboard/thong-bao">
                 <Button variant="ghost" size="icon" className="relative">
                   <Bell className="h-5 w-5" />
-                  <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500" />
+                  <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-primary" />
                 </Button>
               </Link>
             )}
@@ -106,7 +106,7 @@ export function Header() {
 
             {/* Post Button */}
             <Link href={isAuthenticated ? '/dashboard/dang-tin' : '/login'}>
-              <Button className="bg-cta hover:bg-cta-dark text-white text-sm font-bold px-5 hidden sm:flex shadow-md">
+              <Button variant="cta" size="lg" className="hidden px-5 text-sm font-bold shadow-md sm:flex">
                 + Đăng tin
               </Button>
             </Link>
@@ -119,7 +119,7 @@ export function Header() {
               >
                 <Menu className="h-5 w-5" />
               </SheetTrigger>
-              <SheetContent side="right" className="w-72">
+              <SheetContent side="right" className="w-80">
                 <div className="flex flex-col gap-1 mt-6">
                   {mainNavLinks.map((link) => (
                     <Link
@@ -137,7 +137,7 @@ export function Header() {
                   <Link
                     href={isAuthenticated ? '/dashboard/dang-tin' : '/login'}
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="flex items-center justify-center gap-2 py-3 rounded-lg bg-red-600 text-white font-semibold text-sm"
+                    className="flex items-center justify-center gap-2 rounded-lg bg-cta px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-cta-dark"
                   >
                     Đăng tin
                   </Link>
@@ -148,7 +148,7 @@ export function Header() {
                         <Button variant="outline" className="w-full text-sm">Đăng nhập</Button>
                       </Link>
                       <Link href="/register" className="flex-1" onClick={() => setIsMobileMenuOpen(false)}>
-                        <Button className="w-full bg-blue-600 text-sm">Đăng ký</Button>
+                        <Button variant="outline" className="w-full border-primary text-sm text-primary hover:bg-primary-light">Đăng ký</Button>
                       </Link>
                     </div>
                   )}
