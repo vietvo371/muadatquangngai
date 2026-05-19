@@ -11,20 +11,16 @@ import {
   Eye,
   ExternalLink,
   Zap,
+  LayoutGrid,
+  List as ListIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { StatusBadge } from '@/components/ui/status-badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { EmptyState, BoostModal } from '@/components/shared';
+import { PillTabs } from '@/components/dashboard/pill-tabs';
 import api from '@/lib/axios';
 import { formatPrice } from '@/lib/formatters';
 
@@ -54,112 +50,133 @@ export default function PropertyManagementPage() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in duration-500">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Quan ly tin dang</h1>
-          <p className="text-gray-500 mt-1">Quan ly va chinh sua cac tin dang cua ban</p>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Quản lý tin đăng</h1>
+          <p className="text-gray-500 text-sm mt-1">Quản lý và theo dõi hiệu quả các tin đăng của bạn</p>
         </div>
         <Link href="/dashboard/dang-tin">
-          <Button className="bg-cta hover:bg-cta-dark">
+          <Button className="bg-cta hover:bg-cta-dark text-white font-bold px-6 h-11 rounded-xl shadow-md shadow-red-500/20 transition-all">
             <Plus className="h-4 w-4 mr-2" />
-            Dang tin moi
+            Đăng tin mới
           </Button>
         </Link>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Tim kiem tin dang..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            <Select value={statusFilter} onValueChange={(v) => v && setStatusFilter(v)}>
-              <SelectTrigger className="w-full md:w-48">
-                <SelectValue placeholder="Trang thai" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tat ca trang thai</SelectItem>
-                <SelectItem value="active">Dang hien thi</SelectItem>
-                <SelectItem value="pending">Cho duyet</SelectItem>
-                <SelectItem value="inactive">Tam an</SelectItem>
-                <SelectItem value="rejected">Tu choi</SelectItem>
-                <SelectItem value="expired">Het han</SelectItem>
-              </SelectContent>
-            </Select>
-            <div className="flex gap-1">
-              <Button
-                variant={viewMode === 'grid' ? 'default' : 'outline'}
-                size="icon"
-                onClick={() => setViewMode('grid')}
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                </svg>
-              </Button>
-              <Button
-                variant={viewMode === 'list' ? 'default' : 'outline'}
-                size="icon"
-                onClick={() => setViewMode('list')}
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                </svg>
-              </Button>
-            </div>
+      {/* Filters Bar */}
+      <div className="flex flex-col gap-4">
+        {/* Top filter row */}
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <div className="relative w-full sm:max-w-md">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Tìm kiếm theo tiêu đề tin..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 h-11 bg-white border-gray-200 rounded-xl"
+            />
           </div>
-        </CardContent>
-      </Card>
+          
+          <div className="flex items-center gap-2 w-full sm:w-auto ml-auto bg-white p-1 rounded-xl border border-gray-200 shrink-0">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`p-2 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-gray-100 text-gray-900' : 'text-gray-500 hover:text-gray-900'}`}
+            >
+              <LayoutGrid className="h-5 w-5" />
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`p-2 rounded-lg transition-colors ${viewMode === 'list' ? 'bg-gray-100 text-gray-900' : 'text-gray-500 hover:text-gray-900'}`}
+            >
+              <ListIcon className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Status Pills */}
+        <div className="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm">
+          <PillTabs 
+            tabs={[
+              { id: 'all', label: 'Tất cả' },
+              { id: 'active', label: 'Đang hiển thị' },
+              { id: 'pending', label: 'Chờ duyệt' },
+              { id: 'inactive', label: 'Tạm ẩn' },
+              { id: 'expired', label: 'Hết hạn' },
+              { id: 'rejected', label: 'Bị từ chối' }
+            ]}
+            activeTab={statusFilter}
+            onChange={setStatusFilter}
+          />
+        </div>
+      </div>
 
       {/* Properties Grid/List */}
       {isLoading ? (
-        <div className="flex justify-center py-20">
-          <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full" />
+        <div className="flex justify-center items-center min-h-[300px]">
+          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
         </div>
       ) : filtered.length === 0 ? (
-        <Card>
-          <CardContent className="py-16 text-center">
+        <Card className="rounded-2xl border-gray-100 shadow-sm">
+          <CardContent className="py-20 text-center">
             <EmptyState
-              title="Khong co tin dang nao"
-              description={searchQuery ? 'Thu thay doi tu khoa tim kiem' : 'Ban chua co tin dang nao. Hay la nguoi dau tien dang tin!'}
-              action={{ label: 'Dang tin moi', onClick: () => {} }}
+              title="Không tìm thấy tin đăng nào"
+              description={searchQuery ? 'Thử thay đổi từ khóa tìm kiếm hoặc bộ lọc' : 'Bạn chưa có tin đăng nào. Hãy là người đầu tiên đăng tin!'}
+              action={!searchQuery ? { label: 'Đăng tin mới', onClick: () => {} } : undefined}
             />
           </CardContent>
         </Card>
       ) : viewMode === 'grid' ? (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filtered.map((property: any) => (
-            <div key={property.id} className="group space-y-2">
-              <PropertyCardWrapper property={property} />
-              <div className="flex items-center gap-2 px-1">
+            <div key={property.id} className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col h-full group">
+              <Link href={`/${property.type === 'sale' ? 'mua-ban' : 'cho-thue'}/${property.slug}`} className="block relative aspect-[4/3] bg-gray-100 overflow-hidden">
+                {property.thumbnail ? (
+                  <img src={property.thumbnail} alt={property.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">Chưa có ảnh</div>
+                )}
+                {/* Badges */}
+                <div className="absolute top-3 left-3 flex flex-col gap-2">
+                  <Badge className={`border-0 uppercase text-[10px] tracking-wider font-bold shadow-sm ${property.type === 'sale' ? 'bg-primary text-white' : 'bg-green-600 text-white'}`}>
+                    {property.type === 'sale' ? 'Bán' : 'Cho thuê'}
+                  </Badge>
+                  {property.is_vip && property.is_vip !== 'normal' && (
+                    <Badge className="bg-cta text-white border-0 uppercase text-[10px] tracking-wider font-bold shadow-sm">
+                      {property.is_vip === 'diamond' ? '★ VIP' : property.is_vip === 'vip_plus' ? 'VIP+' : 'VIP'}
+                    </Badge>
+                  )}
+                </div>
+                <div className="absolute top-3 right-3">
+                  <StatusBadge status={property.status} />
+                </div>
+              </Link>
+              
+              <div className="p-4 flex flex-col flex-1">
+                <Link href={`/${property.type === 'sale' ? 'mua-ban' : 'cho-thue'}/${property.slug}`}>
+                  <h3 className="font-bold text-gray-900 line-clamp-2 mb-2 group-hover:text-primary transition-colors text-[15px] leading-tight">
+                    {property.title}
+                  </h3>
+                </Link>
+                <div className="flex items-end justify-between mt-auto pt-2">
+                  <p className="text-lg font-extrabold text-[#e03131]">{formatPrice(property.price)}</p>
+                  <p className="text-sm text-gray-500 font-medium">{property.area}m²</p>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="p-3 border-t border-gray-100 bg-gray-50 flex items-center gap-2">
                 <Button
                   variant="outline"
-                  size="sm"
-                  className="flex-1"
+                  className="flex-1 h-9 bg-white border-yellow-300 text-yellow-700 hover:bg-yellow-50 font-bold text-xs"
                   onClick={() => setBoostProperty({ id: property.id, title: property.title })}
                 >
-                  <Zap className="h-3 w-3 mr-1 text-primary" />
-                  VIP
+                  <Zap className="h-3.5 w-3.5 mr-1" /> VIP
                 </Button>
                 <Link href={`/dashboard/quan-ly-tin/${property.id}/edit`} className="flex-1">
-                  <Button variant="outline" size="sm" className="w-full">
-                    <Edit className="h-3 w-3 mr-1" />
-                    Sua
-                  </Button>
-                </Link>
-                <Link href={`/${property.type === 'sale' ? 'mua-ban' : 'cho-thue'}/${property.slug}`} target="_blank">
-                  <Button variant="ghost" size="sm">
-                    <ExternalLink className="h-3 w-3" />
+                  <Button variant="outline" className="w-full h-9 bg-white text-gray-700 hover:text-gray-900 font-bold text-xs">
+                    <Edit className="h-3.5 w-3.5 mr-1" /> Sửa
                   </Button>
                 </Link>
               </div>
@@ -167,66 +184,71 @@ export default function PropertyManagementPage() {
           ))}
         </div>
       ) : (
-        <Card>
-          <div className="divide-y">
+        <Card className="rounded-2xl shadow-sm border-gray-100 overflow-hidden">
+          <div className="divide-y divide-gray-100">
             {filtered.map((property: any) => (
-              <div key={property.id} className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors">
+              <div key={property.id} className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 hover:bg-gray-50/50 transition-colors">
                 {/* Thumbnail */}
-                <div className="h-20 w-28 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                <Link href={`/${property.type === 'sale' ? 'mua-ban' : 'cho-thue'}/${property.slug}`} className="h-24 w-36 rounded-xl overflow-hidden bg-gray-100 shrink-0 relative block">
                   {property.thumbnail ? (
-                    <img src={property.thumbnail} alt={property.title} className="h-full w-full object-cover" />
+                    <img src={property.thumbnail} alt={property.title} className="h-full w-full object-cover hover:scale-105 transition-transform duration-500" />
                   ) : (
-                    <div className="h-full w-full flex items-center justify-center text-gray-400 text-xs">Khong co anh</div>
+                    <div className="h-full w-full flex items-center justify-center text-gray-400 text-xs">Chưa có ảnh</div>
                   )}
-                </div>
+                  {property.is_vip && property.is_vip !== 'normal' && (
+                    <Badge className="absolute top-2 left-2 bg-cta text-white border-0 uppercase text-[10px] tracking-wider font-bold shadow-sm scale-75 origin-top-left">
+                      {property.is_vip === 'diamond' ? '★ VIP' : property.is_vip === 'vip_plus' ? 'VIP+' : 'VIP'}
+                    </Badge>
+                  )}
+                </Link>
 
                 {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Link href={`/dashboard/quan-ly-tin/${property.id}/edit`} className="font-medium text-gray-900 hover:text-primary truncate">
-                      {property.title}
-                    </Link>
+                <div className="flex-1 min-w-0 py-1">
+                  <div className="flex items-center gap-2 flex-wrap mb-1.5">
                     <StatusBadge status={property.status} />
-                    {property.is_vip && property.is_vip !== 'normal' && (
-                      <Badge className="bg-yellow-100 text-yellow-700">
-                        {property.is_vip === 'diamond' ? '★ VIP' : property.is_vip === 'vip_plus' ? 'VIP+' : 'VIP'}
-                      </Badge>
-                    )}
+                    <Badge className={`border-0 uppercase text-[10px] tracking-wider font-bold ${property.type === 'sale' ? 'bg-primary-light text-primary' : 'bg-green-100 text-green-700'}`}>
+                      {property.type === 'sale' ? 'Bán' : 'Cho thuê'}
+                    </Badge>
                   </div>
-                  <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
-                    <span className="font-semibold text-red-600">{formatPrice(property.price)}</span>
-                    <span>{property.area}m2</span>
-                    <span className="flex items-center gap-1">
-                      <Eye className="h-3 w-3" />
-                      {property.view_count || 0}
+                  <Link href={`/dashboard/quan-ly-tin/${property.id}/edit`} className="font-bold text-gray-900 hover:text-primary truncate block text-base mb-2">
+                    {property.title}
+                  </Link>
+                  <div className="flex items-center gap-4 text-[13px] text-gray-500 font-medium">
+                    <span className="font-extrabold text-[#e03131] text-[15px]">{formatPrice(property.price)}</span>
+                    <span className="flex items-center gap-1.5 before:content-['•'] before:mr-2 before:text-gray-300">
+                      {property.area}m²
+                    </span>
+                    <span className="flex items-center gap-1.5 before:content-['•'] before:mr-2 before:text-gray-300">
+                      <Eye className="h-3.5 w-3.5" />
+                      {property.view_count || 0} lượt xem
                     </span>
                   </div>
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="flex sm:flex-col items-center gap-2 shrink-0 border-t sm:border-t-0 sm:border-l border-gray-100 pt-4 sm:pt-0 sm:pl-4 mt-2 sm:mt-0">
                   <Button
-                    variant="ghost"
-                    size="sm"
+                    variant="outline"
+                    className="flex-1 sm:flex-none h-9 w-full bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100 font-bold"
                     onClick={() => setBoostProperty({ id: property.id, title: property.title })}
-                    className="text-primary"
-                    title="Nang cap VIP"
                   >
-                    <Zap className="h-4 w-4" />
+                    <Zap className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Đẩy tin</span>
                   </Button>
-                  <Link href={`/${property.type === 'sale' ? 'mua-ban' : 'cho-thue'}/${property.slug}`} target="_blank">
-                    <Button variant="ghost" size="sm">
-                      <ExternalLink className="h-4 w-4" />
+                  <Link href={`/dashboard/quan-ly-tin/${property.id}/edit`} className="flex-1 sm:flex-none w-full block">
+                    <Button variant="outline" className="h-9 w-full font-bold text-gray-700 hover:text-gray-900">
+                      <Edit className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Chỉnh sửa</span>
                     </Button>
                   </Link>
-                  <Link href={`/dashboard/quan-ly-tin/${property.id}/edit`}>
-                    <Button variant="ghost" size="sm">
-                      <Edit className="h-4 w-4" />
+                  <div className="flex gap-2 w-full">
+                    <Link href={`/${property.type === 'sale' ? 'mua-ban' : 'cho-thue'}/${property.slug}`} target="_blank" className="flex-1">
+                      <Button variant="ghost" className="h-9 w-full text-gray-500 hover:text-gray-900 bg-gray-50">
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
+                    </Link>
+                    <Button variant="ghost" className="h-9 flex-1 text-red-500 hover:text-red-600 hover:bg-red-50 bg-gray-50">
+                      <Trash2 className="h-4 w-4" />
                     </Button>
-                  </Link>
-                  <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -244,37 +266,5 @@ export default function PropertyManagementPage() {
         />
       )}
     </div>
-  );
-}
-
-function PropertyCardWrapper({ property }: { property: any }) {
-  return (
-    <Link
-      href={`/${property.type === 'sale' ? 'mua-ban' : 'cho-thue'}/${property.slug}`}
-      className="group block bg-white rounded-xl overflow-hidden border hover:shadow-lg hover:border-gray-300 transition-all"
-    >
-      <div className="relative aspect-[4/3] bg-gray-100 overflow-hidden">
-        {property.thumbnail ? (
-          <img src={property.thumbnail} alt={property.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-400 text-sm">Khong co anh</div>
-        )}
-        {property.is_vip && property.is_vip !== 'normal' && (
-          <div className="absolute top-3 left-3">
-            <Badge className="bg-cta text-white">
-              {property.is_vip === 'diamond' ? '★ VIP' : property.is_vip === 'vip_plus' ? 'VIP+' : 'VIP'}
-            </Badge>
-          </div>
-        )}
-        <Badge className={`absolute top-3 right-3 ${property.type === 'sale' ? 'bg-primary' : 'bg-green-600'} text-white border-0`}>
-          {property.type === 'sale' ? 'Ban' : 'Cho thue'}
-        </Badge>
-      </div>
-      <div className="p-4">
-        <h3 className="font-semibold text-gray-900 line-clamp-2 mb-2 group-hover:text-primary transition-colors">{property.title}</h3>
-        <p className="text-lg font-bold text-red-600">{formatPrice(property.price)}</p>
-        <p className="text-sm text-gray-500 mt-1">{property.area}m2</p>
-      </div>
-    </Link>
   );
 }

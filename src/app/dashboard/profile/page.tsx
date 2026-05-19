@@ -2,30 +2,31 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
+import { PillTabs } from '@/components/dashboard/pill-tabs';
+import { PackageCard } from '@/components/dashboard/PackageCard';
 import { 
-  User, 
-  Mail, 
-  Phone, 
-  MapPin, 
-  Calendar, 
-  Shield, 
-  Star,
   Camera,
-  Edit,
   Save,
   Lock,
   Bell,
   Eye,
-  CheckCircle
+  CheckCircle,
+  ShieldAlert,
+  Star
 } from 'lucide-react';
+
+const PACKAGES = [
+  { id: 'vip', name: 'Gói VIP', price: 50000, duration: 7, color: 'vip' as const, features: ['Hiển thị trên tin thường', 'Có huy hiệu VIP vàng', 'Màu sắc khung thẻ nổi bật'] },
+  { id: 'vip_plus', name: 'Gói VIP+', price: 100000, duration: 30, color: 'vip_plus' as const, isPopular: true, features: ['Hiển thị trên VIP và tin thường', 'Có huy hiệu VIP+ cam', 'Ảnh đại diện lớn hơn'] },
+  { id: 'diamond', name: 'Gói Diamond', price: 200000, duration: 30, color: 'diamond' as const, features: ['Luôn nằm trên cùng trang chủ', 'Huy hiệu Diamond đỏ độc quyền', 'Hỗ trợ đẩy tin 2 lần/ngày'] },
+];
 
 export default function ProfilePage() {
   const { user, isLoading, updateProfile, changePassword } = useAuth();
@@ -71,265 +72,266 @@ export default function ProfilePage() {
   if (!user) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-gray-500">Vui lòng đăng nhập</p>
+        <p className="text-gray-500 font-medium">Vui lòng đăng nhập để xem thông tin</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 max-w-6xl mx-auto animate-in fade-in duration-500">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Hồ sơ của tôi</h1>
-          <p className="text-gray-500">Quản lý thông tin cá nhân</p>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Hồ sơ cá nhân</h1>
+          <p className="text-gray-500 text-sm mt-1">Quản lý thông tin và cài đặt tài khoản của bạn</p>
         </div>
-        <Badge variant={user.phone_verified_at ? 'default' : 'outline'} className="gap-1">
+        <div className="flex items-center gap-3">
           {user.phone_verified_at ? (
-            <>
-              <CheckCircle className="h-3 w-3" />
+            <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-0 gap-1.5 px-3 py-1">
+              <CheckCircle className="h-3.5 w-3.5" />
               Đã xác thực
-            </>
+            </Badge>
           ) : (
-            <>
-              <Shield className="h-3 w-3" />
+            <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-100 border-0 gap-1.5 px-3 py-1">
+              <ShieldAlert className="h-3.5 w-3.5" />
               Chưa xác thực
-            </>
+            </Badge>
           )}
-        </Badge>
+        </div>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
-        {/* Profile Card */}
-        <Card className="lg:col-span-1">
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <div className="relative inline-block">
-                <Avatar className="h-24 w-24 mx-auto">
-                  <AvatarImage src={user.avatar || undefined} alt={user.name} />
-                  <AvatarFallback className="text-2xl">{user.name?.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <Button
-                  size="icon"
-                  variant="secondary"
-                  className="absolute bottom-0 right-0 h-8 w-8 rounded-full"
-                >
-                  <Camera className="h-4 w-4" />
+      <div className="grid lg:grid-cols-12 gap-6 items-start">
+        {/* Left Sidebar Profile */}
+        <div className="lg:col-span-4 space-y-6">
+          <Card className="rounded-2xl shadow-sm border-gray-100 overflow-hidden">
+            {/* Header background */}
+            <div className="h-24 bg-gradient-to-r from-primary/80 to-primary w-full"></div>
+            
+            <CardContent className="pt-0 px-6 pb-6 relative">
+              <div className="flex justify-center -mt-12 mb-4">
+                <div className="relative inline-block rounded-full p-1 bg-white">
+                  <Avatar className="h-24 w-24 border-4 border-white shadow-sm">
+                    <AvatarImage src={user.avatar || undefined} alt={user.name} />
+                    <AvatarFallback className="text-2xl font-bold bg-primary-light text-primary">{user.name?.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <Button
+                    size="icon"
+                    className="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-gray-900 hover:bg-black text-white border-2 border-white shadow-sm"
+                  >
+                    <Camera className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="text-center mb-6">
+                <h2 className="text-xl font-bold text-gray-900">{user.name}</h2>
+                <p className="text-sm text-gray-500 mb-3">{user.email}</p>
+                <Badge className="bg-primary-light text-primary hover:bg-primary-light border-0">
+                  {user.role === 'admin' ? 'Quản trị viên' : user.role === 'agent' ? 'Môi giới' : 'Người dùng'}
+                </Badge>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 py-4 border-y border-gray-100 text-center">
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">{user.total_listings || 0}</p>
+                  <p className="text-[13px] text-gray-500 font-medium">Tin đã đăng</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-gray-900 flex items-center justify-center gap-1">
+                    {user.rating || '0.0'}
+                    <Star className="h-4 w-4 text-orange-400 fill-orange-400" />
+                  </p>
+                  <p className="text-[13px] text-gray-500 font-medium">Đánh giá</p>
+                </div>
+              </div>
+
+              <div className="mt-6 space-y-1">
+                <Button variant="ghost" className="w-full justify-start gap-3 h-11 text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-medium">
+                  <Bell className="h-5 w-5 text-gray-400" />
+                  Cài đặt thông báo
+                </Button>
+                <Button variant="ghost" className="w-full justify-start gap-3 h-11 text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-medium">
+                  <Lock className="h-5 w-5 text-gray-400" />
+                  Bảo mật tài khoản
+                </Button>
+                <Button variant="ghost" className="w-full justify-start gap-3 h-11 text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-medium">
+                  <Eye className="h-5 w-5 text-gray-400" />
+                  Quyền riêng tư
                 </Button>
               </div>
-              <h2 className="text-xl font-bold text-gray-900 mt-4">{user.name}</h2>
-              <p className="text-gray-500">{user.email}</p>
-              <Badge variant="secondary" className="mt-2">
-                {user.role === 'admin' ? 'Quản trị' : user.role === 'agent' ? 'Môi giới' : 'Người dùng'}
-              </Badge>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Main Content */}
+        <div className="lg:col-span-8">
+          <Card className="rounded-2xl shadow-sm border-gray-100">
+            <div className="px-6 pt-6 pb-2 border-b border-gray-100">
+              <PillTabs 
+                tabs={[
+                  { id: 'info', label: 'Thông tin cá nhân' },
+                  { id: 'password', label: 'Đổi mật khẩu' },
+                  { id: 'vip', label: 'Nâng cấp VIP' },
+                ]}
+                activeTab={activeTab}
+                onChange={setActiveTab}
+              />
             </div>
 
-            <Separator className="my-6" />
-
-            {/* Stats */}
-            <div className="grid grid-cols-2 gap-4 text-center">
-              <div>
-                <p className="text-2xl font-bold text-gray-900">{user.total_listings || 0}</p>
-                <p className="text-sm text-gray-500">Tin đăng</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900 flex items-center justify-center gap-1">
-                  {user.rating || '0'}
-                  <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
-                </p>
-                <p className="text-sm text-gray-500">Đánh giá</p>
-              </div>
-            </div>
-
-            <Separator className="my-6" />
-
-            {/* Quick Links */}
-            <div className="space-y-2">
-              <Button variant="ghost" className="w-full justify-start gap-2">
-                <Bell className="h-4 w-4" />
-                Thông báo
-              </Button>
-              <Button variant="ghost" className="w-full justify-start gap-2">
-                <Lock className="h-4 w-4" />
-                Bảo mật
-              </Button>
-              <Button variant="ghost" className="w-full justify-start gap-2">
-                <Eye className="h-4 w-4" />
-                Quyền riêng tư
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Tabs */}
-        <div className="lg:col-span-2">
-          <Card>
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <CardHeader>
-                <TabsList>
-                  <TabsTrigger value="info">Thông tin</TabsTrigger>
-                  <TabsTrigger value="password">Đổi mật khẩu</TabsTrigger>
-                  <TabsTrigger value="vip">VIP</TabsTrigger>
-                </TabsList>
-              </CardHeader>
-
-              <CardContent>
-                {/* Info Tab */}
-                <TabsContent value="info" className="space-y-6">
-                  <div className="grid md:grid-cols-2 gap-4">
+            <CardContent className="p-6">
+              {/* Info Tab */}
+              {activeTab === 'info' && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <div className="grid md:grid-cols-2 gap-5">
                     <div>
-                      <Label>Họ và tên</Label>
+                      <Label className="text-gray-700 font-semibold">Họ và tên</Label>
                       <Input
                         value={profileForm.name}
                         onChange={(e) => setProfileForm({...profileForm, name: e.target.value})}
-                        className="mt-1"
+                        className="mt-2 bg-gray-50 h-11"
                       />
                     </div>
                     <div>
-                      <Label>Email</Label>
+                      <Label className="text-gray-700 font-semibold">Email</Label>
                       <Input
                         type="email"
                         value={profileForm.email}
                         onChange={(e) => setProfileForm({...profileForm, email: e.target.value})}
-                        className="mt-1"
+                        className="mt-2 bg-gray-50 h-11"
+                        disabled
                       />
                     </div>
                     <div>
-                      <Label>Số điện thoại</Label>
+                      <Label className="text-gray-700 font-semibold">Số điện thoại</Label>
                       <Input
                         value={profileForm.phone}
                         onChange={(e) => setProfileForm({...profileForm, phone: e.target.value})}
-                        className="mt-1"
+                        className="mt-2 bg-gray-50 h-11"
                       />
                     </div>
                     <div>
-                      <Label>Địa chỉ</Label>
+                      <Label className="text-gray-700 font-semibold">Địa chỉ</Label>
                       <Input
                         value={profileForm.address}
                         onChange={(e) => setProfileForm({...profileForm, address: e.target.value})}
-                        className="mt-1"
+                        className="mt-2 bg-gray-50 h-11"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <Label>Giới thiệu bản thân</Label>
+                    <Label className="text-gray-700 font-semibold">Giới thiệu bản thân</Label>
                     <textarea
                       value={profileForm.bio}
                       onChange={(e) => setProfileForm({...profileForm, bio: e.target.value})}
                       rows={4}
-                      className="mt-1 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
-                      placeholder="Chia sẻ về bản thân..."
+                      className="mt-2 w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary resize-none text-[15px]"
+                      placeholder="Chia sẻ vài điều về bạn để khách hàng tin tưởng hơn..."
                     />
                   </div>
 
-                  <Separator />
+                  <Separator className="bg-gray-100" />
 
-                  <div className="grid md:grid-cols-2 gap-4">
+                  <h3 className="text-md font-bold text-gray-900">Mạng xã hội</h3>
+                  <div className="grid md:grid-cols-2 gap-5">
                     <div>
-                      <Label>Facebook</Label>
+                      <Label className="text-gray-700 font-semibold">Facebook</Label>
                       <Input
                         value={profileForm.facebook}
                         onChange={(e) => setProfileForm({...profileForm, facebook: e.target.value})}
-                        className="mt-1"
-                        placeholder="https://facebook.com/..."
+                        className="mt-2 bg-gray-50 h-11"
+                        placeholder="Link Facebook của bạn"
                       />
                     </div>
                     <div>
-                      <Label>Zalo</Label>
+                      <Label className="text-gray-700 font-semibold">Zalo</Label>
                       <Input
                         value={profileForm.zalo}
                         onChange={(e) => setProfileForm({...profileForm, zalo: e.target.value})}
-                        className="mt-1"
+                        className="mt-2 bg-gray-50 h-11"
                         placeholder="Số điện thoại Zalo"
                       />
                     </div>
                   </div>
 
-                  <div className="flex justify-end">
-                    <Button onClick={handleProfileUpdate} disabled={isLoading}>
+                  <div className="flex justify-end pt-4">
+                    <Button onClick={handleProfileUpdate} disabled={isLoading} className="h-11 px-6 bg-gray-900 hover:bg-black font-bold">
                       <Save className="h-4 w-4 mr-2" />
                       Lưu thay đổi
                     </Button>
                   </div>
-                </TabsContent>
+                </div>
+              )}
 
-                {/* Password Tab */}
-                <TabsContent value="password" className="space-y-6">
-                  <div className="max-w-md">
-                    <div className="mb-4">
-                      <Label>Mật khẩu hiện tại</Label>
-                      <Input
-                        type="password"
-                        value={passwordForm.currentPassword}
-                        onChange={(e) => setPasswordForm({...passwordForm, currentPassword: e.target.value})}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div className="mb-4">
-                      <Label>Mật khẩu mới</Label>
-                      <Input
-                        type="password"
-                        value={passwordForm.newPassword}
-                        onChange={(e) => setPasswordForm({...passwordForm, newPassword: e.target.value})}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div className="mb-6">
-                      <Label>Xác nhận mật khẩu mới</Label>
-                      <Input
-                        type="password"
-                        value={passwordForm.confirmPassword}
-                        onChange={(e) => setPasswordForm({...passwordForm, confirmPassword: e.target.value})}
-                        className="mt-1"
-                      />
-                    </div>
-                    <Button onClick={handlePasswordChange} disabled={isLoading}>
+              {/* Password Tab */}
+              {activeTab === 'password' && (
+                <div className="space-y-5 max-w-md animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <div>
+                    <Label className="text-gray-700 font-semibold">Mật khẩu hiện tại</Label>
+                    <Input
+                      type="password"
+                      value={passwordForm.currentPassword}
+                      onChange={(e) => setPasswordForm({...passwordForm, currentPassword: e.target.value})}
+                      className="mt-2 bg-gray-50 h-11"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-gray-700 font-semibold">Mật khẩu mới</Label>
+                    <Input
+                      type="password"
+                      value={passwordForm.newPassword}
+                      onChange={(e) => setPasswordForm({...passwordForm, newPassword: e.target.value})}
+                      className="mt-2 bg-gray-50 h-11"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-gray-700 font-semibold">Xác nhận mật khẩu mới</Label>
+                    <Input
+                      type="password"
+                      value={passwordForm.confirmPassword}
+                      onChange={(e) => setPasswordForm({...passwordForm, confirmPassword: e.target.value})}
+                      className="mt-2 bg-gray-50 h-11"
+                    />
+                  </div>
+                  <div className="pt-2">
+                    <Button onClick={handlePasswordChange} disabled={isLoading} className="h-11 px-6 font-bold w-full sm:w-auto">
                       <Lock className="h-4 w-4 mr-2" />
-                      Đổi mật khẩu
+                      Cập nhật mật khẩu
                     </Button>
                   </div>
-                </TabsContent>
+                </div>
+              )}
 
-                {/* VIP Tab */}
-                <TabsContent value="vip" className="space-y-6">
-                  <div className="text-center py-8">
-                    <Shield className="h-16 w-16 mx-auto text-yellow-500 mb-4" />
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">Nâng cấp VIP</h3>
-                    <p className="text-gray-500 mb-6 max-w-md mx-auto">
-                      Giúp tin đăng của bạn nổi bật hơn và tiếp cận nhiều khách hàng tiềm năng hơn
-                    </p>
-                    
-                    <div className="grid md:grid-cols-3 gap-4 max-w-3xl mx-auto">
-                      {/* VIP Packages */}
-                      {[
-                        { name: 'VIP', price: '500,000', color: 'bg-yellow-500', duration: '7 ngày' },
-                        { name: 'VIP+', price: '1,500,000', color: 'bg-orange-500', duration: '30 ngày' },
-                        { name: 'Diamond', price: '3,000,000', color: 'bg-gradient-to-r from-primary to-primary-dark', duration: '30 ngày' },
-                      ].map((pkg) => (
-                        <Card key={pkg.name} className="relative overflow-hidden">
-                          {pkg.name === 'VIP+' && (
-                            <div className="absolute top-0 left-0 right-0 bg-cta text-white text-xs py-1 text-center">
-                              Phổ biến
-                            </div>
-                          )}
-                          <CardContent className="pt-8">
-                            <div className={`w-12 h-12 rounded-full ${pkg.color} mx-auto flex items-center justify-center mb-4`}>
-                              <Star className="h-6 w-6 text-white" />
-                            </div>
-                            <h4 className="font-bold text-gray-900">{pkg.name}</h4>
-                            <p className="text-sm text-gray-500 mb-2">{pkg.duration}</p>
-                            <p className="text-2xl font-bold text-red-600">{pkg.price}đ</p>
-                            <Button variant="outline" className="w-full mt-4">
-                              Mua ngay
-                            </Button>
-                          </CardContent>
-                        </Card>
-                      ))}
+              {/* VIP Tab */}
+              {activeTab === 'vip' && (
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <div className="text-center mb-8">
+                    <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Star className="h-8 w-8 text-orange-500 fill-orange-500" />
                     </div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">Đăng ký thành viên VIP</h3>
+                    <p className="text-gray-500 max-w-md mx-auto">
+                      Các gói VIP giúp tin đăng của bạn nổi bật hơn, tiếp cận được lượng lớn khách hàng tiềm năng.
+                    </p>
                   </div>
-                </TabsContent>
-              </CardContent>
-            </Tabs>
+                  
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {PACKAGES.map((pkg) => (
+                      <PackageCard
+                        key={pkg.id}
+                        id={pkg.id}
+                        name={pkg.name}
+                        price={pkg.price}
+                        duration={pkg.duration}
+                        features={pkg.features}
+                        isPopular={pkg.isPopular}
+                        color={pkg.color}
+                        onSelect={() => {}}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
           </Card>
         </div>
       </div>

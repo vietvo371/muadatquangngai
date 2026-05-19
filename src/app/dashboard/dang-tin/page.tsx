@@ -2,9 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,53 +11,60 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { LocationSelect } from '@/components/shared/LocationSelect';
 import { ImageUploader } from '@/components/shared/ImageUploader';
+import { PostStepper } from '@/components/dashboard/PostStepper';
+import { PackageCard } from '@/components/dashboard/PackageCard';
 import { 
   ArrowLeft, 
   ArrowRight, 
   Check, 
   Home, 
-  MapPin, 
-  Image, 
   DollarSign,
   Loader2
 } from 'lucide-react';
 
 // Form data interface
 interface PropertyFormData {
-  // Step 1: Basic Info
+  // Step 1: Basic Info & Location
   type: 'sale' | 'rent';
   category_id: string;
   title: string;
   description: string;
-  
-  // Step 2: Location
   province_id?: number;
   district_id?: number;
   ward_id?: number;
   street: string;
   
-  // Step 3: Media
+  // Step 2: Media
   images: Array<{ url: string; name: string; size: number; isPrimary?: boolean }>;
   
-  // Step 4: Pricing & Details
+  // Step 3: Details & Pricing
   price: number;
   price_unit: 'total' | 'per_m2' | 'per_month';
   price_negotiable: boolean;
   area: number;
   bedrooms?: number;
   bathrooms?: number;
-  floors?: number;
   direction?: string;
   furniture?: string;
   legal?: string;
   features: number[];
+
+  // Step 4: Package
+  package_id: string;
 }
 
-const steps = [
-  { id: 1, name: 'Thông tin cơ bản', icon: Home },
-  { id: 2, name: 'Địa điểm', icon: MapPin },
-  { id: 3, name: 'Hình ảnh', icon: Image },
-  { id: 4, name: 'Giá & Chi tiết', icon: DollarSign },
+const STEPS = [
+  { title: 'Cơ bản', description: 'Phân loại & Vị trí' },
+  { title: 'Hình ảnh', description: 'Tải lên tối đa 10 ảnh' },
+  { title: 'Chi tiết', description: 'Giá & Thông số' },
+  { title: 'Thanh toán', description: 'Chọn gói đăng tin' },
+];
+
+const PACKAGES = [
+  { id: 'normal', name: 'Tin Thường', price: 0, duration: 30, color: 'normal' as const, features: ['Hiển thị dưới các tin VIP', 'Tiếp cận người dùng cơ bản', 'Không có huy hiệu nổi bật'] },
+  { id: 'vip', name: 'Gói VIP', price: 50000, duration: 30, color: 'vip' as const, features: ['Hiển thị trên tin thường', 'Có huy hiệu VIP vàng', 'Màu sắc khung thẻ nổi bật'] },
+  { id: 'vip_plus', name: 'Gói VIP+', price: 100000, duration: 30, color: 'vip_plus' as const, isPopular: true, features: ['Hiển thị trên VIP và tin thường', 'Có huy hiệu VIP+ cam', 'Ảnh đại diện lớn hơn'] },
+  { id: 'diamond', name: 'Gói Diamond', price: 200000, duration: 30, color: 'diamond' as const, features: ['Luôn nằm trên cùng trang chủ', 'Huy hiệu Diamond đỏ độc quyền', 'Hỗ trợ đẩy tin 2 lần/ngày', 'Thiết kế thẻ to nhất'] },
 ];
 
 const categories = [
@@ -70,7 +76,7 @@ const categories = [
   { id: 'van-phong', name: 'Văn phòng', type: 'rent' },
 ];
 
-const features = [
+const featuresList = [
   { id: 1, name: 'Hồ bơi' },
   { id: 2, name: 'Gym' },
   { id: 3, name: 'Bảo vệ 24/7' },
@@ -98,61 +104,15 @@ export default function DangTinPage() {
     area: 0,
     bedrooms: 0,
     bathrooms: 0,
-    floors: 1,
     direction: '',
     furniture: 'none',
     legal: '',
     features: [],
+    package_id: 'normal',
   });
 
   const updateFormData = (updates: Partial<PropertyFormData>) => {
     setFormData((prev) => ({ ...prev, ...updates }));
-  };
-
-  const canProceed = () => {
-    switch (currentStep) {
-      case 1:
-        return formData.type && formData.category_id && formData.title.length >= 10 && formData.description.length >= 20;
-      case 2:
-        return formData.province_id && formData.district_id && formData.street;
-      case 3:
-        return formData.images.length > 0;
-      case 4:
-        return formData.price > 0 && formData.area > 0;
-      default:
-        return false;
-    }
-  };
-
-  const nextStep = () => {
-    if (canProceed() && currentStep < 4) {
-      setCurrentStep(prev => prev + 1);
-    }
-  };
-
-  const prevStep = () => {
-    if (currentStep > 1) {
-      setCurrentStep(prev => prev - 1);
-    }
-  };
-
-  const handleSubmit = async () => {
-    setIsSubmitting(true);
-    
-    try {
-      // TODO: Call API to create property
-      // const response = await createProperty(formData);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Redirect to manage page
-      router.push('/dashboard/quan-ly-tin');
-    } catch (error) {
-      console.error('Submit error:', error);
-    } finally {
-      setIsSubmitting(false);
-    }
   };
 
   const toggleFeature = (featureId: number) => {
@@ -162,162 +122,143 @@ export default function DangTinPage() {
     updateFormData({ features: newFeatures });
   };
 
+  const canProceed = () => {
+    switch (currentStep) {
+      case 1:
+        return formData.type && formData.category_id && formData.title.length >= 10 && formData.description.length >= 20 && formData.province_id && formData.district_id;
+      case 2:
+        return formData.images.length > 0;
+      case 3:
+        return formData.price > 0 && formData.area > 0;
+      case 4:
+        return !!formData.package_id;
+      default:
+        return false;
+    }
+  };
+
+  const nextStep = () => {
+    if (canProceed() && currentStep < 4) {
+      setCurrentStep(prev => prev + 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const prevStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(prev => prev - 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      router.push('/dashboard/quan-ly-tin');
+    } catch (error) {
+      console.error('Submit error:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
-    <div className="max-w-4xl mx-auto">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Đăng tin mới</h1>
-        <p className="text-gray-500">Điền thông tin để đăng tin bất động sản của bạn</p>
+    <div className="max-w-4xl mx-auto py-2">
+      <div className="mb-8 text-center">
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900">Đăng tin bất động sản</h1>
+        <p className="text-gray-500 mt-2 text-sm sm:text-base">Điền đầy đủ thông tin để thu hút khách hàng tốt nhất</p>
       </div>
 
-      {/* Step Indicator */}
-      <div className="mb-8 overflow-x-auto pb-2">
-        <div className="flex items-start justify-between min-w-[600px] sm:min-w-0">
-          {steps.map((step, index) => {
-            const Icon = step.icon;
-            const isActive = currentStep === step.id;
-            const isCompleted = currentStep > step.id;
-            
-            return (
-              <div key={step.id} className="flex items-center">
-                <div className="flex flex-col items-center">
-                  <div
-                    className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
-                      isCompleted
-                        ? 'bg-green-500 text-white'
-                        : isActive
-                        ? 'bg-primary text-white'
-                        : 'bg-gray-200 text-gray-500'
-                    }`}
-                  >
-                    {isCompleted ? (
-                      <Check className="h-6 w-6" />
-                    ) : (
-                      <Icon className="h-5 w-5" />
-                    )}
-                  </div>
-                  <span className={`mt-2 text-sm font-medium ${
-                    isActive || isCompleted ? 'text-gray-900' : 'text-gray-500'
-                  }`}>
-                    {step.name}
-                  </span>
-                </div>
-                {index < steps.length - 1 && (
-                  <div
-                    className={`flex-1 h-1 mx-2 ${
-                      isCompleted ? 'bg-green-500' : 'bg-gray-200'
-                    }`}
-                  />
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      <PostStepper currentStep={currentStep} steps={STEPS} />
 
-      {/* Form Steps */}
-      <Card>
-        <CardContent className="p-6">
-          {/* Step 1: Basic Info */}
+      <Card className="border-0 shadow-xl shadow-gray-200/40 rounded-2xl overflow-hidden">
+        <CardContent className="p-6 sm:p-8">
+          
+          {/* Step 1: Basic Info & Location */}
           {currentStep === 1 && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Thông tin cơ bản</h3>
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <section>
+                <h3 className="text-lg font-bold text-gray-900 mb-5 pb-2 border-b">Thông tin cơ bản</h3>
                 
-                {/* Type */}
                 <div className="mb-6">
-                  <Label className="mb-2 block">Loại tin đăng</Label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Label className="mb-3 block font-semibold text-gray-700">Loại tin đăng</Label>
+                  <div className="grid grid-cols-2 gap-4">
                     <button
                       type="button"
                       onClick={() => updateFormData({ type: 'sale', category_id: '' })}
-                      className={`flex-1 p-4 border-2 rounded-lg text-center transition-colors ${
+                      className={`flex flex-col items-center justify-center p-5 border-2 rounded-xl transition-all duration-300 ${
                         formData.type === 'sale'
-                          ? 'border-primary bg-primary-light text-primary'
-                          : 'border-gray-200 hover:border-gray-300'
+                          ? 'border-primary bg-primary-light text-primary shadow-sm scale-[1.02]'
+                          : 'border-gray-200 hover:border-gray-300 text-gray-500 hover:bg-gray-50'
                       }`}
                     >
-                      <Home className="h-8 w-8 mx-auto mb-2" />
-                      <p className="font-semibold">Mua bán</p>
-                      <p className="text-sm text-gray-500">Bán nhà, đất, căn hộ</p>
+                      <Home className="h-7 w-7 mb-2" />
+                      <p className="font-bold">Mua bán</p>
                     </button>
                     <button
                       type="button"
                       onClick={() => updateFormData({ type: 'rent', category_id: '' })}
-                      className={`flex-1 p-4 border-2 rounded-lg text-center transition-colors ${
+                      className={`flex flex-col items-center justify-center p-5 border-2 rounded-xl transition-all duration-300 ${
                         formData.type === 'rent'
-                          ? 'border-primary bg-primary-light text-primary'
-                          : 'border-gray-200 hover:border-gray-300'
+                          ? 'border-[#e03131] bg-red-50 text-[#e03131] shadow-sm scale-[1.02]'
+                          : 'border-gray-200 hover:border-gray-300 text-gray-500 hover:bg-gray-50'
                       }`}
                     >
-                      <DollarSign className="h-8 w-8 mx-auto mb-2" />
-                      <p className="font-semibold">Cho thuê</p>
-                      <p className="text-sm text-gray-500">Thuê nhà, căn hộ</p>
+                      <DollarSign className="h-7 w-7 mb-2" />
+                      <p className="font-bold">Cho thuê</p>
                     </button>
                   </div>
                 </div>
 
-                {/* Category */}
                 <div className="mb-6">
-                  <Label>Danh mục</Label>
+                  <Label className="font-semibold text-gray-700">Danh mục <span className="text-red-500">*</span></Label>
                   <Select
                     value={formData.category_id}
                     onValueChange={(value) => updateFormData({ category_id: value || '' })}
                   >
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Chọn danh mục" />
+                    <SelectTrigger className="mt-2 h-12 bg-gray-50 border-gray-200 focus:ring-primary focus:border-primary">
+                      <SelectValue placeholder="-- Chọn phân khúc --" />
                     </SelectTrigger>
                     <SelectContent>
                       {categories
                         .filter(c => c.type === formData.type)
                         .map(cat => (
-                          <SelectItem key={cat.id} value={cat.id}>
-                            {cat.name}
-                          </SelectItem>
+                          <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                         ))
                       }
                     </SelectContent>
                   </Select>
                 </div>
 
-                {/* Title */}
                 <div className="mb-6">
-                  <Label>Tiêu đề</Label>
+                  <Label className="font-semibold text-gray-700">Tiêu đề tin đăng <span className="text-red-500">*</span></Label>
                   <Input
                     value={formData.title}
                     onChange={(e) => updateFormData({ title: e.target.value })}
-                    placeholder="VD: Căn hộ cao cấp 2PN view biển Mỹ Khê"
-                    className="mt-1"
+                    placeholder="VD: Căn hộ chung cư mini cho thuê 35m2 đầy đủ nội thất..."
+                    className="mt-2 h-12 bg-gray-50 border-gray-200 focus:ring-primary focus:border-primary"
                   />
-                  <p className="text-sm text-gray-500 mt-1">
-                    Tối thiểu 10 ký tự ({formData.title.length}/10)
-                  </p>
+                  <div className="flex justify-between mt-2">
+                    <p className="text-xs text-gray-500">Tối thiểu 10 ký tự</p>
+                    <p className="text-xs font-medium text-gray-500">{formData.title.length}/99</p>
+                  </div>
                 </div>
 
-                {/* Description */}
                 <div>
-                  <Label>Mô tả chi tiết</Label>
+                  <Label className="font-semibold text-gray-700">Mô tả chi tiết <span className="text-red-500">*</span></Label>
                   <Textarea
                     value={formData.description}
                     onChange={(e) => updateFormData({ description: e.target.value })}
-                    placeholder="Mô tả chi tiết về bất động sản của bạn..."
-                    rows={6}
-                    className="mt-1"
+                    placeholder="Giới thiệu chi tiết về diện tích, tiện ích, vị trí, tình trạng pháp lý..."
+                    rows={7}
+                    className="mt-2 bg-gray-50 border-gray-200 focus:ring-primary focus:border-primary resize-none"
                   />
-                  <p className="text-sm text-gray-500 mt-1">
-                    Tối thiểu 20 ký tự ({formData.description.length}/20)
-                  </p>
                 </div>
-              </div>
-            </div>
-          )}
+              </section>
 
-          {/* Step 2: Location */}
-          {currentStep === 2 && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Địa điểm</h3>
-                
+              <section>
+                <h3 className="text-lg font-bold text-gray-900 mb-5 pb-2 border-b">Địa chỉ bất động sản</h3>
                 <LocationSelect
                   value={{
                     province_id: formData.province_id,
@@ -331,201 +272,229 @@ export default function DangTinPage() {
                   })}
                   required
                 />
-
-                <div className="mt-4">
-                  <Label>Địa chỉ cụ thể</Label>
+                <div className="mt-5">
+                  <Label className="font-semibold text-gray-700">Địa chỉ cụ thể (Số nhà, đường)</Label>
                   <Input
                     value={formData.street}
                     onChange={(e) => updateFormData({ street: e.target.value })}
-                    placeholder="VD: 123 Đường Võ Nguyên Giáp"
-                    className="mt-1"
+                    placeholder="VD: 123 Đường Trần Phú..."
+                    className="mt-2 h-12 bg-gray-50 border-gray-200 focus:ring-primary focus:border-primary"
                   />
                 </div>
-              </div>
+              </section>
             </div>
           )}
 
-          {/* Step 3: Images */}
+          {/* Step 2: Images */}
+          {currentStep === 2 && (
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <h3 className="text-lg font-bold text-gray-900 mb-2 pb-2 border-b">Hình ảnh & Video</h3>
+              
+              <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-4 mb-6">
+                <ul className="text-[13px] text-blue-800 space-y-1.5 list-disc list-inside">
+                  <li>Tải lên tối thiểu <strong>1 ảnh</strong>, tối đa <strong>10 ảnh</strong>.</li>
+                  <li>Kéo thả ảnh để thay đổi thứ tự. Ảnh đầu tiên sẽ là ảnh bìa.</li>
+                  <li>Hạn chế ảnh có chứa logo, watermark của các nền tảng khác.</li>
+                </ul>
+              </div>
+
+              <ImageUploader
+                files={formData.images}
+                onChange={(images) => updateFormData({ images })}
+                maxFiles={10}
+                maxSize={10}
+              />
+            </div>
+          )}
+
+          {/* Step 3: Details */}
           {currentStep === 3 && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Hình ảnh</h3>
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <section>
+                <h3 className="text-lg font-bold text-gray-900 mb-5 pb-2 border-b">Mức giá & Diện tích</h3>
                 
-                <ImageUploader
-                  files={formData.images}
-                  onChange={(images) => updateFormData({ images })}
-                  maxFiles={10}
-                  maxSize={10}
-                />
-
-                <div className="mt-4 p-4 bg-yellow-50 rounded-lg">
-                  <p className="text-sm text-yellow-800">
-                    <strong>Lưu ý:</strong>
-                    <ul className="list-disc list-inside mt-1">
-                      <li>Tải lên tối thiểu 1 ảnh</li>
-                      <li>Ảnh đầu tiên sẽ là ảnh bìa</li>
-                      <li>Đăng ảnh chất lượng cao để thu hút khách hàng</li>
-                    </ul>
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Step 4: Pricing & Details */}
-          {currentStep === 4 && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Giá & Chi tiết</h3>
-                
-                {/* Price */}
-                <div className="grid md:grid-cols-2 gap-4 mb-6">
+                <div className="grid md:grid-cols-2 gap-6 mb-6">
                   <div>
-                    <Label>Giá bán/cho thuê</Label>
-                    <div className="flex mt-1">
+                    <Label className="font-semibold text-gray-700">Mức giá <span className="text-red-500">*</span></Label>
+                    <div className="flex mt-2 shadow-sm rounded-lg overflow-hidden">
                       <Input
                         type="number"
                         value={formData.price || ''}
                         onChange={(e) => updateFormData({ price: parseInt(e.target.value) || 0 })}
                         placeholder="VD: 2000000000"
-                        className="flex-1 rounded-r-none"
+                        className="flex-1 rounded-r-none border-r-0 h-12 bg-gray-50 focus:bg-white"
                       />
                       <Select
                         value={formData.price_unit}
                         onValueChange={(value) => updateFormData({ price_unit: value as any })}
                       >
-                        <SelectTrigger className="w-32 rounded-l-none">
+                        <SelectTrigger className="w-32 rounded-l-none h-12 bg-gray-100 border-l-0 font-medium">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="total">Tổng</SelectItem>
-                          <SelectItem value="per_m2">/m²</SelectItem>
-                          <SelectItem value="per_month">/tháng</SelectItem>
+                          <SelectItem value="total">Tổng giá</SelectItem>
+                          <SelectItem value="per_m2">/ m²</SelectItem>
+                          <SelectItem value="per_month">/ tháng</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
+                    
+                    <div className="mt-3 flex items-center">
+                      <Checkbox
+                        id="negotiable"
+                        checked={formData.price_negotiable}
+                        onCheckedChange={(checked) => updateFormData({ price_negotiable: !!checked })}
+                      />
+                      <Label htmlFor="negotiable" className="ml-2 cursor-pointer text-sm font-medium text-gray-700">
+                        Giá có thể thương lượng
+                      </Label>
+                    </div>
                   </div>
-                  <div className="flex items-end pb-1">
-                    <Checkbox
-                      id="negotiable"
-                      checked={formData.price_negotiable}
-                      onCheckedChange={(checked) => updateFormData({ price_negotiable: !!checked })}
-                    />
-                    <Label htmlFor="negotiable" className="ml-2 cursor-pointer">
-                      Giá có thể thương lượng
-                    </Label>
-                  </div>
-                </div>
-
-                {/* Area */}
-                <div className="mb-6">
-                  <Label>Diện tích (m²)</Label>
-                  <Input
-                    type="number"
-                    value={formData.area || ''}
-                    onChange={(e) => updateFormData({ area: parseInt(e.target.value) || 0 })}
-                    placeholder="VD: 75"
-                    className="mt-1 w-full max-w-[200px]"
-                  />
-                </div>
-
-                {/* Details */}
-                <div className="grid md:grid-cols-3 gap-4 mb-6">
+                  
                   <div>
-                    <Label>Số phòng ngủ</Label>
+                    <Label className="font-semibold text-gray-700">Diện tích <span className="text-red-500">*</span></Label>
+                    <div className="relative mt-2 shadow-sm rounded-lg overflow-hidden">
+                      <Input
+                        type="number"
+                        value={formData.area || ''}
+                        onChange={(e) => updateFormData({ area: parseInt(e.target.value) || 0 })}
+                        placeholder="VD: 75"
+                        className="h-12 bg-gray-50 focus:bg-white pr-12"
+                      />
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">m²</span>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section>
+                <h3 className="text-lg font-bold text-gray-900 mb-5 pb-2 border-b">Thông tin chi tiết</h3>
+                
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-5 mb-6">
+                  <div>
+                    <Label className="text-sm font-medium text-gray-600">Phòng ngủ</Label>
                     <Select
                       value={String(formData.bedrooms || 0)}
                       onValueChange={(value) => updateFormData({ bedrooms: parseInt(value || '0') })}
                     >
-                      <SelectTrigger className="mt-1">
+                      <SelectTrigger className="mt-2 h-11 bg-gray-50">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="0">Không có</SelectItem>
-                        <SelectItem value="1">1 PN</SelectItem>
-                        <SelectItem value="2">2 PN</SelectItem>
-                        <SelectItem value="3">3 PN</SelectItem>
-                        <SelectItem value="4">4 PN</SelectItem>
-                        <SelectItem value="5">5+ PN</SelectItem>
+                        {[1,2,3,4,5,6].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
-                    <Label>Số phòng tắm</Label>
+                    <Label className="text-sm font-medium text-gray-600">Phòng tắm</Label>
                     <Select
                       value={String(formData.bathrooms || 0)}
                       onValueChange={(value) => updateFormData({ bathrooms: parseInt(value || '0') })}
                     >
-                      <SelectTrigger className="mt-1">
+                      <SelectTrigger className="mt-2 h-11 bg-gray-50">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="0">Không có</SelectItem>
-                        <SelectItem value="1">1</SelectItem>
-                        <SelectItem value="2">2</SelectItem>
-                        <SelectItem value="3">3+</SelectItem>
+                        {[1,2,3,4,5].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
-                    <Label>Hướng nhà</Label>
+                    <Label className="text-sm font-medium text-gray-600">Hướng nhà</Label>
                     <Select
                       value={formData.direction || ''}
                       onValueChange={(value) => updateFormData({ direction: value || '' })}
                     >
-                      <SelectTrigger className="mt-1">
-                        <SelectValue placeholder="Chọn hướng" />
+                      <SelectTrigger className="mt-2 h-11 bg-gray-50">
+                        <SelectValue placeholder="Tùy chọn" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="dong">Đông</SelectItem>
-                        <SelectItem value="tay">Tây</SelectItem>
-                        <SelectItem value="nam">Nam</SelectItem>
-                        <SelectItem value="bac">Bắc</SelectItem>
-                        <SelectItem value="dong_bac">Đông Bắc</SelectItem>
-                        <SelectItem value="dong_nam">Đông Nam</SelectItem>
-                        <SelectItem value="tay_bac">Tây Bắc</SelectItem>
-                        <SelectItem value="tay_nam">Tây Nam</SelectItem>
+                        {['Đông', 'Tây', 'Nam', 'Bắc', 'Đông Bắc', 'Đông Nam', 'Tây Bắc', 'Tây Nam'].map(dir => (
+                          <SelectItem key={dir} value={dir}>{dir}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-600">Pháp lý</Label>
+                    <Select
+                      value={formData.legal || ''}
+                      onValueChange={(value) => updateFormData({ legal: value || '' })}
+                    >
+                      <SelectTrigger className="mt-2 h-11 bg-gray-50">
+                        <SelectValue placeholder="Tùy chọn" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="so_do">Sổ đỏ</SelectItem>
+                        <SelectItem value="so_hong">Sổ hồng</SelectItem>
+                        <SelectItem value="contract">Hợp đồng mua bán</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
 
-                {/* Furniture */}
                 <div className="mb-6">
-                  <Label>Tình trạng nội thất</Label>
+                  <Label className="font-semibold text-gray-700">Tình trạng nội thất</Label>
                   <Select
                     value={formData.furniture || 'none'}
                     onValueChange={(value) => updateFormData({ furniture: value || '' })}
                   >
-                    <SelectTrigger className="mt-1">
+                    <SelectTrigger className="mt-2 h-11 bg-gray-50 w-full md:w-1/2">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">Không nội thất</SelectItem>
-                      <SelectItem value="basic">Nội thất cơ bản</SelectItem>
-                      <SelectItem value="full">Nội thất đầy đủ</SelectItem>
+                      <SelectItem value="none">Không nội thất (Nhà trống)</SelectItem>
+                      <SelectItem value="basic">Nội thất cơ bản (Liền tường)</SelectItem>
+                      <SelectItem value="full">Nội thất đầy đủ (Full option)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+              </section>
 
-                {/* Features */}
-                <div>
-                  <Label className="mb-2 block">Tiện ích</Label>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {features.map((feature) => (
-                      <div key={feature.id} className="flex items-center gap-2">
-                        <Checkbox
-                          id={`feature-${feature.id}`}
-                          checked={formData.features.includes(feature.id)}
-                          onCheckedChange={() => toggleFeature(feature.id)}
-                        />
-                        <Label htmlFor={`feature-${feature.id}`} className="cursor-pointer">
-                          {feature.name}
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
+              <section>
+                <h3 className="text-lg font-bold text-gray-900 mb-5 pb-2 border-b">Tiện ích kèm theo</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-y-4 gap-x-2">
+                  {featuresList.map((feature) => (
+                    <div key={feature.id} className="flex items-center gap-2.5">
+                      <Checkbox
+                        id={`feature-${feature.id}`}
+                        checked={formData.features.includes(feature.id)}
+                        onCheckedChange={() => toggleFeature(feature.id)}
+                        className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                      />
+                      <Label htmlFor={`feature-${feature.id}`} className="cursor-pointer text-[14px] text-gray-700">
+                        {feature.name}
+                      </Label>
+                    </div>
+                  ))}
                 </div>
+              </section>
+            </div>
+          )}
+
+          {/* Step 4: Packages */}
+          {currentStep === 4 && (
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <h3 className="text-lg font-bold text-gray-900 mb-2 pb-2 border-b text-center">Chọn gói đăng tin</h3>
+              <p className="text-center text-gray-500 text-sm mb-8">Tin đăng sẽ được kiểm duyệt trong vòng 24h sau khi thanh toán.</p>
+              
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {PACKAGES.map((pkg) => (
+                  <PackageCard
+                    key={pkg.id}
+                    id={pkg.id}
+                    name={pkg.name}
+                    price={pkg.price}
+                    duration={pkg.duration}
+                    features={pkg.features}
+                    isPopular={pkg.isPopular}
+                    color={pkg.color}
+                    selected={formData.package_id === pkg.id}
+                    onSelect={(id) => updateFormData({ package_id: id })}
+                  />
+                ))}
               </div>
             </div>
           )}
@@ -533,12 +502,12 @@ export default function DangTinPage() {
       </Card>
 
       {/* Navigation */}
-      <div className="flex justify-between mt-6">
+      <div className="flex justify-between items-center mt-6">
         <Button
           variant="outline"
           onClick={prevStep}
-          disabled={currentStep === 1}
-          className="gap-2"
+          disabled={currentStep === 1 || isSubmitting}
+          className="gap-2 h-11 px-6 border-gray-200 hover:bg-gray-50 text-gray-700 font-semibold rounded-xl"
         >
           <ArrowLeft className="h-4 w-4" />
           Quay lại
@@ -548,26 +517,26 @@ export default function DangTinPage() {
           <Button
             onClick={nextStep}
             disabled={!canProceed()}
-            className="gap-2"
+            className="gap-2 h-11 px-6 bg-gray-900 hover:bg-black text-white font-semibold rounded-xl transition-all"
           >
-            Tiếp theo
+            Tiếp tục
             <ArrowRight className="h-4 w-4" />
           </Button>
         ) : (
           <Button
             onClick={handleSubmit}
             disabled={!canProceed() || isSubmitting}
-            className="gap-2 bg-cta hover:bg-cta-dark"
+            className="gap-2 h-11 px-8 bg-cta hover:bg-cta-dark text-white font-bold rounded-xl transition-all shadow-md shadow-red-500/20"
           >
             {isSubmitting ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Đang đăng tin...
+                Đang xử lý...
               </>
             ) : (
               <>
-                <Check className="h-4 w-4" />
-                Đăng tin
+                <Check className="h-5 w-5" />
+                Thanh toán & Đăng tin
               </>
             )}
           </Button>
