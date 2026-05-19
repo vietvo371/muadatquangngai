@@ -10,19 +10,6 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs';
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -44,10 +31,13 @@ import {
   Loader2,
   Trash2,
   AlertTriangle,
+  Monitor
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { PillTabs } from '@/components/dashboard/pill-tabs';
 
 export default function SettingsPage() {
+  const [activeTab, setActiveTab] = useState('profile');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
@@ -96,393 +86,424 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="max-w-4xl mx-auto animate-in fade-in duration-500">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Cài đặt tài khoản</h1>
-        <p className="text-gray-500">Quản lý cài đặt và tùy chọn tài khoản của bạn</p>
+        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Cài đặt hệ thống</h1>
+        <p className="text-gray-500 mt-1">Cấu hình cá nhân, thông báo và bảo mật tài khoản</p>
       </div>
 
-      <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="profile" className="gap-2">
-            <User className="h-4 w-4" />
-            Hồ sơ
-          </TabsTrigger>
-          <TabsTrigger value="notifications" className="gap-2">
-            <Bell className="h-4 w-4" />
-            Thông báo
-          </TabsTrigger>
-          <TabsTrigger value="privacy" className="gap-2">
-            <Shield className="h-4 w-4" />
-            Quyền riêng tư
-          </TabsTrigger>
-          <TabsTrigger value="security" className="gap-2">
-            <Lock className="h-4 w-4" />
-            Bảo mật
-          </TabsTrigger>
-        </TabsList>
+      <div className="grid lg:grid-cols-12 gap-6 items-start">
+        {/* Sidebar Tabs */}
+        <div className="lg:col-span-3">
+          <Card className="rounded-2xl border-gray-100 shadow-sm overflow-hidden sticky top-24">
+            <div className="p-3">
+              <PillTabs 
+                tabs={[
+                  { id: 'profile', label: 'Hồ sơ', icon: <User className="h-4 w-4" /> },
+                  { id: 'notifications', label: 'Thông báo', icon: <Bell className="h-4 w-4" /> },
+                  { id: 'privacy', label: 'Quyền riêng tư', icon: <Shield className="h-4 w-4" /> },
+                  { id: 'security', label: 'Bảo mật', icon: <Lock className="h-4 w-4" /> },
+                ]}
+                activeTab={activeTab}
+                onChange={setActiveTab}
+                orientation="vertical"
+              />
+            </div>
+          </Card>
+        </div>
 
-        {/* Profile Tab */}
-        <TabsContent value="profile">
-          <Card>
-            <CardHeader>
-              <CardTitle>Thông tin hồ sơ</CardTitle>
-              <CardDescription>Cập nhật thông tin cá nhân của bạn</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Avatar */}
-              <div className="flex items-center gap-6">
-                <div className="relative">
-                  <Avatar className="h-24 w-24">
-                    <AvatarImage src={profile.avatar || undefined} />
-                    <AvatarFallback className="text-2xl">
-                      {profile.name.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <Button
-                    size="icon"
-                    variant="secondary"
-                    className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full"
-                  >
-                    <Camera className="h-4 w-4" />
+        {/* Main Content */}
+        <div className="lg:col-span-9 space-y-6">
+          {/* Profile Tab */}
+          {activeTab === 'profile' && (
+            <Card className="rounded-2xl shadow-sm border-gray-100 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <CardHeader className="border-b border-gray-100 bg-gray-50/50 pb-5">
+                <CardTitle className="text-xl">Thông tin hồ sơ</CardTitle>
+                <CardDescription>Cập nhật thông tin cá nhân và liên hệ của bạn</CardDescription>
+              </CardHeader>
+              <CardContent className="p-6 space-y-8">
+                {/* Avatar */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-6">
+                  <div className="relative shrink-0">
+                    <Avatar className="h-24 w-24 border-4 border-white shadow-md">
+                      <AvatarImage src={profile.avatar || undefined} />
+                      <AvatarFallback className="text-3xl bg-primary-light text-primary font-bold">
+                        {profile.name.charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <Button
+                      size="icon"
+                      className="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-gray-900 hover:bg-black text-white border-2 border-white shadow-sm"
+                    >
+                      <Camera className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 text-lg mb-1">Ảnh đại diện</h3>
+                    <p className="text-sm text-gray-500 mb-3">Định dạng JPG, PNG. Dung lượng tối đa 2MB.</p>
+                    <div className="flex gap-2">
+                      <Button variant="outline" className="h-9 font-medium">Tải ảnh lên</Button>
+                      <Button variant="ghost" className="h-9 text-red-500 hover:text-red-600 font-medium">Xóa ảnh</Button>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator className="bg-gray-100" />
+
+                <div className="grid sm:grid-cols-2 gap-6">
+                  {/* Name */}
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label htmlFor="name" className="font-semibold text-gray-700">Họ và tên</Label>
+                    <Input
+                      id="name"
+                      value={profile.name}
+                      onChange={(e) => setProfile({ ...profile, name: e.target.value })}
+                      className="h-11 bg-gray-50"
+                    />
+                  </div>
+
+                  {/* Email */}
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="font-semibold text-gray-700">Địa chỉ Email</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="email"
+                        type="email"
+                        value={profile.email}
+                        onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                        className="flex-1 h-11 bg-gray-50"
+                      />
+                      <Button variant="outline" className="h-11 px-4 font-medium">Xác thực</Button>
+                    </div>
+                  </div>
+
+                  {/* Phone */}
+                  <div className="space-y-2">
+                    <Label htmlFor="phone" className="font-semibold text-gray-700">Số điện thoại</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="phone"
+                        value={profile.phone}
+                        onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                        className="flex-1 h-11 bg-gray-50"
+                      />
+                      <Button variant="outline" className="h-11 px-4 font-medium">Đổi số</Button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-4 border-t border-gray-100">
+                  <Button onClick={handleSave} disabled={isSubmitting} className="h-11 px-8 bg-gray-900 hover:bg-black font-bold">
+                    {isSubmitting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                    <Save className="h-4 w-4 mr-2" />
+                    Lưu thay đổi
                   </Button>
                 </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Notifications Tab */}
+          {activeTab === 'notifications' && (
+            <Card className="rounded-2xl shadow-sm border-gray-100 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <CardHeader className="border-b border-gray-100 bg-gray-50/50 pb-5">
+                <CardTitle className="text-xl">Cài đặt thông báo</CardTitle>
+                <CardDescription>Quản lý cách bạn nhận các thông báo từ hệ thống</CardDescription>
+              </CardHeader>
+              <CardContent className="p-6 space-y-8">
+                {/* Email Notifications */}
                 <div>
-                  <h3 className="font-medium">Ảnh đại diện</h3>
-                  <p className="text-sm text-gray-500">JPG, PNG. Tối đa 2MB</p>
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Name */}
-              <div className="space-y-2">
-                <Label htmlFor="name">Họ và tên</Label>
-                <Input
-                  id="name"
-                  value={profile.name}
-                  onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-                />
-              </div>
-
-              {/* Email */}
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="email"
-                    type="email"
-                    value={profile.email}
-                    onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                    className="flex-1"
-                  />
-                  <Button variant="outline">Xác thực</Button>
-                </div>
-              </div>
-
-              {/* Phone */}
-              <div className="space-y-2">
-                <Label htmlFor="phone">Số điện thoại</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="phone"
-                    value={profile.phone}
-                    onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                    className="flex-1"
-                  />
-                  <Button variant="outline">Đổi số</Button>
-                </div>
-              </div>
-
-              <Separator />
-
-              <Button onClick={handleSave} disabled={isSubmitting} className="gap-2">
-                {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                <Save className="h-4 w-4" />
-                Lưu thay đổi
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Notifications Tab */}
-        <TabsContent value="notifications">
-          <Card>
-            <CardHeader>
-              <CardTitle>Thông báo</CardTitle>
-              <CardDescription>Quản lý cách bạn nhận thông báo</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Email Notifications */}
-              <div>
-                <h3 className="font-medium mb-4 flex items-center gap-2">
-                  <Mail className="h-4 w-4" />
-                  Email
-                </h3>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Tin nhắn mới</p>
-                      <p className="text-sm text-gray-500">Nhận email khi có tin nhắn mới</p>
+                  <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
+                      <Mail className="h-4 w-4 text-blue-600" />
                     </div>
-                    <Switch
-                      checked={notifications.email_new_message}
-                      onCheckedChange={(v) => setNotifications({ ...notifications, email_new_message: v })}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Thông báo hệ thống</p>
-                      <p className="text-sm text-gray-500">Nhận thông báo về tài khoản</p>
+                    Thông báo qua Email
+                  </h3>
+                  <div className="space-y-4 ml-10">
+                    <div className="flex items-center justify-between p-3 rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors">
+                      <div>
+                        <p className="font-bold text-gray-900 text-[15px]">Tin nhắn mới</p>
+                        <p className="text-sm text-gray-500 font-medium mt-0.5">Nhận email khi có người gửi tin nhắn cho bạn</p>
+                      </div>
+                      <Switch
+                        checked={notifications.email_new_message}
+                        onCheckedChange={(v) => setNotifications({ ...notifications, email_new_message: v })}
+                        className="data-[state=checked]:bg-primary"
+                      />
                     </div>
-                    <Switch
-                      checked={notifications.email_new_notification}
-                      onCheckedChange={(v) => setNotifications({ ...notifications, email_new_notification: v })}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Email marketing</p>
-                      <p className="text-sm text-gray-500">Nhận tin khuyến mãi, ưu đãi</p>
+                    <div className="flex items-center justify-between p-3 rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors">
+                      <div>
+                        <p className="font-bold text-gray-900 text-[15px]">Thông báo hệ thống</p>
+                        <p className="text-sm text-gray-500 font-medium mt-0.5">Nhận cập nhật quan trọng về tài khoản và tin đăng</p>
+                      </div>
+                      <Switch
+                        checked={notifications.email_new_notification}
+                        onCheckedChange={(v) => setNotifications({ ...notifications, email_new_notification: v })}
+                        className="data-[state=checked]:bg-primary"
+                      />
                     </div>
-                    <Switch
-                      checked={notifications.email_marketing}
-                      onCheckedChange={(v) => setNotifications({ ...notifications, email_marketing: v })}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Push Notifications */}
-              <div>
-                <h3 className="font-medium mb-4 flex items-center gap-2">
-                  <Smartphone className="h-4 w-4" />
-                  Push Notification
-                </h3>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Tin nhắn mới</p>
-                      <p className="text-sm text-gray-500">Thông báo khi có tin nhắn</p>
+                    <div className="flex items-center justify-between p-3 rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors">
+                      <div>
+                        <p className="font-bold text-gray-900 text-[15px]">Email Marketing</p>
+                        <p className="text-sm text-gray-500 font-medium mt-0.5">Nhận tin khuyến mãi, ưu đãi và tin tức thị trường</p>
+                      </div>
+                      <Switch
+                        checked={notifications.email_marketing}
+                        onCheckedChange={(v) => setNotifications({ ...notifications, email_marketing: v })}
+                        className="data-[state=checked]:bg-primary"
+                      />
                     </div>
-                    <Switch
-                      checked={notifications.push_new_message}
-                      onCheckedChange={(v) => setNotifications({ ...notifications, push_new_message: v })}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Thông báo</p>
-                      <p className="text-sm text-gray-500">Thông báo hệ thống</p>
-                    </div>
-                    <Switch
-                      checked={notifications.push_new_notification}
-                      onCheckedChange={(v) => setNotifications({ ...notifications, push_new_notification: v })}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Thay đổi giá</p>
-                      <p className="text-sm text-gray-500">Thông báo khi tin đăng bạn quan tâm thay đổi giá</p>
-                    </div>
-                    <Switch
-                      checked={notifications.push_price_change}
-                      onCheckedChange={(v) => setNotifications({ ...notifications, push_price_change: v })}
-                    />
                   </div>
                 </div>
-              </div>
 
-              <Separator />
+                <Separator className="bg-gray-100" />
 
-              <Button onClick={handleSave} disabled={isSubmitting} className="gap-2">
-                {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                <Save className="h-4 w-4" />
-                Lưu thay đổi
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Privacy Tab */}
-        <TabsContent value="privacy">
-          <Card>
-            <CardHeader>
-              <CardTitle>Quyền riêng tư</CardTitle>
-              <CardDescription>Kiểm soát ai có thể xem thông tin của bạn</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Hiển thị số điện thoại</p>
-                    <p className="text-sm text-gray-500">Cho phép người khác xem số điện thoại</p>
-                  </div>
-                  <Switch
-                    checked={privacy.show_phone}
-                    onCheckedChange={(v) => setPrivacy({ ...privacy, show_phone: v })}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Hiển thị email</p>
-                    <p className="text-sm text-gray-500">Cho phép người khác xem email</p>
-                  </div>
-                  <Switch
-                    checked={privacy.show_email}
-                    onCheckedChange={(v) => setPrivacy({ ...privacy, show_email: v })}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Trạng thái online</p>
-                    <p className="text-sm text-gray-500">Hiển thị khi bạn đang online</p>
-                  </div>
-                  <Switch
-                    checked={privacy.show_online_status}
-                    onCheckedChange={(v) => setPrivacy({ ...privacy, show_online_status: v })}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Cho phép nhắn tin</p>
-                    <p className="text-sm text-gray-500">Người khác có thể gửi tin nhắn cho bạn</p>
-                  </div>
-                  <Switch
-                    checked={privacy.allow_messages}
-                    onCheckedChange={(v) => setPrivacy({ ...privacy, allow_messages: v })}
-                  />
-                </div>
-              </div>
-
-              <Separator />
-
-              <Button onClick={handleSave} disabled={isSubmitting} className="gap-2">
-                {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                <Save className="h-4 w-4" />
-                Lưu thay đổi
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Security Tab */}
-        <TabsContent value="security">
-          <Card>
-            <CardHeader>
-              <CardTitle>Bảo mật</CardTitle>
-              <CardDescription>Quản lý mật khẩu và bảo mật tài khoản</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Change Password */}
-              <div className="space-y-4">
-                <h3 className="font-medium flex items-center gap-2">
-                  <Lock className="h-4 w-4" />
-                  Đổi mật khẩu
-                </h3>
-                <div className="space-y-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="current_password">Mật khẩu hiện tại</Label>
-                    <Input id="current_password" type="password" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="new_password">Mật khẩu mới</Label>
-                    <Input id="new_password" type="password" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="confirm_password">Xác nhận mật khẩu mới</Label>
-                    <Input id="confirm_password" type="password" />
-                  </div>
-                  <Button>Đổi mật khẩu</Button>
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Two Factor */}
-              <div className="flex items-center justify-between">
+                {/* Push Notifications */}
                 <div>
-                  <h3 className="font-medium">Xác thực 2 yếu tố (2FA)</h3>
-                  <p className="text-sm text-gray-500">Thêm lớp bảo mật cho tài khoản</p>
-                </div>
-                <Button variant="outline">Kích hoạt</Button>
-              </div>
-
-              <Separator />
-
-              {/* Sessions */}
-              <div>
-                <h3 className="font-medium mb-4">Phiên đăng nhập</h3>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium">Chrome trên MacOS</p>
-                      <p className="text-sm text-gray-500">TP.HCM, Việt Nam • Hoạt động gần đây</p>
+                  <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center shrink-0">
+                      <Smartphone className="h-4 w-4 text-green-600" />
                     </div>
-                    <Badge>Hiện tại</Badge>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium">Safari trên iPhone</p>
-                      <p className="text-sm text-gray-500">TP.HCM, Việt Nam • 2 ngày trước</p>
+                    Thông báo đẩy (Push)
+                  </h3>
+                  <div className="space-y-4 ml-10">
+                    <div className="flex items-center justify-between p-3 rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors">
+                      <div>
+                        <p className="font-bold text-gray-900 text-[15px]">Tin nhắn mới</p>
+                        <p className="text-sm text-gray-500 font-medium mt-0.5">Hiển thị thông báo ngay lập tức trên trình duyệt</p>
+                      </div>
+                      <Switch
+                        checked={notifications.push_new_message}
+                        onCheckedChange={(v) => setNotifications({ ...notifications, push_new_message: v })}
+                        className="data-[state=checked]:bg-primary"
+                      />
                     </div>
-                    <Button variant="ghost" size="sm">Đăng xuất</Button>
+                    <div className="flex items-center justify-between p-3 rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors">
+                      <div>
+                        <p className="font-bold text-gray-900 text-[15px]">Thông báo hệ thống</p>
+                        <p className="text-sm text-gray-500 font-medium mt-0.5">Hiển thị cảnh báo trực tiếp về tài khoản</p>
+                      </div>
+                      <Switch
+                        checked={notifications.push_new_notification}
+                        onCheckedChange={(v) => setNotifications({ ...notifications, push_new_notification: v })}
+                        className="data-[state=checked]:bg-primary"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between p-3 rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors">
+                      <div>
+                        <p className="font-bold text-gray-900 text-[15px]">Thay đổi giá</p>
+                        <p className="text-sm text-gray-500 font-medium mt-0.5">Thông báo khi tin đăng bạn quan tâm giảm giá</p>
+                      </div>
+                      <Switch
+                        checked={notifications.push_price_change}
+                        onCheckedChange={(v) => setNotifications({ ...notifications, push_price_change: v })}
+                        className="data-[state=checked]:bg-primary"
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <Separator />
+                <div className="flex justify-end pt-4 border-t border-gray-100">
+                  <Button onClick={handleSave} disabled={isSubmitting} className="h-11 px-8 bg-gray-900 hover:bg-black font-bold">
+                    {isSubmitting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                    <Save className="h-4 w-4 mr-2" />
+                    Lưu thay đổi
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-              {/* Delete Account */}
-              <div className="p-4 border border-red-200 rounded-lg bg-red-50">
-                <h3 className="font-medium text-red-600 flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4" />
-                  Xóa tài khoản
-                </h3>
-                <p className="text-sm text-gray-600 mt-2 mb-4">
-                  Khi xóa tài khoản, tất cả dữ liệu sẽ bị xóa vĩnh viễn. Hành động này không thể hoàn tác.
-                </p>
-                <Button variant="destructive" onClick={() => setShowDeleteDialog(true)} className="gap-2">
-                  <Trash2 className="h-4 w-4" />
-                  Xóa tài khoản
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+          {/* Privacy Tab */}
+          {activeTab === 'privacy' && (
+            <Card className="rounded-2xl shadow-sm border-gray-100 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <CardHeader className="border-b border-gray-100 bg-gray-50/50 pb-5">
+                <CardTitle className="text-xl">Quyền riêng tư</CardTitle>
+                <CardDescription>Kiểm soát ai có thể xem thông tin và liên hệ với bạn</CardDescription>
+              </CardHeader>
+              <CardContent className="p-6 space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 rounded-xl border border-gray-100 bg-white">
+                    <div className="pr-4">
+                      <p className="font-bold text-gray-900 text-[15px]">Hiển thị số điện thoại</p>
+                      <p className="text-sm text-gray-500 font-medium mt-0.5">Cho phép người khác xem số điện thoại trên tin đăng của bạn</p>
+                    </div>
+                    <Switch
+                      checked={privacy.show_phone}
+                      onCheckedChange={(v) => setPrivacy({ ...privacy, show_phone: v })}
+                      className="data-[state=checked]:bg-primary shrink-0"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 rounded-xl border border-gray-100 bg-white">
+                    <div className="pr-4">
+                      <p className="font-bold text-gray-900 text-[15px]">Hiển thị Email</p>
+                      <p className="text-sm text-gray-500 font-medium mt-0.5">Cho phép người khác xem địa chỉ email liên hệ</p>
+                    </div>
+                    <Switch
+                      checked={privacy.show_email}
+                      onCheckedChange={(v) => setPrivacy({ ...privacy, show_email: v })}
+                      className="data-[state=checked]:bg-primary shrink-0"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 rounded-xl border border-gray-100 bg-white">
+                    <div className="pr-4">
+                      <p className="font-bold text-gray-900 text-[15px]">Trạng thái hoạt động</p>
+                      <p className="text-sm text-gray-500 font-medium mt-0.5">Hiển thị nhãn "Đang Online" khi bạn truy cập hệ thống</p>
+                    </div>
+                    <Switch
+                      checked={privacy.show_online_status}
+                      onCheckedChange={(v) => setPrivacy({ ...privacy, show_online_status: v })}
+                      className="data-[state=checked]:bg-primary shrink-0"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 rounded-xl border border-gray-100 bg-white">
+                    <div className="pr-4">
+                      <p className="font-bold text-gray-900 text-[15px]">Cho phép nhắn tin</p>
+                      <p className="text-sm text-gray-500 font-medium mt-0.5">Người dùng khác có thể gửi tin nhắn chat trực tiếp cho bạn</p>
+                    </div>
+                    <Switch
+                      checked={privacy.allow_messages}
+                      onCheckedChange={(v) => setPrivacy({ ...privacy, allow_messages: v })}
+                      className="data-[state=checked]:bg-primary shrink-0"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-4 border-t border-gray-100">
+                  <Button onClick={handleSave} disabled={isSubmitting} className="h-11 px-8 bg-gray-900 hover:bg-black font-bold">
+                    {isSubmitting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                    <Save className="h-4 w-4 mr-2" />
+                    Lưu thay đổi
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Security Tab */}
+          {activeTab === 'security' && (
+            <Card className="rounded-2xl shadow-sm border-gray-100 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <CardHeader className="border-b border-gray-100 bg-gray-50/50 pb-5">
+                <CardTitle className="text-xl">Bảo mật tài khoản</CardTitle>
+                <CardDescription>Bảo vệ tài khoản của bạn bằng các lớp bảo mật nâng cao</CardDescription>
+              </CardHeader>
+              <CardContent className="p-6 space-y-8">
+                {/* Change Password */}
+                <div>
+                  <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
+                      <Lock className="h-4 w-4 text-gray-700" />
+                    </div>
+                    Đổi mật khẩu
+                  </h3>
+                  <div className="space-y-4 ml-10 max-w-md">
+                    <div className="space-y-2">
+                      <Label htmlFor="current_password" className="font-semibold text-gray-700">Mật khẩu hiện tại</Label>
+                      <Input id="current_password" type="password" className="h-11 bg-gray-50" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="new_password" className="font-semibold text-gray-700">Mật khẩu mới</Label>
+                      <Input id="new_password" type="password" className="h-11 bg-gray-50" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="confirm_password" className="font-semibold text-gray-700">Xác nhận mật khẩu mới</Label>
+                      <Input id="confirm_password" type="password" className="h-11 bg-gray-50" />
+                    </div>
+                    <Button className="font-bold">Đổi mật khẩu</Button>
+                  </div>
+                </div>
+
+                <Separator className="bg-gray-100" />
+
+                {/* Two Factor */}
+                <div className="flex items-center justify-between py-2">
+                  <div>
+                    <h3 className="font-bold text-gray-900 text-lg">Xác thực 2 yếu tố (2FA)</h3>
+                    <p className="text-sm text-gray-500 font-medium mt-1 max-w-md">Tăng cường bảo mật bằng cách yêu cầu mã xác nhận từ điện thoại mỗi khi đăng nhập.</p>
+                  </div>
+                  <Button variant="outline" className="h-10 px-6 font-bold shrink-0">Kích hoạt</Button>
+                </div>
+
+                <Separator className="bg-gray-100" />
+
+                {/* Sessions */}
+                <div>
+                  <h3 className="font-bold text-gray-900 mb-4 text-lg">Thiết bị đã đăng nhập</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-xl">
+                      <div className="flex items-center gap-4">
+                        <Monitor className="h-8 w-8 text-gray-400" />
+                        <div>
+                          <p className="font-bold text-gray-900 text-[15px]">Mac OS • Chrome</p>
+                          <p className="text-[13px] text-gray-500 font-medium mt-0.5">TP.HCM, Việt Nam • Đang hoạt động</p>
+                        </div>
+                      </div>
+                      <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-0 font-bold">Hiện tại</Badge>
+                    </div>
+                    <div className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-xl">
+                      <div className="flex items-center gap-4">
+                        <Smartphone className="h-8 w-8 text-gray-400" />
+                        <div>
+                          <p className="font-bold text-gray-900 text-[15px]">iPhone 14 Pro Max • Safari</p>
+                          <p className="text-[13px] text-gray-500 font-medium mt-0.5">Hà Nội, Việt Nam • 2 ngày trước</p>
+                        </div>
+                      </div>
+                      <Button variant="ghost" size="sm" className="font-bold text-gray-500 hover:text-gray-900">Đăng xuất</Button>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator className="bg-gray-100" />
+
+                {/* Delete Account */}
+                <div className="p-6 border border-red-200 rounded-xl bg-red-50/50">
+                  <h3 className="font-bold text-red-600 text-lg flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5" />
+                    Xóa tài khoản
+                  </h3>
+                  <p className="text-sm text-gray-600 mt-2 mb-4 font-medium leading-relaxed">
+                    Khi bạn xóa tài khoản, tất cả dữ liệu (bao gồm tin đăng, tin đã lưu, lịch sử giao dịch) sẽ bị xóa vĩnh viễn khỏi hệ thống. Hành động này tuyệt đối không thể hoàn tác.
+                  </p>
+                  <Button variant="destructive" onClick={() => setShowDeleteDialog(true)} className="gap-2 font-bold shadow-md shadow-red-500/20">
+                    <Trash2 className="h-4 w-4" />
+                    Xóa tài khoản vĩnh viễn
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
 
       {/* Delete Account Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="text-red-600 flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5" />
-              Xóa tài khoản
-            </DialogTitle>
-            <DialogDescription>
-              Bạn có chắc chắn muốn xóa tài khoản? Hành động này không thể hoàn tác.
+        <DialogContent className="rounded-2xl border-0 overflow-hidden p-0 sm:max-w-md">
+          <div className="bg-red-600 p-6 flex flex-col items-center justify-center text-white text-center">
+            <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mb-4">
+              <AlertTriangle className="h-8 w-8" />
+            </div>
+            <DialogTitle className="text-xl font-bold mb-1 text-white">Xác nhận xóa tài khoản</DialogTitle>
+            <DialogDescription className="text-red-100 font-medium">
+              Bạn sắp thực hiện một hành động không thể hoàn tác.
             </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <p className="text-sm text-gray-600 mb-4">
-              Nhập <strong>DELETE</strong> để xác nhận:
-            </p>
-            <Input placeholder="Nhập DELETE" />
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
-              Hủy
-            </Button>
-            <Button variant="destructive" onClick={handleDeleteAccount}>
-              Xóa tài khoản
-            </Button>
-          </DialogFooter>
+          <div className="p-6">
+            <p className="text-[15px] text-gray-700 mb-4 font-medium">
+              Vui lòng gõ chữ <strong className="text-red-600 bg-red-50 px-2 py-1 rounded">DELETE</strong> vào ô bên dưới để xác nhận xóa toàn bộ dữ liệu của bạn:
+            </p>
+            <Input placeholder="Nhập DELETE" className="h-12 text-center font-bold tracking-wider mb-6 border-red-200 focus-visible:ring-red-500" />
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => setShowDeleteDialog(false)} className="flex-1 h-11 font-bold">
+                Hủy bỏ
+              </Button>
+              <Button variant="destructive" onClick={handleDeleteAccount} className="flex-1 h-11 font-bold">
+                Xác nhận Xóa
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

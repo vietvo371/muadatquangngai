@@ -2,12 +2,10 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Separator } from '@/components/ui/separator';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,6 +23,7 @@ import {
   Smile,
   Check,
   CheckCheck,
+  Info
 } from 'lucide-react';
 import { formatDistanceToNow, formatPrice } from '@/lib/formatters';
 
@@ -131,7 +130,7 @@ export default function ConversationPage({
     setMsgs([...msgs, message]);
     setNewMessage('');
 
-    // Simulate reply after 1 second
+    // Simulate reply after 1.5 seconds
     setTimeout(() => {
       const reply = {
         id: msgs.length + 2,
@@ -165,89 +164,103 @@ export default function ConversationPage({
   };
 
   return (
-    <div className="h-[calc(100vh-100px)] flex flex-col bg-white rounded-lg border">
+    <div className="h-[calc(100vh-100px)] flex flex-col bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden animate-in fade-in duration-300">
       {/* Header */}
-      <div className="p-4 border-b">
+      <div className="p-4 border-b border-gray-100 bg-white flex items-center justify-between shrink-0">
         <div className="flex items-center gap-4">
-          <Link href="/dashboard/tin-nhan">
-            <Button variant="ghost" size="icon">
+          <Link href="/dashboard/tin-nhan" className="md:hidden">
+            <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0">
               <ArrowLeft className="h-5 w-5" />
             </Button>
           </Link>
 
-          <Avatar className="h-10 w-10">
-            <AvatarImage src={conversation.participant.avatar || undefined} />
-            <AvatarFallback>{conversation.participant.name.charAt(0)}</AvatarFallback>
-          </Avatar>
+          <div className="relative">
+            <Avatar className="h-11 w-11 border border-gray-100 shadow-sm">
+              <AvatarImage src={conversation.participant.avatar || undefined} />
+              <AvatarFallback className="bg-primary-light text-primary font-bold">
+                {conversation.participant.name.charAt(0)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+          </div>
 
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <h2 className="font-semibold text-gray-900">{conversation.participant.name}</h2>
+          <div>
+            <div className="flex items-center gap-2 mb-0.5">
+              <h2 className="font-bold text-gray-900 text-[16px] leading-none">{conversation.participant.name}</h2>
               {conversation.participant.is_agent && (
-                <Badge variant="secondary" className="text-xs">
-                  <Star className="h-3 w-3 mr-1 fill-yellow-500 text-yellow-500" />
-                  {conversation.participant.rating}
+                <Badge className="bg-yellow-100 text-yellow-700 hover:bg-yellow-100 border-0 h-5 px-1.5 flex items-center gap-1 rounded-sm">
+                  <Star className="h-2.5 w-2.5 fill-yellow-600 text-yellow-600" />
+                  <span className="text-[10px] font-bold">{conversation.participant.rating}</span>
                 </Badge>
               )}
             </div>
-            {conversation.participant.is_agent ? (
-              <p className="text-sm text-gray-500">{conversation.participant.total_listings} tin đăng</p>
-            ) : (
-              <p className="text-sm text-gray-500">Khách hàng</p>
-            )}
+            <p className="text-sm text-gray-500 font-medium">
+              {conversation.participant.is_agent ? `${conversation.participant.total_listings} tin đăng` : 'Khách hàng cá nhân'}
+            </p>
           </div>
+        </div>
 
-          <div className="flex items-center gap-2">
-            <Link href={`tel:${conversation.participant.phone}`}>
-              <Button size="icon" variant="outline">
-                <Phone className="h-4 w-4" />
+        <div className="flex items-center gap-1">
+          <Link href={`tel:${conversation.participant.phone}`}>
+            <Button size="icon" variant="ghost" className="text-primary hover:text-primary hover:bg-primary-light h-10 w-10 rounded-full">
+              <Phone className="h-5 w-5" />
+            </Button>
+          </Link>
+          <Button size="icon" variant="ghost" className="h-10 w-10 rounded-full text-gray-500">
+            <Info className="h-5 w-5" />
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="icon" variant="ghost" className="h-10 w-10 rounded-full text-gray-500">
+                <MoreVertical className="h-5 w-5" />
               </Button>
-            </Link>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger>
-                <Button size="icon" variant="ghost">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem>Xem hồ sơ</DropdownMenuItem>
-                <DropdownMenuItem>Chặn tin nhắn</DropdownMenuItem>
-                <DropdownMenuItem className="text-red-600">Xóa cuộc trò chuyện</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem className="cursor-pointer font-medium">Xem hồ sơ</DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer font-medium">Chặn người dùng</DropdownMenuItem>
+              <DropdownMenuItem className="text-red-600 focus:text-red-600 cursor-pointer font-medium">Xóa cuộc trò chuyện</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
-      {/* Property Card */}
+      {/* Property Context Card */}
       {conversation.property && (
-        <Link href={`/mua-ban/${conversation.property.slug}`}>
-          <div className="p-3 border-b hover:bg-gray-50 transition-colors">
-            <div className="flex gap-3">
+        <Link href={`/mua-ban/${conversation.property.slug}`} className="block shrink-0">
+          <div className="p-3 bg-gray-50/80 border-b border-gray-100 flex items-center justify-between group hover:bg-gray-100 transition-colors">
+            <div className="flex gap-3 items-center">
               <img
                 src={conversation.property.thumbnail}
                 alt={conversation.property.title}
-                className="w-16 h-16 rounded-lg object-cover"
+                className="w-14 h-14 rounded-lg object-cover shadow-sm border border-gray-200"
               />
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-gray-900 line-clamp-1">
+              <div className="min-w-0 flex-1">
+                <p className="font-bold text-sm text-gray-900 line-clamp-1 group-hover:text-primary transition-colors">
                   {conversation.property.title}
                 </p>
-                <p className="text-sm text-red-600 font-semibold">
-                  {formatPrice(conversation.property.price)}
-                </p>
-                <p className="text-xs text-gray-500 line-clamp-1">
-                  {conversation.property.address}
-                </p>
+                <div className="flex items-center gap-3 mt-1">
+                  <span className="text-[13px] font-extrabold text-[#e03131]">
+                    {formatPrice(conversation.property.price)}
+                  </span>
+                  <span className="text-xs text-gray-500 line-clamp-1 border-l border-gray-300 pl-3">
+                    {conversation.property.address}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
         </Link>
       )}
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      {/* Messages Area */}
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 bg-[#f8fafc]">
+        {/* Date separator */}
+        <div className="flex justify-center my-4">
+          <span className="bg-white border border-gray-200 text-gray-500 text-xs px-3 py-1 rounded-full shadow-sm font-medium">
+            Hôm nay, {new Date().toLocaleDateString('vi-VN')}
+          </span>
+        </div>
+
         {msgs.map((message) => {
           const isMe = message.sender_id === 1;
           return (
@@ -256,55 +269,53 @@ export default function ConversationPage({
               className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
             >
               {!isMe && (
-                <Avatar className="h-8 w-8 mr-2 flex-shrink-0">
-                  <AvatarFallback>{conversation.participant.name.charAt(0)}</AvatarFallback>
+                <Avatar className="h-8 w-8 mr-3 shrink-0 shadow-sm border border-gray-100">
+                  <AvatarFallback className="bg-white text-gray-600 font-bold text-xs">{conversation.participant.name.charAt(0)}</AvatarFallback>
                 </Avatar>
               )}
 
-              <div
-                className={`max-w-[70%] ${
-                  isMe ? 'order-1' : 'order-0'
-                }`}
-              >
+              <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[75%]`}>
                 <div
-                  className={`px-4 py-2 rounded-2xl ${
+                  className={`px-4 py-2.5 rounded-2xl shadow-sm text-[14.5px] leading-relaxed ${
                     isMe
-                      ? 'bg-primary text-white rounded-br-md'
-                      : 'bg-gray-100 text-gray-900 rounded-bl-md'
+                      ? 'bg-primary text-white rounded-br-sm'
+                      : 'bg-white border border-gray-100 text-gray-900 rounded-bl-sm'
                   }`}
                 >
-                  <p className="whitespace-pre-wrap">{message.content}</p>
+                  <p className="whitespace-pre-wrap break-words">{message.content}</p>
                 </div>
-                <div className={`flex items-center gap-1 mt-1 text-xs text-gray-400 ${
-                  isMe ? 'justify-end' : 'justify-start'
+                <div className={`flex items-center gap-1.5 mt-1.5 px-1 text-[11px] font-medium text-gray-400 ${
+                  isMe ? 'flex-row-reverse' : 'flex-row'
                 }`}>
-                  <span>{formatDistanceToNow(new Date(message.created_at))}</span>
+                  <span>{new Date(message.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
                   {isMe && getStatusIcon(message.status)}
                 </div>
               </div>
             </div>
           );
         })}
-        <div ref={messagesEndRef} />
+        <div ref={messagesEndRef} className="h-1" />
       </div>
 
-      {/* Input */}
-      <div className="p-4 border-t">
-        <div className="flex items-end gap-2">
-          <Button size="icon" variant="ghost">
-            <Image className="h-5 w-5" />
-          </Button>
-          <Button size="icon" variant="ghost">
-            <Smile className="h-5 w-5" />
-          </Button>
+      {/* Input Area */}
+      <div className="p-4 bg-white border-t border-gray-100 shrink-0">
+        <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-full p-1.5 pr-2 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all">
+          <div className="flex shrink-0">
+            <Button size="icon" variant="ghost" className="h-9 w-9 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-200 shrink-0">
+              <Image className="h-5 w-5" />
+            </Button>
+            <Button size="icon" variant="ghost" className="h-9 w-9 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-200 shrink-0 hidden sm:flex">
+              <Smile className="h-5 w-5" />
+            </Button>
+          </div>
           
-          <div className="flex-1">
+          <div className="flex-1 shrink min-w-0">
             <Input
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Nhập tin nhắn..."
-              className="rounded-full"
+              className="border-0 bg-transparent shadow-none focus-visible:ring-0 h-10 text-[15px] px-0 w-full"
             />
           </div>
 
@@ -312,9 +323,13 @@ export default function ConversationPage({
             onClick={sendMessage}
             disabled={!newMessage.trim()}
             size="icon"
-            className="bg-primary hover:bg-primary-dark"
+            className={`h-10 w-10 shrink-0 rounded-full transition-colors shadow-sm ${
+              newMessage.trim() 
+                ? 'bg-primary hover:bg-primary-dark text-white' 
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            }`}
           >
-            <Send className="h-4 w-4" />
+            <Send className="h-4 w-4 ml-0.5" />
           </Button>
         </div>
       </div>

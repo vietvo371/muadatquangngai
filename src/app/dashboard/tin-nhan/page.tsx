@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, MessageSquare, Phone, MoreVertical, Star } from 'lucide-react';
+import { Search, MessageSquare, Phone, MoreVertical, Star, Inbox } from 'lucide-react';
 import { formatDistanceToNow } from '@/lib/formatters';
 
 // Mock conversations
@@ -102,26 +102,31 @@ export default function MessagesPage() {
   const totalUnread = conversations.reduce((sum, c) => sum + c.unread_count, 0);
 
   return (
-    <div className="h-[calc(100vh-100px)] flex gap-6">
+    <div className="h-[calc(100vh-100px)] flex flex-col md:flex-row gap-6 animate-in fade-in duration-500 max-w-6xl mx-auto">
       {/* Conversations List */}
-      <div className="w-80 flex-shrink-0 flex flex-col bg-white rounded-lg border">
+      <div className="w-full md:w-[380px] flex-shrink-0 flex flex-col bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         {/* Header */}
-        <div className="p-4 border-b">
+        <div className="p-5 border-b border-gray-100 bg-gray-50/50">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-xl font-bold text-gray-900">Tin nhắn</h1>
+            <h1 className="text-xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
+              <MessageSquare className="h-5 w-5 text-primary" />
+              Tin nhắn
+            </h1>
             {totalUnread > 0 && (
-              <Badge variant="destructive">{totalUnread}</Badge>
+              <Badge className="bg-[#e03131] hover:bg-[#e03131] text-white border-0 px-2 py-0.5 rounded-full font-bold">
+                {totalUnread} mới
+              </Badge>
             )}
           </div>
           
           {/* Search */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
-              placeholder="Tìm kiếm tin nhắn..."
+              placeholder="Tìm kiếm người nhắn..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
+              className="pl-10 bg-white border-gray-200 h-10 rounded-xl"
             />
           </div>
         </div>
@@ -132,69 +137,70 @@ export default function MessagesPage() {
             <Link
               key={conversation.id}
               href={`/dashboard/tin-nhan/${conversation.id}`}
+              className="block"
             >
               <div
-                className={`p-4 border-b hover:bg-gray-50 transition-colors ${
-                  selectedConversation === conversation.id ? 'bg-blue-50' : ''
-                } ${conversation.unread_count > 0 ? 'bg-blue-50/30' : ''}`}
+                className={`p-4 border-b border-gray-50 transition-all ${
+                  selectedConversation === conversation.id ? 'bg-primary-light/10 border-l-4 border-l-primary' : 'border-l-4 border-l-transparent hover:bg-gray-50'
+                } ${conversation.unread_count > 0 ? 'bg-primary-light/5' : ''}`}
                 onClick={() => setSelectedConversation(conversation.id)}
               >
-                <div className="flex gap-3">
+                <div className="flex gap-4">
                   {/* Avatar */}
-                  <div className="relative">
-                    <Avatar className="h-12 w-12">
+                  <div className="relative shrink-0 pt-1">
+                    <Avatar className="h-12 w-12 border border-gray-100">
                       <AvatarImage src={conversation.participant.avatar || undefined} />
-                      <AvatarFallback>
+                      <AvatarFallback className="bg-gray-100 text-gray-600 font-medium">
                         {conversation.participant.name.charAt(0)}
                       </AvatarFallback>
                     </Avatar>
                     {conversation.participant.is_agent && (
-                      <div className="absolute -bottom-1 -right-1 bg-primary text-white rounded-full p-0.5">
-                        <Star className="h-3 w-3 fill-current" />
+                      <div className="absolute -bottom-1 -right-1 bg-yellow-400 text-white rounded-full p-0.5 border-2 border-white shadow-sm">
+                        <Star className="h-2.5 w-2.5 fill-current" />
                       </div>
                     )}
                   </div>
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <p className={`font-medium truncate ${
+                    <div className="flex items-start justify-between mb-0.5">
+                      <p className={`font-bold truncate text-[15px] ${
                         conversation.unread_count > 0 ? 'text-gray-900' : 'text-gray-700'
                       }`}>
                         {conversation.participant.name}
-                        {conversation.participant.is_agent && (
-                          <Badge variant="secondary" className="ml-2 text-xs">Môi giới</Badge>
-                        )}
                       </p>
-                      <span className="text-xs text-gray-400">
+                      <span className={`text-[11px] whitespace-nowrap ml-2 ${conversation.unread_count > 0 ? 'text-primary font-bold' : 'text-gray-400 font-medium'}`}>
                         {formatDistanceToNow(new Date(conversation.last_message.created_at))}
                       </span>
                     </div>
 
-                    {/* Property */}
+                    {conversation.participant.is_agent && (
+                      <Badge className="bg-yellow-50 text-yellow-700 hover:bg-yellow-50 border-0 mb-1 rounded-[4px] px-1.5 py-0 text-[10px] uppercase font-bold tracking-wider">Môi giới</Badge>
+                    )}
+
+                    {/* Property indicator */}
                     {conversation.property && (
-                      <div className="flex items-center gap-1 mt-1">
-                        <span className="text-xs text-gray-500 line-clamp-1">
+                      <div className="flex items-center gap-1 mb-1 mt-0.5">
+                        <Home className="h-3 w-3 text-gray-400" />
+                        <span className="text-[12px] text-gray-500 truncate font-medium">
                           {conversation.property.title}
                         </span>
                       </div>
                     )}
 
                     {/* Last message */}
-                    <p className={`text-sm mt-1 truncate ${
-                      conversation.unread_count > 0 ? 'text-gray-900 font-medium' : 'text-gray-500'
+                    <p className={`text-[13px] truncate ${
+                      conversation.unread_count > 0 ? 'text-gray-900 font-semibold' : 'text-gray-500'
                     }`}>
-                      {conversation.last_message.is_mine && 'Bạn: '}
+                      {conversation.last_message.is_mine && <span className="text-gray-400 mr-1">Bạn:</span>}
                       {conversation.last_message.content}
                     </p>
                   </div>
 
-                  {/* Unread badge */}
+                  {/* Unread dot */}
                   {conversation.unread_count > 0 && (
-                    <div className="flex-shrink-0">
-                      <Badge variant="default" className="bg-primary">
-                        {conversation.unread_count}
-                      </Badge>
+                    <div className="flex-shrink-0 pt-2">
+                      <div className="w-2.5 h-2.5 rounded-full bg-[#e03131]"></div>
                     </div>
                   )}
                 </div>
@@ -203,23 +209,27 @@ export default function MessagesPage() {
           ))}
 
           {filteredConversations.length === 0 && (
-            <div className="p-8 text-center">
-              <MessageSquare className="h-12 w-12 mx-auto text-gray-300 mb-3" />
-              <p className="text-gray-500">Không có cuộc trò chuyện nào</p>
+            <div className="p-12 text-center flex flex-col items-center justify-center h-full">
+              <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                <Inbox className="h-8 w-8 text-gray-300" />
+              </div>
+              <p className="text-gray-500 font-medium">Không tìm thấy tin nhắn nào</p>
             </div>
           )}
         </div>
       </div>
 
       {/* Empty State - Right Panel */}
-      <div className="flex-1 bg-white rounded-lg border flex items-center justify-center">
-        <div className="text-center">
-          <MessageSquare className="h-16 w-16 mx-auto text-gray-300 mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            Chọn một cuộc trò chuyện
+      <div className="hidden md:flex flex-1 bg-gray-50 rounded-2xl border border-gray-100 items-center justify-center">
+        <div className="text-center p-8 max-w-sm">
+          <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm border border-gray-100">
+            <MessageSquare className="h-10 w-10 text-primary" />
+          </div>
+          <h3 className="text-xl font-bold text-gray-900 mb-2 tracking-tight">
+            Tin nhắn của bạn
           </h3>
-          <p className="text-gray-500">
-            Chọn cuộc trò chuyện từ danh sách bên trái để bắt đầu nhắn tin
+          <p className="text-gray-500 text-sm leading-relaxed">
+            Chọn một cuộc trò chuyện từ danh sách bên trái để xem chi tiết và bắt đầu nhắn tin với đối tác.
           </p>
         </div>
       </div>

@@ -6,7 +6,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +27,7 @@ import {
   Calendar,
 } from 'lucide-react';
 import { formatDistanceToNow } from '@/lib/formatters';
+import { UnderlineTabs } from '@/components/dashboard/underline-tabs';
 
 // Mock notifications
 const notifications = [
@@ -79,9 +79,9 @@ const notifications = [
 ];
 
 const typeConfig = {
-  property: { icon: Home, color: 'bg-primary-light text-primary' },
+  property: { icon: Home, color: 'bg-blue-100 text-blue-600' },
   message: { icon: MessageSquare, color: 'bg-green-100 text-green-600' },
-  system: { icon: Bell, color: 'bg-yellow-100 text-yellow-600' },
+  system: { icon: Bell, color: 'bg-orange-100 text-orange-600' },
   review: { icon: Star, color: 'bg-purple-100 text-purple-600' },
   appointment: { icon: Calendar, color: 'bg-indigo-100 text-indigo-600' },
   report: { icon: AlertCircle, color: 'bg-red-100 text-red-600' },
@@ -90,6 +90,7 @@ const typeConfig = {
 export default function NotificationsPage() {
   const [notifs, setNotifs] = useState(notifications);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [activeTab, setActiveTab] = useState('all');
 
   const unreadCount = notifs.filter(n => !n.read_at).length;
 
@@ -128,71 +129,67 @@ export default function NotificationsPage() {
     }
   };
 
+  const displayedNotifs = activeTab === 'unread' ? notifs.filter(n => !n.read_at) : notifs;
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-4xl mx-auto animate-in fade-in duration-500">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Thông báo</h1>
-          <p className="text-gray-500">
-            {unreadCount > 0 ? (
-              <span className="text-red-500 font-medium">{unreadCount} thông báo chưa đọc</span>
-            ) : (
-              'Tất cả đã đọc'
-            )}
-          </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-primary-light rounded-xl flex items-center justify-center">
+            <Bell className="h-6 w-6 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Thông báo</h1>
+            <p className="text-gray-500 text-sm mt-0.5">
+              {unreadCount > 0 ? (
+                <span className="text-[#e03131] font-semibold">{unreadCount} thông báo chưa đọc</span>
+              ) : (
+                'Tất cả đã đọc'
+              )}
+            </p>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 border-t sm:border-0 pt-4 sm:pt-0">
           {unreadCount > 0 && (
-            <Button variant="outline" onClick={markAllAsRead} className="gap-2">
-              <CheckCheck className="h-4 w-4" />
+            <Button variant="outline" onClick={markAllAsRead} className="gap-2 h-10 bg-white hover:bg-gray-50 border-gray-200">
+              <CheckCheck className="h-4 w-4 text-green-600" />
               Đánh dấu đã đọc
             </Button>
           )}
           {notifs.some(n => n.read_at) && (
-            <Button variant="outline" onClick={deleteAllRead} className="gap-2">
-              <Trash2 className="h-4 w-4" />
+            <Button variant="outline" onClick={deleteAllRead} className="gap-2 h-10 bg-white hover:bg-gray-50 border-gray-200">
+              <Trash2 className="h-4 w-4 text-red-500" />
               Xóa đã đọc
             </Button>
           )}
         </div>
       </div>
 
-      {/* Tabs */}
-      <Tabs defaultValue="all">
-        <TabsList>
-          <TabsTrigger value="all">Tất cả</TabsTrigger>
-          <TabsTrigger value="unread">
-            Chưa đọc
-            {unreadCount > 0 && (
-              <Badge variant="destructive" className="ml-2">{unreadCount}</Badge>
-            )}
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="all" className="mt-4">
+      <Card className="rounded-2xl border-gray-100 shadow-sm overflow-hidden">
+        <div className="px-6 bg-gray-50/50">
+          <UnderlineTabs 
+            tabs={[
+              { id: 'all', label: 'Tất cả' },
+              { id: 'unread', label: 'Chưa đọc', count: unreadCount > 0 ? unreadCount : undefined },
+            ]}
+            activeTab={activeTab}
+            onChange={setActiveTab}
+          />
+        </div>
+        
+        <CardContent className="p-0">
           <NotificationList
-            notifications={notifs}
+            notifications={displayedNotifs}
             selectedIds={selectedIds}
             onToggleSelect={toggleSelect}
             onToggleSelectAll={toggleSelectAll}
             onMarkAsRead={markAsRead}
             onDelete={deleteNotification}
           />
-        </TabsContent>
-
-        <TabsContent value="unread" className="mt-4">
-          <NotificationList
-            notifications={notifs.filter(n => !n.read_at)}
-            selectedIds={selectedIds}
-            onToggleSelect={toggleSelect}
-            onToggleSelectAll={toggleSelectAll}
-            onMarkAsRead={markAsRead}
-            onDelete={deleteNotification}
-          />
-        </TabsContent>
-      </Tabs>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -216,108 +213,107 @@ function NotificationList({
 }: NotificationListProps) {
   if (notifications.length === 0) {
     return (
-      <Card>
-        <CardContent className="py-16 text-center">
-          <BellOff className="h-16 w-16 mx-auto text-gray-300 mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Không có thông báo</h3>
-          <p className="text-gray-500">Bạn sẽ nhận được thông báo khi có cập nhật mới</p>
-        </CardContent>
-      </Card>
+      <div className="py-20 text-center">
+        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <BellOff className="h-8 w-8 text-gray-400" />
+        </div>
+        <h3 className="text-lg font-bold text-gray-900 mb-2">Không có thông báo</h3>
+        <p className="text-gray-500">Bạn sẽ nhận được thông báo khi có cập nhật mới</p>
+      </div>
     );
   }
 
   return (
-    <div className="space-y-2">
-      {/* Header with select all */}
-      <div className="flex items-center gap-2 p-2">
+    <div className="flex flex-col">
+      {/* List Header Actions */}
+      <div className="flex items-center gap-3 p-4 bg-gray-50 border-b border-gray-100">
         <Checkbox
           checked={selectedIds.length === notifications.length && notifications.length > 0}
           onCheckedChange={onToggleSelectAll}
+          className="ml-2"
         />
-        <span className="text-sm text-gray-500">
+        <span className="text-sm font-medium text-gray-600">
           {selectedIds.length > 0 ? `${selectedIds.length} đã chọn` : 'Chọn tất cả'}
         </span>
         {selectedIds.length > 0 && (
-          <Button variant="ghost" size="sm" onClick={() => selectedIds.forEach(id => onDelete(id))}>
-            Xóa đã chọn
+          <Button variant="ghost" size="sm" onClick={() => selectedIds.forEach(id => onDelete(id))} className="ml-auto text-red-600 hover:text-red-700 hover:bg-red-50 h-8">
+            <Trash2 className="h-4 w-4 mr-2" /> Xóa đã chọn
           </Button>
         )}
       </div>
 
-      {notifications.map((notification) => {
-        const config = typeConfig[notification.type as keyof typeof typeConfig] || typeConfig.system;
-        const Icon = config.icon;
-        const isUnread = !notification.read_at;
+      {/* List Items */}
+      <div className="divide-y divide-gray-100">
+        {notifications.map((notification) => {
+          const config = typeConfig[notification.type as keyof typeof typeConfig] || typeConfig.system;
+          const Icon = config.icon;
+          const isUnread = !notification.read_at;
 
-        return (
-          <Card
-            key={notification.id}
-            className={`transition-colors ${isUnread ? 'bg-blue-50/50' : ''}`}
-          >
-            <CardContent className="p-4">
-              <div className="flex items-start gap-4">
-                {/* Checkbox */}
-                <div className="pt-1">
-                  <Checkbox
-                    checked={selectedIds.includes(notification.id)}
-                    onCheckedChange={() => onToggleSelect(notification.id)}
-                  />
-                </div>
+          return (
+            <div
+              key={notification.id}
+              className={`flex items-start gap-4 p-4 sm:p-5 hover:bg-gray-50 transition-colors ${isUnread ? 'bg-primary-light/10' : ''}`}
+            >
+              {/* Checkbox */}
+              <div className="pt-2">
+                <Checkbox
+                  checked={selectedIds.includes(notification.id)}
+                  onCheckedChange={() => onToggleSelect(notification.id)}
+                />
+              </div>
 
-                {/* Icon */}
-                <div className={`p-2 rounded-full ${config.color}`}>
-                  <Icon className="h-5 w-5" />
-                </div>
+              {/* Icon */}
+              <div className={`p-3 rounded-full shrink-0 ${config.color}`}>
+                <Icon className="h-5 w-5" />
+              </div>
 
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h4 className={`font-medium ${isUnread ? 'text-gray-900' : 'text-gray-700'}`}>
-                        {notification.title}
-                        {isUnread && <span className="ml-2 text-primary">●</span>}
-                      </h4>
-                      <p className="text-sm text-gray-500 mt-1 line-clamp-2">
-                        {notification.content}
-                      </p>
-                      <p className="text-xs text-gray-400 mt-2">
-                        {formatDistanceToNow(new Date(notification.created_at))}
-                      </p>
-                    </div>
-
-                    {/* Actions */}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger>
-                        <Button size="icon" variant="ghost" className="h-8 w-8">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {notification.action_url && (
-                          <DropdownMenuItem>
-                            <Eye className="h-4 w-4 mr-2" />
-                            <Link href={notification.action_url}>Xem chi tiết</Link>
-                          </DropdownMenuItem>
-                        )}
-                        {isUnread && (
-                          <DropdownMenuItem onClick={() => onMarkAsRead(notification.id)}>
-                            <Check className="h-4 w-4 mr-2" />
-                            Đánh dấu đã đọc
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem onClick={() => onDelete(notification.id)} className="text-red-600">
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Xóa
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+              {/* Content */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h4 className={`text-[15px] leading-tight mb-1 ${isUnread ? 'font-bold text-gray-900' : 'font-semibold text-gray-700'}`}>
+                      {notification.title}
+                      {isUnread && <span className="ml-2 inline-block w-2 h-2 rounded-full bg-primary align-middle"></span>}
+                    </h4>
+                    <p className={`text-sm line-clamp-2 leading-relaxed ${isUnread ? 'text-gray-700 font-medium' : 'text-gray-500'}`}>
+                      {notification.content}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-2 font-medium">
+                      {formatDistanceToNow(new Date(notification.created_at))}
+                    </p>
                   </div>
+
+                  {/* Actions */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:text-gray-900">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      {notification.action_url && (
+                        <DropdownMenuItem asChild>
+                          <Link href={notification.action_url} className="cursor-pointer">
+                            <Eye className="h-4 w-4 mr-2" /> Xem chi tiết
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
+                      {isUnread && (
+                        <DropdownMenuItem onClick={() => onMarkAsRead(notification.id)} className="cursor-pointer">
+                          <Check className="h-4 w-4 mr-2 text-green-600" /> Đánh dấu đã đọc
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem onClick={() => onDelete(notification.id)} className="text-red-600 focus:text-red-600 cursor-pointer">
+                        <Trash2 className="h-4 w-4 mr-2" /> Xóa thông báo
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        );
-      })}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
