@@ -1,28 +1,35 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PageLoader } from '@/components/shared';
-import { postApi, type Post, type PostComment } from '@/lib/post-api';
+import { postApi, type Post } from '@/lib/post-api';
 import {
   ChevronLeft,
-  Share2,
   Eye,
-  MessageSquare,
   Printer,
-  ExternalLink,
   Calendar,
+  Share2,
+  Facebook,
+  Twitter,
+  Linkedin,
+  Link2
 } from 'lucide-react';
+import { toast } from 'sonner';
+
+// Components
+import { TableOfContents } from '@/components/news/TableOfContents';
+import { NewsCard } from '@/components/news/NewsCard';
 
 export default function BlogDetailPage({ params }: { params: { slug: string } }) {
   const [relatedPosts] = useState<Post[]>([]);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['post', params.slug],
@@ -35,13 +42,20 @@ export default function BlogDetailPage({ params }: { params: { slug: string } })
   const handleShare = (platform: string) => {
     const url = typeof window !== 'undefined' ? window.location.href : '';
     const text = post?.title || '';
+    
+    if (platform === 'copy') {
+      navigator.clipboard.writeText(url);
+      toast.success('Đã sao chép đường dẫn bài viết!');
+      return;
+    }
+
     const shareUrls: Record<string, string> = {
       facebook: `https://www.facebook.com/sharer/sharer.php?u=${url}`,
       twitter: `https://twitter.com/intent/tweet?url=${url}&text=${text}`,
       linkedin: `https://www.linkedin.com/shareArticle?mini=true&url=${url}&title=${text}`,
     };
     if (shareUrls[platform]) {
-      window.open(shareUrls[platform]);
+      window.open(shareUrls[platform], '_blank', 'width=600,height=400');
     }
   };
 
@@ -49,190 +63,197 @@ export default function BlogDetailPage({ params }: { params: { slug: string } })
 
   if (error || !post) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold text-gray-700 mb-2">Không tìm thấy bài viết</h2>
-          <Link href="/tin-tuc" className="text-primary hover:underline">Quay lại tin tức</Link>
+      <div className="min-h-[70vh] bg-gray-50 flex items-center justify-center flex-col">
+        <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
+          <Share2 className="h-10 w-10 text-gray-400" />
         </div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Không tìm thấy bài viết</h2>
+        <p className="text-gray-500 mb-6">Bài viết có thể đã bị xóa hoặc không tồn tại.</p>
+        <Link href="/tin-tuc">
+          <Button className="font-bold px-8">Quay lại Tin tức</Button>
+        </Link>
       </div>
     );
   }
 
+  const publishedDate = new Date(post.published_at || post.created_at).toLocaleDateString('vi-VN', {
+    weekday: 'long',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
+
   return (
-    <div className="bg-gray-50 min-h-screen">
-      {/* Header */}
-      <div className="bg-white border-b">
-        <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="bg-white min-h-screen">
+      {/* Header Banner */}
+      <div className="relative pt-10 pb-20 md:pt-16 md:pb-28 overflow-hidden z-10 bg-gray-900">
+        {post.thumbnail && (
+          <>
+            <Image
+              src={post.thumbnail}
+              alt={post.title}
+              fill
+              className="object-cover opacity-40 scale-105 blur-sm"
+              priority
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/80 to-transparent" />
+          </>
+        )}
+        
+        <div className="max-w-5xl mx-auto px-4 relative z-20">
           {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
-            <Link href="/" className="hover:text-primary">Trang chủ</Link>
-            <ChevronLeft className="h-4 w-4 rotate-180" />
-            <Link href="/tin-tuc" className="hover:text-primary">Tin tức</Link>
-            <ChevronLeft className="h-4 w-4 rotate-180" />
-            <span className="text-gray-900 line-clamp-1">{post.title}</span>
+          <div className="flex flex-wrap items-center gap-2 text-sm text-gray-300 mb-6 md:mb-8 font-medium">
+            <Link href="/" className="hover:text-white transition-colors">Trang chủ</Link>
+            <ChevronLeft className="h-4 w-4 rotate-180 text-gray-500" />
+            <Link href="/tin-tuc" className="hover:text-white transition-colors">Tin tức</Link>
+            {post.category && (
+              <>
+                <ChevronLeft className="h-4 w-4 rotate-180 text-gray-500" />
+                <span className="text-white bg-white/10 px-2 py-0.5 rounded-md">{post.category.name}</span>
+              </>
+            )}
           </div>
 
-          {/* Category */}
-          {post.category && <Badge className="mb-3">{post.category.name}</Badge>}
-
           {/* Title */}
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">{post.title}</h1>
+          <div className="max-w-4xl">
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-white mb-6 leading-tight drop-shadow-md">
+              {post.title}
+            </h1>
 
-          {/* Meta */}
-          <div className="flex flex-wrap items-center gap-6 text-sm text-gray-500">
-            {post.author && (
-              <div className="flex items-center gap-2">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={post.author.avatar || undefined} />
-                  <AvatarFallback>{post.author.name.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <span className="font-medium">{post.author.name}</span>
+            {/* Meta */}
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-4 text-sm text-gray-300">
+              {post.author && (
+                <div className="flex items-center gap-3 bg-white/10 pr-4 rounded-full backdrop-blur-sm border border-white/10">
+                  <Avatar className="h-10 w-10 border-2 border-white/20">
+                    <AvatarImage src={post.author.avatar || undefined} className="object-cover" />
+                    <AvatarFallback className="bg-primary text-white font-bold">{post.author.name.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <span className="font-bold text-white">{post.author.name}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-4">
+                <span className="flex items-center gap-1.5 font-medium">
+                  <Calendar className="h-4 w-4 text-primary-light" />
+                  {publishedDate}
+                </span>
+                <span className="flex items-center gap-1.5 font-medium">
+                  <Eye className="h-4 w-4 text-primary-light" />
+                  {post.view_count.toLocaleString()} lượt xem
+                </span>
               </div>
-            )}
-            <span className="flex items-center gap-1">
-              <Calendar className="h-4 w-4" />
-              {new Date(post.published_at || post.created_at).toLocaleDateString('vi-VN')}
-            </span>
-            <span className="flex items-center gap-1">
-              <Eye className="h-4 w-4" />
-              {post.view_count.toLocaleString()} lượt xem
-            </span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="bg-white rounded-xl shadow-sm">
-          {/* Featured Image */}
-          {post.thumbnail && (
-            <div className="aspect-[16/9] rounded-t-xl overflow-hidden">
-              <Image
-                src={post.thumbnail}
-                alt={post.title}
-                width={800}
-                height={450}
-                className="w-full h-full object-cover"
-              />
-            </div>
-          )}
+      <div className="max-w-5xl mx-auto px-4">
+        <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 relative -mt-10 md:-mt-16 z-30">
+          
+          {/* Main Content */}
+          <div className="flex-1 bg-white rounded-3xl shadow-xl border border-gray-100 p-6 md:p-10">
+            
+            {/* Excerpt */}
+            {post.excerpt && (
+              <p className="text-lg md:text-xl text-gray-700 font-medium leading-relaxed mb-10 pb-10 border-b border-gray-100 italic">
+                {post.excerpt}
+              </p>
+            )}
 
-          {/* Article Content */}
-          <div className="p-8">
-            {post.content ? (
-              <div
-                className="prose prose-lg max-w-none"
-                dangerouslySetInnerHTML={{ __html: post.content }}
-              />
-            ) : post.excerpt ? (
-              <p className="text-gray-600 leading-relaxed">{post.excerpt}</p>
-            ) : null}
+            {/* Mobile TOC (shows only on small screens) */}
+            <div className="lg:hidden mb-10">
+              <TableOfContents contentRef={contentRef} />
+            </div>
+
+            {/* Article Content */}
+            <div 
+              ref={contentRef}
+              className="prose prose-lg md:prose-xl max-w-none prose-headings:font-bold prose-headings:text-gray-900 prose-h2:text-2xl md:prose-h2:text-3xl prose-p:text-gray-600 prose-p:leading-relaxed prose-a:text-primary hover:prose-a:text-primary-dark prose-img:rounded-2xl prose-img:shadow-md"
+            >
+              {post.content ? (
+                <div dangerouslySetInnerHTML={{ __html: post.content }} />
+              ) : (
+                <div className="text-center py-20 text-gray-500">Nội dung đang cập nhật...</div>
+              )}
+            </div>
 
             {/* Tags */}
             {post.tags && post.tags.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-8 pt-8 border-t">
+              <div className="flex flex-wrap gap-2 mt-12 pt-8 border-t border-gray-100">
                 {post.tags.map((tag) => (
-                  <Badge key={tag} variant="secondary">
+                  <Badge key={tag} variant="outline" className="bg-gray-50 text-gray-600 hover:bg-gray-100 font-medium px-3 py-1 text-sm border-gray-200">
                     #{tag}
                   </Badge>
                 ))}
               </div>
             )}
 
-            {/* Share */}
-            <div className="flex items-center gap-4 mb-6 mt-6">
-              <span className="text-gray-500">Chia sẻ:</span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleShare('facebook')}
-              >
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Facebook
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleShare('twitter')}
-              >
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Twitter
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleShare('linkedin')}
-              >
-                <ExternalLink className="h-4 w-4 mr-2" />
-                LinkedIn
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8 rounded-full"
-                onClick={() => typeof window !== 'undefined' && window.print()}
-              >
-                <Printer className="h-4 w-4" />
-              </Button>
+            {/* Share Bottom */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-8 pt-8 border-t border-gray-100">
+              <span className="font-bold text-gray-900 text-lg">Chia sẻ bài viết</span>
+              <div className="flex flex-wrap items-center gap-3">
+                <Button variant="outline" size="icon" className="rounded-full w-10 h-10 bg-blue-50 text-blue-600 border-0 hover:bg-blue-100 hover:text-blue-700" onClick={() => handleShare('facebook')}>
+                  <Facebook className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="icon" className="rounded-full w-10 h-10 bg-sky-50 text-sky-500 border-0 hover:bg-sky-100 hover:text-sky-600" onClick={() => handleShare('twitter')}>
+                  <Twitter className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="icon" className="rounded-full w-10 h-10 bg-indigo-50 text-indigo-600 border-0 hover:bg-indigo-100 hover:text-indigo-700" onClick={() => handleShare('linkedin')}>
+                  <Linkedin className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="icon" className="rounded-full w-10 h-10 bg-gray-50 text-gray-600 border-0 hover:bg-gray-100" onClick={() => handleShare('copy')}>
+                  <Link2 className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="icon" className="rounded-full w-10 h-10 bg-gray-50 text-gray-600 border-0 hover:bg-gray-100" onClick={() => typeof window !== 'undefined' && window.print()}>
+                  <Printer className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Sidebar */}
+          <div className="lg:w-80 shrink-0 space-y-8 mt-10 lg:mt-0">
+            {/* Desktop TOC */}
+            <div className="hidden lg:block sticky top-24">
+              <TableOfContents contentRef={contentRef} />
+              
+              {/* Author Bio (Sidebar variant) */}
+              {post.author && (
+                <Card className="mt-8 rounded-2xl border-gray-100 shadow-sm bg-gray-50/50">
+                  <CardContent className="p-6">
+                    <div className="flex flex-col items-center text-center">
+                      <Avatar className="h-20 w-20 border-4 border-white shadow-sm mb-4">
+                        <AvatarImage src={post.author.avatar || undefined} className="object-cover" />
+                        <AvatarFallback className="bg-primary text-white font-bold text-xl">
+                          {post.author.name.charAt(0)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <p className="text-sm text-gray-500 font-bold uppercase tracking-wider mb-1">Tác giả</p>
+                      <h3 className="font-bold text-gray-900 text-lg mb-2">{post.author.name}</h3>
+                      {post.author.bio && (
+                        <p className="text-gray-600 text-sm leading-relaxed">{post.author.bio}</p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Author Bio */}
-        {post.author && (
-          <Card className="mt-8">
-            <CardContent className="p-6">
-              <div className="flex gap-4">
-                <Avatar className="h-16 w-16">
-                  <AvatarImage src={post.author.avatar || undefined} />
-                  <AvatarFallback className="text-xl">
-                    {post.author.name.charAt(0)}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <h3 className="font-semibold text-lg">{post.author.name}</h3>
-                  {post.author.bio && (
-                    <p className="text-gray-500 text-sm mt-1">{post.author.bio}</p>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Related Posts */}
         {relatedPosts.length > 0 && (
-          <div className="mt-12">
-            <h2 className="text-xl font-bold text-gray-900 mb-6">Bài viết liên quan</h2>
+          <div className="mt-20 mb-20">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-2xl font-bold text-gray-900">Bài viết liên quan</h2>
+              <Link href="/tin-tuc">
+                <Button variant="ghost" className="font-bold text-primary hover:bg-primary-light/10">
+                  Xem tất cả
+                </Button>
+              </Link>
+            </div>
             <div className="grid md:grid-cols-3 gap-6">
               {relatedPosts.map((p) => (
-                <Link key={p.id} href={`/tin-tuc/${p.slug}`}>
-                  <Card className="overflow-hidden hover:shadow-lg transition-shadow">
-                    {p.thumbnail && (
-                      <div className="aspect-[16/10] relative">
-                        <Image
-                          src={p.thumbnail}
-                          alt={p.title}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                    )}
-                    <CardContent className="p-4">
-                      {p.category && (
-                        <Badge variant="secondary" className="mb-2 text-xs">
-                          {p.category.name}
-                        </Badge>
-                      )}
-                      <h3 className="font-semibold line-clamp-2 hover:text-primary">
-                        {p.title}
-                      </h3>
-                      <p className="text-sm text-gray-500 mt-2">
-                        {new Date(p.published_at || p.created_at).toLocaleDateString('vi-VN')}
-                      </p>
-                    </CardContent>
-                  </Card>
-                </Link>
+                <NewsCard key={p.id} post={p} />
               ))}
             </div>
           </div>

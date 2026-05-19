@@ -1,25 +1,19 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
-import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { EmptyState } from '@/components/shared';
 import { PageLoader } from '@/components/shared';
 import { postApi, type Post, type PostCategory } from '@/lib/post-api';
-import {
-  Search,
-  Calendar,
-  Eye,
-  ArrowRight,
-  ChevronLeft,
-  ChevronRight,
-} from 'lucide-react';
 import { SectionHeading } from '@/components/home/SectionHeading';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import Image from 'next/image';
+
+// Components
+import { NewsHero } from '@/components/news/NewsHero';
+import { NewsCard } from '@/components/news/NewsCard';
 
 export default function BlogListPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -50,46 +44,8 @@ export default function BlogListPage() {
 
   return (
     <div className="flex flex-col bg-white">
-
-      {/* HERO */}
-      <section className="relative h-[320px] md:h-[380px] z-10">
-        <div className="absolute inset-0 overflow-hidden">
-          <Image
-            src="/images/image_data/banner_hero.jpg"
-            alt="Tin tức bất động sản Quảng Ngãi"
-            fill
-            className="object-cover object-center"
-            priority
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/5" />
-        </div>
-
-        <div className="absolute inset-0 flex flex-col items-center justify-center px-4 gap-5">
-          <div className="text-center">
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white drop-shadow-xl leading-tight mb-3 tracking-tight">
-              Tin tức bất động sản
-              <br />
-              <span className="text-red-400">Quảng Ngãi</span>
-            </h1>
-            <p className="text-white/75 text-sm sm:text-base font-medium tracking-widest uppercase">
-              Cập nhật thông tin mới nhất về thị trường
-            </p>
-          </div>
-
-          {/* Search */}
-          <div className="w-full max-w-xl bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/20 shadow-2xl relative z-50">
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-white/70" />
-              <Input
-                placeholder="Tìm kiếm tin tức..."
-                value={searchQuery}
-                onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
-                className="pl-11 bg-white/10 border-white/20 text-white placeholder:text-white/50 rounded-xl h-11"
-              />
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* HERO SECTION */}
+      <NewsHero searchQuery={searchQuery} onSearchChange={(val) => { setSearchQuery(val); setPage(1); }} />
 
       {/* FEATURED POST */}
       {isLoading ? (
@@ -101,39 +57,9 @@ export default function BlogListPage() {
           <div className="max-w-6xl mx-auto">
             <SectionHeading
               title="Bài viết nổi bật"
-              subtitle="Những tin tức được quan tâm nhất"
+              subtitle="Tiêu điểm thị trường bất động sản tuần này"
             />
-
-            <Link href={`/tin-tuc/${featuredPost.slug}`} className="group block">
-              <div className="relative rounded-2xl overflow-hidden shadow-md mb-8">
-                <div className="relative h-64 md:h-80">
-                  <Image
-                    src={featuredPost.thumbnail || '/images/image_data/banner_hero.jpg'}
-                    alt={featuredPost.title}
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-500"
-                    sizes="(max-width: 1200px) 100vw, 1200px"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                  <div className="absolute bottom-5 left-5 right-5">
-                    <Badge className="mb-3 bg-cta text-white">
-                      {featuredPost.category?.name || 'Tin tức'}
-                    </Badge>
-                    <h2 className="text-white font-bold text-xl md:text-2xl leading-snug drop-shadow-sm group-hover:text-white/80 transition-colors">
-                      {featuredPost.title}
-                    </h2>
-                  </div>
-                </div>
-              </div>
-              <p className="text-sm text-gray-400 mb-2">
-                {new Date(featuredPost.published_at || featuredPost.created_at).toLocaleDateString('vi-VN')}
-              </p>
-              {featuredPost.excerpt && (
-                <p className="text-sm text-gray-500 line-clamp-2 leading-relaxed max-w-3xl">
-                  {featuredPost.excerpt}
-                </p>
-              )}
-            </Link>
+            <NewsCard post={featuredPost} featured={true} />
           </div>
         </section>
       ) : (
@@ -141,31 +67,39 @@ export default function BlogListPage() {
           <div className="max-w-6xl mx-auto">
             <EmptyState
               title="Chưa có bài viết nào"
-              description="Hãy là người đầu tiên đăng tin tức bất động sản."
-              action={{ label: 'Quay lại', onClick: () => {} }}
+              description="Hệ thống đang cập nhật các tin tức mới nhất."
+              action={{ label: 'Tải lại', onClick: () => window.location.reload() }}
             />
           </div>
         </section>
       )}
 
       {/* CATEGORIES + POSTS */}
-      <section className="py-6 px-4 bg-gray-50">
+      <section className="py-10 px-4 bg-gray-50 border-t border-gray-100">
         <div className="max-w-6xl mx-auto">
           {/* Category pills */}
-          <div className="flex items-center gap-2 mb-8 overflow-x-auto pb-2 scrollbar-hide">
+          <div className="flex items-center gap-2 mb-10 overflow-x-auto pb-2 scrollbar-hide">
             <Button
               variant={selectedCategory === '' ? 'default' : 'outline'}
               onClick={() => { setSelectedCategory(''); setPage(1); }}
-              className={`shrink-0 rounded-full ${selectedCategory === '' ? 'bg-primary' : ''}`}
+              className={`shrink-0 rounded-full font-bold h-10 px-6 transition-all ${
+                selectedCategory === '' 
+                  ? 'bg-primary shadow-md hover:bg-primary/90 text-white border-primary' 
+                  : 'bg-white text-gray-600 hover:text-gray-900 border-gray-200 hover:border-gray-300'
+              }`}
             >
-              Tất cả
+              Tất cả tin tức
             </Button>
             {categories.map((cat) => (
               <Button
                 key={cat.id}
                 variant={selectedCategory === cat.slug ? 'default' : 'outline'}
                 onClick={() => { setSelectedCategory(cat.slug); setPage(1); }}
-                className={`shrink-0 rounded-full ${selectedCategory === cat.slug ? 'bg-primary' : ''}`}
+                className={`shrink-0 rounded-full font-bold h-10 px-6 transition-all ${
+                  selectedCategory === cat.slug 
+                    ? 'bg-primary shadow-md hover:bg-primary/90 text-white border-primary' 
+                    : 'bg-white text-gray-600 hover:text-gray-900 border-gray-200 hover:border-gray-300'
+                }`}
               >
                 {cat.name}
               </Button>
@@ -179,61 +113,24 @@ export default function BlogListPage() {
             </div>
           ) : remainingPosts.length > 0 ? (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
                 {remainingPosts.map((post) => (
-                  <Link key={post.id} href={`/tin-tuc/${post.slug}`} className="group">
-                    <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 h-full">
-                      <div className="relative h-44">
-                        <Image
-                          src={post.thumbnail || '/images/image_data/banner_hero.jpg'}
-                          alt={post.title}
-                          fill
-                          className="object-cover group-hover:scale-110 transition-transform duration-500"
-                          sizes="(max-width: 768px) 100vw, 33vw"
-                        />
-                        <div className="absolute top-3 left-3">
-                          <Badge className="bg-primary text-white">
-                            {post.category?.name || 'Tin tức'}
-                          </Badge>
-                        </div>
-                      </div>
-                      <CardContent className="p-5">
-                        <h3 className="font-bold text-gray-900 line-clamp-2 group-hover:text-primary transition-colors leading-snug">
-                          {post.title}
-                        </h3>
-                        {post.excerpt && (
-                          <p className="text-sm text-gray-500 line-clamp-2 leading-relaxed mb-4">
-                            {post.excerpt}
-                          </p>
-                        )}
-                        <div className="flex items-center justify-between text-xs text-gray-400">
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-3.5 w-3.5" />
-                            <span>{new Date(post.published_at || post.created_at).toLocaleDateString('vi-VN')}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Eye className="h-3.5 w-3.5" />
-                            <span>{post.view_count.toLocaleString()}</span>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
+                  <NewsCard key={post.id} post={post} />
                 ))}
               </div>
 
               {/* Pagination */}
               {meta && meta.last_page > 1 && (
-                <div className="flex justify-center mt-10">
-                  <div className="flex gap-1.5">
+                <div className="flex justify-center mt-12">
+                  <div className="flex gap-2">
                     <Button
                       variant="outline"
                       size="icon"
-                      className="w-9 h-9"
+                      className="w-10 h-10 rounded-xl bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
                       onClick={() => setPage((p) => Math.max(1, p - 1))}
                       disabled={page === 1}
                     >
-                      <ChevronLeft className="h-4 w-4" />
+                      <ChevronLeft className="h-5 w-5" />
                     </Button>
                     {Array.from({ length: Math.min(5, meta.last_page) }, (_, i) => {
                       const p = i + 1;
@@ -241,64 +138,76 @@ export default function BlogListPage() {
                         <Button
                           key={p}
                           variant={p === page ? 'default' : 'outline'}
-                          className={`w-9 h-9 ${p === page ? 'bg-primary hover:bg-primary/90' : ''}`}
+                          className={`w-10 h-10 rounded-xl font-bold ${
+                            p === page 
+                              ? 'bg-primary text-white shadow-sm border-primary hover:bg-primary/90' 
+                              : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                          }`}
                           onClick={() => setPage(p)}
                         >
                           {p}
                         </Button>
                       );
                     })}
-                    {meta.last_page > 5 && <span className="px-2 self-center text-gray-400">...</span>}
+                    {meta.last_page > 5 && <span className="px-2 self-center text-gray-400 font-bold">...</span>}
                     <Button
                       variant="outline"
                       size="icon"
-                      className="w-9 h-9"
+                      className="w-10 h-10 rounded-xl bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
                       onClick={() => setPage((p) => Math.min(meta.last_page, p + 1))}
                       disabled={page === meta.last_page}
                     >
-                      <ChevronRight className="h-4 w-4" />
+                      <ChevronRight className="h-5 w-5" />
                     </Button>
                   </div>
                 </div>
               )}
             </>
           ) : (
-            <EmptyState
-              title="Không có bài viết nào"
-              description="Hãy thử tìm kiếm với từ khóa khác."
-            />
+            <div className="py-12">
+              <EmptyState
+                title="Không tìm thấy bài viết"
+                description="Không có bài viết nào phù hợp với tìm kiếm của bạn. Hãy thử từ khóa khác."
+              />
+            </div>
           )}
         </div>
       </section>
 
       {/* NEWSLETTER CTA */}
-      <section className="py-14 px-4 bg-white">
-        <div className="max-w-6xl mx-auto">
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary to-primary/80 p-8 md:p-12">
-            <div className="relative z-10 max-w-lg">
-              <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">
-                Đăng ký nhận tin mới
-              </h2>
-              <p className="text-white/80 text-sm mb-6">
-                Nhận thông tin mới nhất về thị trường bất động sản Quảng Ngãi qua email
-              </p>
-              <div className="flex gap-3">
-                <Input
-                  placeholder="Email của bạn"
-                  className="flex-1 bg-white/20 border-white/30 text-white placeholder:text-white/60 rounded-xl h-11"
-                />
-                <Button className="bg-white text-primary hover:bg-white/90 h-11 px-6 font-semibold shrink-0">
-                  Đăng ký
-                </Button>
-              </div>
+      <section className="py-16 px-4 bg-white">
+        <div className="max-w-5xl mx-auto">
+          <div className="relative overflow-hidden rounded-[2rem] bg-gray-900 p-8 md:p-14 shadow-xl">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-transparent mix-blend-overlay" />
+            <div className="absolute right-0 top-0 bottom-0 w-1/2 opacity-20 pointer-events-none">
+              <div className="w-full h-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary/40 via-transparent to-transparent blur-2xl" />
             </div>
-            <div className="absolute right-0 top-0 bottom-0 w-1/3 opacity-10">
-              <Image
-                src="/images/image_data/banner_hero.jpg"
-                alt=""
-                fill
-                className="object-cover"
-              />
+            
+            <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+              <div className="max-w-lg text-center md:text-left">
+                <h2 className="text-3xl md:text-4xl font-black text-white mb-4 tracking-tight leading-tight">
+                  Nhận Bản Tin <br className="hidden md:block"/>
+                  <span className="text-primary-light">Thị Trường</span> Mỗi Tuần
+                </h2>
+                <p className="text-gray-300 text-[15px] font-medium leading-relaxed max-w-md mx-auto md:mx-0">
+                  Phân tích độc quyền, báo cáo quy hoạch và cơ hội đầu tư tốt nhất tại Quảng Ngãi được gửi thẳng vào email của bạn.
+                </p>
+              </div>
+              
+              <div className="w-full md:w-auto flex-1 max-w-md">
+                <div className="flex flex-col sm:flex-row gap-3 bg-white/10 p-2 rounded-2xl backdrop-blur-md border border-white/10">
+                  <Input
+                    placeholder="Nhập địa chỉ email của bạn..."
+                    className="flex-1 bg-white border-0 text-gray-900 placeholder:text-gray-500 rounded-xl h-12 focus-visible:ring-2 focus-visible:ring-primary shadow-inner"
+                  />
+                  <Button className="bg-primary hover:bg-primary-dark text-white h-12 px-8 font-bold rounded-xl shadow-md sm:w-auto w-full transition-all hover:scale-[1.02]">
+                    Đăng Ký Ngay
+                  </Button>
+                </div>
+                <p className="text-xs text-gray-400 mt-4 text-center md:text-left font-medium">
+                  Bằng việc đăng ký, bạn đồng ý với <a href="#" className="text-primary-light hover:underline">Chính sách bảo mật</a> của chúng tôi.
+                </p>
+              </div>
             </div>
           </div>
         </div>
