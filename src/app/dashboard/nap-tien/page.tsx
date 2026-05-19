@@ -51,9 +51,9 @@ const packages = [
       'Khung tin đăng nổi bật',
     ],
     popular: true,
-    color: 'text-orange-600',
-    bg: 'bg-orange-50',
-    border: 'border-orange-200'
+    color: 'text-[#1075b1]',
+    bg: 'bg-[#e8f4fb]',
+    border: 'border-[#1075b1]/20'
   },
   {
     id: 'diamond_30',
@@ -149,7 +149,7 @@ export default function NapTienPage() {
       </div>
 
       {/* Promotional Banner */}
-      <Card className="bg-gradient-to-r from-orange-500 to-red-600 border-0 mb-8 rounded-2xl shadow-md overflow-hidden relative">
+      <Card className="bg-gradient-to-r from-[#1075b1] to-[#0c5d8f] border-0 mb-8 rounded-2xl shadow-md overflow-hidden relative">
         <div className="absolute right-0 top-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
         <CardContent className="p-6 sm:p-8 text-white relative z-10">
           <div className="flex flex-col sm:flex-row sm:items-center gap-6 justify-between">

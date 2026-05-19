@@ -108,7 +108,7 @@ const users = [
 ];
 
 const roleConfig = {
-  admin: { label: 'Quản trị', color: 'bg-purple-100 text-purple-700' },
+  admin: { label: 'Quản trị', color: 'bg-[#e8f4fb] text-[#1075b1]' },
   agent: { label: 'Môi giới', color: 'bg-primary-light text-primary' },
   user: { label: 'Người dùng', color: 'bg-gray-100 text-gray-700' },
 };

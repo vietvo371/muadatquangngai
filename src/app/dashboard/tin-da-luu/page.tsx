@@ -192,7 +192,7 @@ export default function SavedPage() {
                       </h3>
                     </Link>
                     <p className="text-sm text-gray-500 mb-3 truncate flex items-center gap-1.5">
-                      <span className="text-[10px]">📍</span> {property.address}
+                      {property.address}
                     </p>
                     <div className="flex items-end justify-between mt-auto border-t border-gray-100 pt-3">
                       <span className="text-lg font-extrabold text-[#e03131] tracking-tight">{formatPrice(property.price)}</span>

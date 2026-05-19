@@ -22,10 +22,10 @@ import {
 import { formatPrice } from '@/lib/formatters';
 
 const stats = [
-  { label: 'Tin đang đăng', value: 5, icon: <Building2 className="w-6 h-6 text-[#0ea5e9]" />, colorClassName: 'bg-sky-50', trend: { value: 12, isUp: true } },
-  { label: 'Lượt xem tin', value: '1.2K', icon: <Eye className="w-6 h-6 text-[#10b981]" />, colorClassName: 'bg-emerald-50', trend: { value: 8, isUp: true } },
-  { label: 'Lượt lưu tin', value: 45, icon: <Heart className="w-6 h-6 text-[#e03131]" />, colorClassName: 'bg-red-50', trend: { value: 2, isUp: false } },
-  { label: 'Yêu cầu tư vấn', value: 12, icon: <MessageSquare className="w-6 h-6 text-indigo-500" />, colorClassName: 'bg-indigo-50' },
+  { label: 'Tin đang đăng', value: 5, icon: <Building2 className="w-6 h-6 text-[#1075b1]" />, colorClassName: 'bg-[#e8f4fb]', trend: { value: 12, isUp: true } },
+  { label: 'Lượt xem tin', value: '1.2K', icon: <Eye className="w-6 h-6 text-[#1075b1]" />, colorClassName: 'bg-[#e8f4fb]', trend: { value: 8, isUp: true } },
+  { label: 'Lượt lưu tin', value: 45, icon: <Heart className="w-6 h-6 text-[#1075b1]" />, colorClassName: 'bg-[#e8f4fb]', trend: { value: 2, isUp: false } },
+  { label: 'Yêu cầu tư vấn', value: 12, icon: <MessageSquare className="w-6 h-6 text-[#1075b1]" />, colorClassName: 'bg-[#e8f4fb]' },
 ];
 
 const recentProperties = [
@@ -146,7 +146,7 @@ export default function DashboardPage() {
                 {user?.balance?.toLocaleString('vi-VN') || '0'} đ
               </p>
               <Link href="/dashboard/nap-tien">
-                <Button className="w-full bg-primary hover:bg-[#0ea5e9] text-white font-bold h-11 border-0 transition-colors">
+                <Button className="w-full bg-primary hover:bg-[#0c5d8f] text-white font-bold h-11 border-0 transition-colors">
                   <CreditCard className="h-4 w-4 mr-2" />
                   Nạp tiền vào ví
                 </Button>
@@ -174,7 +174,7 @@ export default function DashboardPage() {
               </Link>
               <Link href="/dashboard/tin-nhan" className="block">
                 <Button variant="outline" className="w-full justify-start h-11 font-medium text-gray-700 bg-white hover:bg-gray-50 border-gray-200">
-                  <MessageSquare className="h-4 w-4 mr-3 text-indigo-500" />
+                  <MessageSquare className="h-4 w-4 mr-3 text-[#1075b1]" />
                   Tin nhắn
                 </Button>
               </Link>
@@ -182,18 +182,18 @@ export default function DashboardPage() {
           </Card>
 
           {/* VIP Upgrade */}
-          <Card className="rounded-2xl border border-orange-200 bg-orange-50 shadow-sm relative overflow-hidden">
-            <div className="absolute right-0 bottom-0 w-24 h-24 bg-orange-500/10 rounded-full blur-xl -mb-10 -mr-10"></div>
+          <Card className="rounded-2xl border border-[#1075b1]/20 bg-[#e8f4fb] shadow-sm relative overflow-hidden">
+            <div className="absolute right-0 bottom-0 w-24 h-24 bg-[#1075b1]/10 rounded-full blur-xl -mb-10 -mr-10"></div>
             <CardContent className="p-6 text-center relative z-10">
-              <div className="w-12 h-12 mx-auto rounded-full bg-orange-100 flex items-center justify-center mb-4">
-                <Star className="h-6 w-6 text-orange-600 fill-orange-600" />
+              <div className="w-12 h-12 mx-auto rounded-full bg-white flex items-center justify-center mb-4 shadow-sm">
+                <Star className="h-6 w-6 text-[#1075b1] fill-[#1075b1]" />
               </div>
               <h3 className="font-bold text-gray-900 mb-2">Trở thành VIP Member</h3>
               <p className="text-sm text-gray-600 mb-5 leading-relaxed">
                 Nổi bật tin đăng của bạn và tiếp cận hàng ngàn khách hàng tiềm năng mỗi ngày.
               </p>
               <Link href="/dashboard/profile?tab=vip">
-                <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold h-11">
+                <Button className="w-full bg-[#1075b1] hover:bg-[#0c5d8f] text-white font-bold h-11">
                   Xem các gói VIP
                 </Button>
               </Link>

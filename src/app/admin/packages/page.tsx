@@ -33,7 +33,7 @@ import { formatPrice } from '@/lib/formatters';
 const VIP_COLORS = {
   vip: 'bg-primary-light text-primary',
   vip_plus: 'bg-red-100 text-red-700',
-  diamond: 'bg-purple-100 text-purple-700',
+  diamond: 'bg-gray-100 text-gray-700',
 };
 
 const VIP_LABELS = {

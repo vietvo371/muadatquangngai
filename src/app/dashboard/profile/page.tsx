@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
-import { PillTabs } from '@/components/dashboard/pill-tabs';
+import { PillTabs } from '@/components/ui/pill-tabs';
 import { PackageCard } from '@/components/dashboard/PackageCard';
 import { 
   Camera,
@@ -91,7 +91,7 @@ export default function ProfilePage() {
               Đã xác thực
             </Badge>
           ) : (
-            <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-100 border-0 gap-1.5 px-3 py-1">
+            <Badge className="bg-gray-100 text-gray-600 hover:bg-gray-100 border-0 gap-1.5 px-3 py-1">
               <ShieldAlert className="h-3.5 w-3.5" />
               Chưa xác thực
             </Badge>
@@ -138,7 +138,7 @@ export default function ProfilePage() {
                 <div>
                   <p className="text-2xl font-bold text-gray-900 flex items-center justify-center gap-1">
                     {user.rating || '0.0'}
-                    <Star className="h-4 w-4 text-orange-400 fill-orange-400" />
+                    <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
                   </p>
                   <p className="text-[13px] text-gray-500 font-medium">Đánh giá</p>
                 </div>
@@ -305,8 +305,8 @@ export default function ProfilePage() {
               {activeTab === 'vip' && (
                 <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                   <div className="text-center mb-8">
-                    <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Star className="h-8 w-8 text-orange-500 fill-orange-500" />
+                    <div className="w-16 h-16 bg-[#e8f4fb] rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Star className="h-8 w-8 text-[#1075b1] fill-[#1075b1]" />
                     </div>
                     <h3 className="text-xl font-bold text-gray-900 mb-2">Đăng ký thành viên VIP</h3>
                     <p className="text-gray-500 max-w-md mx-auto">

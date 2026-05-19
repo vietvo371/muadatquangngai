@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { PropertyCard } from '@/components/property/PropertyCard';
 import { ReviewCard } from '@/components/property/ReviewCard';
-import { PillTabs } from '@/components/dashboard/pill-tabs';
+import { PillTabs } from '@/components/ui/pill-tabs';
 import {
   Star,
   MapPin,

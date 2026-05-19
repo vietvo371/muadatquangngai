@@ -27,7 +27,7 @@ import {
   Calendar,
 } from 'lucide-react';
 import { formatDistanceToNow } from '@/lib/formatters';
-import { UnderlineTabs } from '@/components/dashboard/underline-tabs';
+import { UnderlineTabs } from '@/components/ui/underline-tabs';
 
 // Mock notifications
 const notifications = [
@@ -79,12 +79,12 @@ const notifications = [
 ];
 
 const typeConfig = {
-  property: { icon: Home, color: 'bg-blue-100 text-blue-600' },
-  message: { icon: MessageSquare, color: 'bg-green-100 text-green-600' },
-  system: { icon: Bell, color: 'bg-orange-100 text-orange-600' },
-  review: { icon: Star, color: 'bg-purple-100 text-purple-600' },
-  appointment: { icon: Calendar, color: 'bg-indigo-100 text-indigo-600' },
-  report: { icon: AlertCircle, color: 'bg-red-100 text-red-600' },
+  property: { icon: Home, color: 'bg-[#e8f4fb] text-[#1075b1]' },
+  message: { icon: MessageSquare, color: 'bg-[#e8f4fb] text-[#1075b1]' },
+  system: { icon: Bell, color: 'bg-[#e8f4fb] text-[#1075b1]' },
+  review: { icon: Star, color: 'bg-[#e8f4fb] text-[#1075b1]' },
+  appointment: { icon: Calendar, color: 'bg-[#e8f4fb] text-[#1075b1]' },
+  report: { icon: AlertCircle, color: 'bg-[#e8f4fb] text-[#1075b1]' },
 };
 
 export default function NotificationsPage() {
@@ -154,7 +154,7 @@ export default function NotificationsPage() {
         <div className="flex items-center gap-2 border-t sm:border-0 pt-4 sm:pt-0">
           {unreadCount > 0 && (
             <Button variant="outline" onClick={markAllAsRead} className="gap-2 h-10 bg-white hover:bg-gray-50 border-gray-200">
-              <CheckCheck className="h-4 w-4 text-green-600" />
+              <CheckCheck className="h-4 w-4 text-[#1075b1]" />
               Đánh dấu đã đọc
             </Button>
           )}

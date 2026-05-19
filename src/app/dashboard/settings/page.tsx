@@ -34,7 +34,7 @@ import {
   Monitor
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { PillTabs } from '@/components/dashboard/pill-tabs';
+import { PillTabs } from '@/components/ui/pill-tabs';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('profile');
@@ -214,8 +214,8 @@ export default function SettingsPage() {
                 {/* Email Notifications */}
                 <div>
                   <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
-                      <Mail className="h-4 w-4 text-blue-600" />
+                    <div className="w-8 h-8 rounded-full bg-[#e8f4fb] flex items-center justify-center shrink-0">
+                      <Mail className="h-4 w-4 text-[#1075b1]" />
                     </div>
                     Thông báo qua Email
                   </h3>
@@ -261,8 +261,8 @@ export default function SettingsPage() {
                 {/* Push Notifications */}
                 <div>
                   <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center shrink-0">
-                      <Smartphone className="h-4 w-4 text-green-600" />
+                    <div className="w-8 h-8 rounded-full bg-[#e8f4fb] flex items-center justify-center shrink-0">
+                      <Smartphone className="h-4 w-4 text-[#1075b1]" />
                     </div>
                     Thông báo đẩy (Push)
                   </h3>

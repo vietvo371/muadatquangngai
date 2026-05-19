@@ -20,7 +20,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { EmptyState, BoostModal } from '@/components/shared';
-import { PillTabs } from '@/components/dashboard/pill-tabs';
+import { PillTabs } from '@/components/ui/pill-tabs';
 import api from '@/lib/axios';
 import { formatPrice } from '@/lib/formatters';
 

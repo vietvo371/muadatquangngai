@@ -278,7 +278,7 @@ export default function AdminTransactionsPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="text-orange-600"
+                          className="text-[#1075b1]"
                           onClick={() => handleRefund(tx.id)}
                         >
                           Hoàn tiền

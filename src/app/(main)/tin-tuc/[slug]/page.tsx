@@ -188,7 +188,7 @@ export default function BlogDetailPage({ params }: { params: { slug: string } })
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-8 pt-8 border-t border-gray-100">
               <span className="font-bold text-gray-900 text-lg">Chia sẻ bài viết</span>
               <div className="flex flex-wrap items-center gap-3">
-                 <Button variant="outline" size="icon" className="rounded-full w-10 h-10 bg-blue-50 text-blue-600 border-0 hover:bg-blue-100 hover:text-blue-700" onClick={() => handleShare('facebook')}>
+                 <Button variant="outline" size="icon" className="rounded-full w-10 h-10 bg-[#e8f4fb] text-[#1075b1] border-0 hover:bg-[#d0e9f5] hover:text-[#0c5d8f]" onClick={() => handleShare('facebook')}>
                   <svg className="h-4 w-4 fill-current" viewBox="0 0 24 24">
                     <path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z"/>
                   </svg>
@@ -198,7 +198,7 @@ export default function BlogDetailPage({ params }: { params: { slug: string } })
                     <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
                   </svg>
                 </Button>
-                <Button variant="outline" size="icon" className="rounded-full w-10 h-10 bg-indigo-50 text-indigo-600 border-0 hover:bg-indigo-100 hover:text-indigo-700" onClick={() => handleShare('linkedin')}>
+                <Button variant="outline" size="icon" className="rounded-full w-10 h-10 bg-[#e8f4fb] text-[#1075b1] border-0 hover:bg-[#d0e9f5] hover:text-[#0c5d8f]" onClick={() => handleShare('linkedin')}>
                   <svg className="h-4 w-4 fill-current" viewBox="0 0 24 24">
                     <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.779-1.75-1.75s.784-1.75 1.75-1.75 1.75.779 1.75 1.75-.784 1.75-1.75 1.75zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
                   </svg>

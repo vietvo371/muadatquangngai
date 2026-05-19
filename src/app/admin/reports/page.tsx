@@ -100,9 +100,9 @@ const reports = [
 
 const typeConfig = {
   fake: { label: 'Tin giả', color: 'bg-red-100 text-red-700', icon: XCircle },
-  spam: { label: 'Spam', color: 'bg-orange-100 text-orange-700', icon: Flag },
+  spam: { label: 'Spam', color: 'bg-amber-100 text-amber-700', icon: Flag },
   inappropriate: { label: 'Không phù hợp', color: 'bg-yellow-100 text-yellow-700', icon: AlertTriangle },
-  fraud: { label: 'Lừa đảo', color: 'bg-purple-100 text-purple-700', icon: User },
+  fraud: { label: 'Lừa đảo', color: 'bg-gray-100 text-gray-700', icon: User },
 };
 
 export default function AdminReportsPage() {

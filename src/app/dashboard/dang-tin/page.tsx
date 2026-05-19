@@ -290,8 +290,8 @@ export default function DangTinPage() {
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <h3 className="text-lg font-bold text-gray-900 mb-2 pb-2 border-b">Hình ảnh & Video</h3>
               
-              <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-4 mb-6">
-                <ul className="text-[13px] text-blue-800 space-y-1.5 list-disc list-inside">
+              <div className="bg-[#e8f4fb]/50 border border-[#1075b1]/15 rounded-xl p-4 mb-6">
+                <ul className="text-[13px] text-[#1075b1] space-y-1.5 list-disc list-inside">
                   <li>Tải lên tối thiểu <strong>1 ảnh</strong>, tối đa <strong>10 ảnh</strong>.</li>
                   <li>Kéo thả ảnh để thay đổi thứ tự. Ảnh đầu tiên sẽ là ảnh bìa.</li>
                   <li>Hạn chế ảnh có chứa logo, watermark của các nền tảng khác.</li>
