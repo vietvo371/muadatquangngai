@@ -3,24 +3,25 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, Loader2, Phone } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent } from '@/components/ui/card';
+import { OTPInput } from '@/components/ui/otp-input';
 
 export default function LoginPhonePage() {
   const router = useRouter();
   
+  const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [otp, setOtp] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [countdown, setCountdown] = useState(0);
 
   const handleSendOtp = async () => {
-    if (phone.length < 10) {
+    if (phone.length < 9) {
       setError('Số điện thoại không hợp lệ');
       return;
     }
@@ -30,11 +31,11 @@ export default function LoginPhonePage() {
 
     try {
       // TODO: Call API to send OTP
-      // await axios.post('/api/auth/otp/send', { phone, type: 'login' });
+      // await axios.post('/api/auth/otp/send', { phone, type: activeTab });
       
       // For demo, go to OTP step
       setStep('otp');
-      setCountdown(60);
+      setCountdown(59);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Gửi mã OTP thất bại');
     } finally {
@@ -42,47 +43,7 @@ export default function LoginPhonePage() {
     }
   };
 
-  const handleOtpChange = (index: number, value: string) => {
-    if (value.length > 1) {
-      // Handle paste
-      const digits = value.replace(/\D/g, '').slice(0, 6);
-      const newOtp = [...otp];
-      digits.split('').forEach((digit, i) => {
-        if (index + i < 6) {
-          newOtp[index + i] = digit;
-        }
-      });
-      setOtp(newOtp);
-      
-      // Auto submit if 6 digits
-      if (digits.length === 6) {
-        handleVerifyOtp(newOtp.join(''));
-      }
-      return;
-    }
-
-    if (!/^\d?$/.test(value)) return;
-    
-    const newOtp = [...otp];
-    newOtp[index] = value;
-    setOtp(newOtp);
-
-    // Auto focus next input
-    if (value && index < 5) {
-      const nextInput = document.getElementById(`otp-${index + 1}`);
-      nextInput?.focus();
-    }
-  };
-
-  const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
-    if (e.key === 'Backspace' && !otp[index] && index > 0) {
-      const prevInput = document.getElementById(`otp-${index - 1}`);
-      prevInput?.focus();
-    }
-  };
-
-  const handleVerifyOtp = async (otpValue?: string) => {
-    const code = otpValue || otp.join('');
+  const handleVerifyOtp = async (code: string) => {
     if (code.length !== 6) {
       setError('Vui lòng nhập đủ 6 chữ số');
       return;
@@ -107,122 +68,129 @@ export default function LoginPhonePage() {
   const handleResendOtp = async () => {
     if (countdown > 0) return;
     
-    setCountdown(60);
+    setCountdown(59);
     // TODO: Resend OTP
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-8">
+    <div className="w-full">
       <div className="text-center mb-8">
-        <div className="w-16 h-16 mx-auto rounded-full bg-primary-light flex items-center justify-center mb-4">
-          <Phone className="h-8 w-8 text-primary" />
-        </div>
-        <h1 className="text-2xl font-bold text-gray-900">
-          {step === 'phone' ? 'Đăng nhập bằng SMS' : 'Nhập mã xác thực'}
-        </h1>
-        <p className="text-gray-500 mt-2">
-          {step === 'phone' 
-            ? 'Nhập số điện thoại để đăng nhập'
-            : `Mã xác thực đã được gửi đến ${phone}`
-          }
-        </p>
+        <h1 className="text-[24px] font-extrabold text-gray-900 tracking-tight">Đăng nhập bằng SĐT</h1>
+        <p className="text-[14px] text-gray-500 mt-2 font-medium">Nhập số điện thoại để tiếp tục</p>
       </div>
 
-      {/* Error Message */}
+      <div className="flex bg-gray-100 p-1 rounded-xl mb-8">
+        <button
+          className={`flex-1 text-[13px] font-semibold py-2 rounded-lg transition-colors ${
+            activeTab === 'login' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
+          }`}
+          onClick={() => { setActiveTab('login'); setStep('phone'); setError(''); }}
+        >
+          Đăng nhập
+        </button>
+        <button
+          className={`flex-1 text-[13px] font-semibold py-2 rounded-lg transition-colors ${
+            activeTab === 'register' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
+          }`}
+          onClick={() => { setActiveTab('register'); setStep('phone'); setError(''); }}
+        >
+          Đăng ký
+        </button>
+      </div>
+
       {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+        <div className="mb-4 p-3 bg-red-50 border border-[#e03131]/20 rounded-lg text-[13px] text-[#e03131] flex items-center gap-2">
           {error}
         </div>
       )}
 
       {step === 'phone' ? (
         <div className="space-y-4">
-          <div>
-            <Label htmlFor="phone">Số điện thoại</Label>
-            <div className="relative mt-1">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">+84</span>
+          <div className="space-y-1.5">
+            <Label htmlFor="phone" className="text-[13px] font-semibold text-gray-700">Số điện thoại</Label>
+            <div className="relative flex">
+              <div className="flex items-center justify-center bg-gray-50 border border-gray-200 border-r-0 rounded-l-md px-3 text-[14px] text-gray-500 font-medium">
+                +84
+              </div>
               <Input
                 id="phone"
                 type="tel"
                 placeholder="Nhập số điện thoại"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-                className="pl-14 h-12 text-lg"
-                maxLength={11}
+                className="rounded-l-none h-11 focus:ring-[3px] focus:ring-primary/15 focus:border-primary transition-all text-lg"
+                maxLength={10}
               />
             </div>
           </div>
 
           <Button 
             onClick={handleSendOtp} 
-            className="w-full h-12 bg-primary hover:bg-primary-dark"
-            disabled={isLoading || phone.length < 10}
+            className="w-full h-11 bg-primary hover:bg-primary-dark font-semibold text-[14px]"
+            disabled={isLoading || phone.length < 9}
           >
             {isLoading ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
                 Đang gửi...
               </>
             ) : (
-              'Gửi mã xác thực'
+              'Gửi mã OTP'
             )}
           </Button>
         </div>
       ) : (
-        <div className="space-y-6">
-          {/* OTP Input */}
-          <div className="flex justify-center gap-2">
-            {otp.map((digit, index) => (
-              <Input
-                key={index}
-                id={`otp-${index}`}
-                type="text"
-                inputMode="numeric"
-                maxLength={6}
-                value={digit}
-                onChange={(e) => handleOtpChange(index, e.target.value)}
-                onKeyDown={(e) => handleKeyDown(index, e)}
-                className="w-12 h-14 text-center text-xl font-semibold"
-              />
-            ))}
-          </div>
+        <div className="space-y-6 text-center">
+          <p className="text-[14px] text-gray-500 font-medium">
+            Mã OTP đã được gửi đến<br />
+            <strong className="text-gray-900">+84 {phone}</strong>
+          </p>
+
+          <OTPInput 
+            length={6} 
+            value={otp} 
+            onChange={(val) => {
+              setOtp(val);
+              if (val.length === 6) {
+                handleVerifyOtp(val);
+              }
+            }} 
+          />
 
           <Button 
-            onClick={() => handleVerifyOtp()} 
-            className="w-full h-12 bg-primary hover:bg-primary-dark"
-            disabled={isLoading || otp.join('').length !== 6}
+            onClick={() => handleVerifyOtp(otp)} 
+            className="w-full h-11 bg-primary hover:bg-primary-dark font-semibold text-[14px]"
+            disabled={isLoading || otp.length !== 6}
           >
             {isLoading ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
                 Đang xác thực...
               </>
             ) : (
-              'Xác thực'
+              'Xác nhận'
             )}
           </Button>
 
-          {/* Resend */}
           <div className="text-center">
             {countdown > 0 ? (
-              <p className="text-sm text-gray-500">
-                Gửi lại mã sau <span className="font-semibold">{countdown}s</span>
+              <p className="text-[13px] text-gray-400 font-medium">
+                Gửi lại sau {countdown}s
               </p>
             ) : (
               <button
                 onClick={handleResendOtp}
-                className="text-sm text-primary hover:text-primary-dark font-medium"
+                className="text-[13px] text-primary hover:text-primary-dark font-semibold"
               >
-                Gửi lại mã xác thực
+                Gửi lại mã
               </button>
             )}
           </div>
 
-          {/* Change phone */}
-          <div className="text-center">
+          <div className="text-center pt-2">
             <button
               onClick={() => setStep('phone')}
-              className="text-sm text-gray-500 hover:text-gray-700"
+              className="text-[13px] text-gray-500 hover:text-gray-700 font-medium"
             >
               ← Thay đổi số điện thoại
             </button>
@@ -230,29 +198,11 @@ export default function LoginPhonePage() {
         </div>
       )}
 
-      {/* Login with email */}
-      <div className="relative my-6">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-gray-200"></div>
-        </div>
-        <div className="relative flex justify-center text-sm">
-          <span className="px-4 bg-white text-gray-500">hoặc</span>
-        </div>
-      </div>
-
-      <Link href="/login">
-        <Button variant="outline" className="w-full h-12">
-          Đăng nhập bằng email
-        </Button>
-      </Link>
-
-      {/* Register Link */}
-      <p className="text-center text-sm text-gray-500 mt-6">
-        Chưa có tài khoản?{' '}
-        <Link href="/register" className="text-primary hover:text-primary-dark font-medium">
-          Đăng ký ngay
+      <div className="text-center mt-8 pt-6 border-t border-gray-100">
+        <Link href="/login" className="text-[14px] text-gray-500 hover:text-gray-900 font-medium transition-colors">
+          Đăng nhập bằng Email
         </Link>
-      </p>
+      </div>
     </div>
   );
 }

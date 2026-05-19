@@ -3,12 +3,14 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Mail, Lock, User, Phone } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useAuthStore } from '@/stores/authStore';
 import axios from '@/lib/axios';
+import { PasswordStrength } from '@/components/ui/password-strength';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -67,26 +69,160 @@ export default function RegisterPage() {
     }
   };
 
-  // Handle OAuth register
   const handleOAuthRegister = (provider: 'google' | 'facebook') => {
-    // TODO: Implement OAuth redirect
     console.log('OAuth register with', provider);
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-8">
+    <div className="w-full">
       <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Tạo tài khoản mới</h1>
-        <p className="text-gray-500 mt-2">Tham gia cộng đồng BatDongSan ngay hôm nay</p>
+        <h1 className="text-[24px] font-extrabold text-gray-900 tracking-tight">Tạo tài khoản</h1>
+        <p className="text-[14px] text-gray-500 mt-2 font-medium">Tham gia cộng đồng BatDongSan ngay hôm nay</p>
       </div>
 
-      {/* OAuth Buttons */}
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-[#e03131]/20 rounded-lg text-[13px] text-[#e03131] flex items-center gap-2 whitespace-pre-line">
+          {error}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="name" className="text-[13px] font-semibold text-gray-700">Họ và tên</Label>
+          <div className="relative">
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <Input
+              id="name"
+              type="text"
+              placeholder="Nguyễn Văn A"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              required
+              className="pl-10 h-11 focus:ring-[3px] focus:ring-primary/15 focus:border-primary transition-all"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="email" className="text-[13px] font-semibold text-gray-700">Email</Label>
+          <div className="relative">
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <Input
+              id="email"
+              type="email"
+              placeholder="you@example.com"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              required
+              className="pl-10 h-11 focus:ring-[3px] focus:ring-primary/15 focus:border-primary transition-all"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="phone" className="text-[13px] font-semibold text-gray-700">Số điện thoại</Label>
+          <div className="relative flex">
+            <div className="flex items-center justify-center bg-gray-50 border border-gray-200 border-r-0 rounded-l-md px-3 text-[14px] text-gray-500 font-medium">
+              +84
+            </div>
+            <Input
+              id="phone"
+              type="tel"
+              placeholder="Nhập số điện thoại"
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '') })}
+              className="rounded-l-none h-11 focus:ring-[3px] focus:ring-primary/15 focus:border-primary transition-all"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="password" className="text-[13px] font-semibold text-gray-700">Mật khẩu</Label>
+          <div className="relative mt-1">
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <Input
+              id="password"
+              type={showPassword ? 'text' : 'password'}
+              placeholder="••••••••"
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              required
+              minLength={8}
+              className="pl-10 pr-10 h-11 focus:ring-[3px] focus:ring-primary/15 focus:border-primary transition-all"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+            </button>
+          </div>
+          <PasswordStrength password={formData.password} />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="password_confirmation" className="text-[13px] font-semibold text-gray-700">Xác nhận mật khẩu</Label>
+          <div className="relative">
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <Input
+              id="password_confirmation"
+              type={showPassword ? 'text' : 'password'}
+              placeholder="Nhập lại mật khẩu"
+              value={formData.password_confirmation}
+              onChange={(e) => setFormData({ ...formData, password_confirmation: e.target.value })}
+              required
+              className="pl-10 h-11 focus:ring-[3px] focus:ring-primary/15 focus:border-primary transition-all"
+            />
+          </div>
+        </div>
+
+        <div className="flex items-start gap-2 pt-2">
+          <Checkbox 
+            id="terms" 
+            checked={acceptTerms}
+            onCheckedChange={(checked) => setAcceptTerms(checked as boolean)}
+            className="data-[state=checked]:bg-primary data-[state=checked]:border-primary mt-0.5" 
+          />
+          <label htmlFor="terms" className="text-[13px] text-gray-600 font-medium leading-tight">
+            Tôi đã đọc và đồng ý với{' '}
+            <Link href="/dieu-khoan" className="text-primary hover:text-primary-dark font-semibold">
+              Điều khoản dịch vụ
+            </Link>{' '}
+            và{' '}
+            <Link href="/chinh-sach" className="text-primary hover:text-primary-dark font-semibold">
+              Chính sách bảo mật
+            </Link>
+          </label>
+        </div>
+
+        <Button type="submit" className="w-full h-[48px] bg-primary hover:bg-primary-dark font-semibold text-[14px] mt-4" disabled={isLoading}>
+          {isLoading ? (
+            <>
+              <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+              Đang tạo...
+            </>
+          ) : (
+            'Tạo tài khoản'
+          )}
+        </Button>
+      </form>
+
+      <div className="relative my-6">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-gray-200"></div>
+        </div>
+        <div className="relative flex justify-center text-[13px]">
+          <span className="px-4 bg-white text-gray-500 font-medium">hoặc đăng ký với</span>
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 gap-3 mb-6">
         <Button
           type="button"
           variant="outline"
           onClick={() => handleOAuthRegister('google')}
-          className="h-11"
+          className="h-11 border-gray-200 hover:bg-gray-50 font-medium text-[14px] text-gray-700"
         >
           <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24">
             <path
@@ -112,147 +248,23 @@ export default function RegisterPage() {
           type="button"
           variant="outline"
           onClick={() => handleOAuthRegister('facebook')}
-          className="h-11"
+          className="h-11 border-gray-200 hover:bg-gray-50 font-medium text-[14px] text-gray-700"
         >
-          <svg className="h-5 w-5 mr-2 text-primary" fill="currentColor" viewBox="0 0 24 24">
+          <svg className="h-5 w-5 mr-2 text-[#1877F2]" fill="currentColor" viewBox="0 0 24 24">
             <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
           </svg>
           Facebook
         </Button>
       </div>
 
-      <div className="relative mb-6">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-gray-200"></div>
-        </div>
-        <div className="relative flex justify-center text-sm">
-          <span className="px-4 bg-white text-gray-500">hoặc đăng ký với</span>
-        </div>
+      <div className="text-center">
+        <p className="text-[14px] text-gray-600 font-medium">
+          Đã có tài khoản?{' '}
+          <Link href="/login" className="text-primary hover:text-primary-dark font-semibold">
+            Đăng nhập
+          </Link>
+        </p>
       </div>
-
-      {/* Error Message */}
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 whitespace-pre-line">
-          {error}
-        </div>
-      )}
-
-      {/* Register Form */}
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <Label htmlFor="name">Họ và tên</Label>
-          <Input
-            id="name"
-            type="text"
-            placeholder="Nhập họ và tên của bạn"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            required
-            className="mt-1"
-          />
-        </div>
-
-        <div>
-          <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            type="email"
-            placeholder="Nhập email của bạn"
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            required
-            className="mt-1"
-          />
-        </div>
-
-        <div>
-          <Label htmlFor="phone">Số điện thoại</Label>
-          <Input
-            id="phone"
-            type="tel"
-            placeholder="Nhập số điện thoại (tùy chọn)"
-            value={formData.phone}
-            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-            className="mt-1"
-          />
-        </div>
-
-        <div>
-          <Label htmlFor="password">Mật khẩu</Label>
-          <div className="relative mt-1">
-            <Input
-              id="password"
-              type={showPassword ? 'text' : 'password'}
-              placeholder="Tối thiểu 8 ký tự"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              required
-              minLength={8}
-              className="pr-10"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-            >
-              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </button>
-          </div>
-        </div>
-
-        <div>
-          <Label htmlFor="password_confirmation">Xác nhận mật khẩu</Label>
-          <Input
-            id="password_confirmation"
-            type={showPassword ? 'text' : 'password'}
-            placeholder="Nhập lại mật khẩu"
-            value={formData.password_confirmation}
-            onChange={(e) => setFormData({ ...formData, password_confirmation: e.target.value })}
-            required
-            className="mt-1"
-          />
-        </div>
-
-        {/* Terms */}
-        <div className="flex items-start gap-2">
-          <input
-            type="checkbox"
-            id="terms"
-            checked={acceptTerms}
-            onChange={(e) => setAcceptTerms(e.target.checked)}
-            className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-          />
-          <label htmlFor="terms" className="text-sm text-gray-600">
-            Tôi đã đọc và đồng ý với{' '}
-            <Link href="/dieu-khoan" className="text-primary hover:underline">
-              Điều khoản sử dụng
-            </Link>{' '}
-            và{' '}
-            <Link href="/chinh-sach" className="text-primary hover:underline">
-              Chính sách bảo mật
-            </Link>
-          </label>
-        </div>
-
-        <Button type="submit" className="w-full h-11 bg-primary hover:bg-primary-dark" disabled={isLoading}>
-          {isLoading ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Đang đăng ký...
-            </>
-          ) : (
-            'Tạo tài khoản'
-          )}
-        </Button>
-      </form>
-
-      {/* Login Link */}
-      <p className="text-center text-sm text-gray-500 mt-6">
-        Đã có tài khoản?{' '}
-        <Link href="/login" className="text-primary hover:text-primary-dark font-medium">
-          Đăng nhập ngay
-        </Link>
-      </p>
     </div>
   );
 }

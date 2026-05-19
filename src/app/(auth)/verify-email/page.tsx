@@ -4,25 +4,16 @@ import { Suspense, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import {
-  Mail,
-  CheckCircle,
-  AlertCircle,
-  ArrowLeft,
-  Loader2,
-  RefreshCw,
-} from 'lucide-react';
+import { Shield, CheckCircle, ArrowLeft, Loader2 } from 'lucide-react';
+import { OTPInput } from '@/components/ui/otp-input';
 
 function VerifyEmailContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<'idle' | 'loading' | 'sent' | 'error'>('idle');
   const [email, setEmail] = useState('');
-  const [resendCooldown, setResendCooldown] = useState(0);
+  const [otp, setOtp] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(59);
 
   useEffect(() => {
     if (searchParams) {
@@ -47,7 +38,20 @@ function VerifyEmailContent() {
     try {
       await new Promise(resolve => setTimeout(resolve, 1500));
       setStatus('sent');
-      setResendCooldown(60);
+      setResendCooldown(59);
+    } catch {
+      setStatus('error');
+    }
+  };
+
+  const handleVerify = async (code: string) => {
+    if (code.length !== 6) return;
+
+    setStatus('loading');
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      // redirect or set verified state
+      router.push('/dashboard');
     } catch {
       setStatus('error');
     }
@@ -57,136 +61,95 @@ function VerifyEmailContent() {
 
   if (isAlreadyVerified) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-6 text-center">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle className="h-8 w-8 text-green-600" />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Xác thực thành công!</h1>
-            <p className="text-gray-500 mb-6">
-              Email của bạn đã được xác thực. Bây giờ bạn có thể đăng nhập để sử dụng tài khoản.
-            </p>
-            <Link href="/login">
-              <Button className="w-full">Đăng nhập ngay</Button>
-            </Link>
-          </CardContent>
-        </Card>
+      <div className="w-full text-center">
+        <div className="w-16 h-16 bg-[#d1fae5] rounded-full flex items-center justify-center mx-auto mb-6">
+          <CheckCircle className="h-8 w-8 text-[#10b981]" />
+        </div>
+        <h1 className="text-[24px] font-extrabold text-gray-900 tracking-tight mb-2">Xác thực thành công!</h1>
+        <p className="text-[14px] text-gray-500 font-medium mb-8">
+          Email của bạn đã được xác thực. Bây giờ bạn có thể đăng nhập để sử dụng tài khoản.
+        </p>
+        <Link href="/login">
+          <Button className="w-full h-11 bg-primary hover:bg-primary-dark font-semibold text-[14px]">Đăng nhập ngay</Button>
+        </Link>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="w-12 h-12 bg-primary-light rounded-full flex items-center justify-center mx-auto mb-4">
-            <Mail className="h-6 w-6 text-primary" />
-          </div>
-          <CardTitle className="text-2xl">Xác thực email</CardTitle>
-          <CardDescription>
-            Chúng tôi đã gửi email xác thực đến địa chỉ của bạn
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email đã đăng ký</Label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                id="email"
-                type="email"
-                placeholder="nguyenvana@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
+    <div className="w-full text-center">
+      <div className="w-16 h-16 bg-primary-light rounded-full flex items-center justify-center mx-auto mb-6">
+        <Shield className="h-8 w-8 text-primary" />
+      </div>
+      <h1 className="text-[24px] font-extrabold text-gray-900 tracking-tight mb-2">Xác thực email</h1>
+      <p className="text-[14px] text-gray-500 font-medium mb-8">
+        Nhập mã 6 chữ số được gửi đến<br />
+        <strong className="text-gray-900">{email || 'email của bạn'}</strong>
+      </p>
 
-          <div className="bg-primary-light rounded-lg p-4">
-            <h4 className="font-medium text-gray-900 mb-2">Hướng dẫn:</h4>
-            <ol className="text-sm text-gray-700 space-y-1 list-decimal list-inside">
-              <li>Mở email từ BatDongSan</li>
-              <li>Tìm email có tiêu đề "Xác thực email của bạn"</li>
-              <li>Nhấp vào nút "Xác thực email"</li>
-              <li>Bạn sẽ được chuyển đến trang xác thực thành công</li>
-            </ol>
-          </div>
+      {status === 'error' && (
+        <div className="mb-4 p-3 bg-red-50 text-[#e03131] text-[13px] rounded-lg border border-[#e03131]/20">
+          Đã xảy ra lỗi. Vui lòng thử lại.
+        </div>
+      )}
 
-          {status === 'error' && (
-            <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 flex-shrink-0" />
-              Đã xảy ra lỗi khi gửi email. Vui lòng thử lại.
-            </div>
+      <div className="space-y-6">
+        <OTPInput 
+          length={6} 
+          value={otp} 
+          onChange={(val) => {
+            setOtp(val);
+            if (val.length === 6) {
+              handleVerify(val);
+            }
+          }} 
+        />
+
+        <Button
+          onClick={() => handleVerify(otp)}
+          disabled={otp.length !== 6 || status === 'loading'}
+          className="w-full h-11 bg-primary hover:bg-primary-dark font-semibold text-[14px]"
+        >
+          {status === 'loading' ? (
+            <>
+              <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+              Đang xác thực...
+            </>
+          ) : (
+            'Xác nhận'
           )}
+        </Button>
 
-          {status === 'sent' && (
-            <div className="p-3 bg-green-50 text-green-600 text-sm rounded-lg flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 flex-shrink-0" />
-              Email xác thực đã được gửi thành công!
-            </div>
+        <div className="text-center">
+          {resendCooldown > 0 ? (
+            <p className="text-[13px] text-gray-400 font-medium">
+              Gửi lại mã sau {resendCooldown}s
+            </p>
+          ) : (
+            <button
+              onClick={handleResend}
+              className="text-[13px] text-primary hover:text-primary-dark font-semibold"
+            >
+              Gửi lại mã
+            </button>
           )}
+        </div>
 
-          <Button
-            onClick={handleResend}
-            disabled={!email || resendCooldown > 0 || status === 'loading'}
-            className="w-full"
-            variant={status === 'sent' ? 'outline' : 'default'}
-          >
-            {status === 'loading' ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Đang gửi...
-              </>
-            ) : resendCooldown > 0 ? (
-              <>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Gửi lại sau {resendCooldown}s
-              </>
-            ) : (
-              <>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Gửi lại email xác thực
-              </>
-            )}
-          </Button>
-
-          <Separator />
-
-          <div className="text-center text-sm text-gray-500 space-y-2">
-            <p>
-              Không nhận được email? Kiểm tra thư mục spam.
-            </p>
-            <p>
-              Email sai?{' '}
-              <Link href="/register" className="text-primary hover:underline">
-                Đăng ký lại
-              </Link>
-            </p>
-          </div>
-
-          <Link href="/login">
-            <Button variant="outline" className="w-full gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              Quay lại đăng nhập
-            </Button>
+        <div className="text-center pt-2">
+          <Link href="/register" className="text-[13px] text-gray-500 hover:text-gray-700 font-medium">
+            ← Đổi địa chỉ email
           </Link>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }
 
 function VerifyEmailLoading() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <Card className="w-full max-w-md">
-        <CardContent className="pt-6 text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-          <p className="mt-4 text-gray-500">Đang tải...</p>
-        </CardContent>
-      </Card>
+    <div className="w-full text-center py-12">
+      <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+      <p className="mt-4 text-[14px] text-gray-500 font-medium">Đang tải...</p>
     </div>
   );
 }
