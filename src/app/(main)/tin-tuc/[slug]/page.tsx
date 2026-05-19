@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useQuery } from '@tanstack/react-query';
@@ -25,7 +25,6 @@ import { TableOfContents } from '@/components/news/TableOfContents';
 import { NewsCard } from '@/components/news/NewsCard';
 
 export default function BlogDetailPage({ params }: { params: { slug: string } }) {
-  const [relatedPosts] = useState<Post[]>([]);
   const contentRef = useRef<HTMLDivElement>(null!);
 
   const { data, isLoading, error } = useQuery({
@@ -35,6 +34,14 @@ export default function BlogDetailPage({ params }: { params: { slug: string } })
   });
 
   const post: Post | null = data?.data || null;
+
+  const { data: relatedData } = useQuery({
+    queryKey: ['post-related', post?.id],
+    queryFn: () => postApi.related(post!.id, { limit: 3 }),
+    enabled: !!post?.id,
+  });
+
+  const relatedPosts: Post[] = relatedData?.data || [];
 
   const handleShare = (platform: string) => {
     const url = typeof window !== 'undefined' ? window.location.href : '';

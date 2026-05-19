@@ -14,7 +14,6 @@ const mainNavLinks = [
   { href: '/cho-thue', label: 'Nhà đất cho thuê' },
   { href: '/du-an', label: 'Dự án' },
   { href: '/tin-tuc', label: 'Tin tức' },
-  { href: '/phan-tich', label: 'Phân tích đánh giá' },
 ];
 
 export function Header() {
