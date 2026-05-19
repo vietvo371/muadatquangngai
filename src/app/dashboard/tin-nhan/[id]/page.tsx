@@ -210,10 +210,8 @@ export default function ConversationPage({
             <Info className="h-5 w-5" />
           </Button>
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size="icon" variant="ghost" className="h-10 w-10 rounded-full text-gray-500">
-                <MoreVertical className="h-5 w-5" />
-              </Button>
+            <DropdownMenuTrigger className="h-10 w-10 rounded-full text-gray-500 hover:text-gray-900 hover:bg-gray-100 flex items-center justify-center transition-colors shrink-0">
+              <MoreVertical className="h-5 w-5" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuItem className="cursor-pointer font-medium">Xem hồ sơ</DropdownMenuItem>

@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, MessageSquare, Phone, MoreVertical, Star, Inbox } from 'lucide-react';
+import { Search, MessageSquare, Phone, MoreVertical, Star, Inbox, Home } from 'lucide-react';
 import { formatDistanceToNow } from '@/lib/formatters';
 
 // Mock conversations

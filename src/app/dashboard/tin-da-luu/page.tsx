@@ -224,17 +224,15 @@ export default function SavedPage() {
                         <p className="text-sm text-gray-500 mb-3 truncate">{property.address}</p>
                       </Link>
                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-gray-400 hover:text-gray-900 shrink-0">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
+                        <DropdownMenuTrigger className="h-8 w-8 rounded-full text-gray-400 hover:text-gray-900 shrink-0 hover:bg-gray-100 flex items-center justify-center transition-colors">
+                          <MoreVertical className="h-4 w-4" />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-40">
-                          <DropdownMenuItem asChild>
-                            <Link href={`/mua-ban/${property.slug}`} className="cursor-pointer">
+                          <Link href={`/mua-ban/${property.slug}`} className="w-full cursor-pointer">
+                            <DropdownMenuItem className="cursor-pointer">
                               <ExternalLink className="h-4 w-4 mr-2" /> Xem tin
-                            </Link>
-                          </DropdownMenuItem>
+                            </DropdownMenuItem>
+                          </Link>
                           <DropdownMenuItem className="cursor-pointer">
                             <Share2 className="h-4 w-4 mr-2" /> Chia sẻ
                           </DropdownMenuItem>

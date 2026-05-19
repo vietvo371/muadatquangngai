@@ -27,16 +27,18 @@ export function SpecBoxes({ price, priceUnit, area, bedrooms, bathrooms, directi
   }
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-8">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 py-5 border-y border-gray-100 mb-8">
       {specs.map((spec, i) => {
         const Icon = spec.icon;
         return (
-          <div key={i} className="bg-gray-50 rounded-xl p-4 flex flex-col justify-center border border-gray-100">
-            <div className="flex items-center gap-1.5 text-gray-500 mb-1">
-              <Icon className="w-4 h-4" />
-              <span className="text-[13px] font-medium">{spec.label}</span>
+          <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-transparent hover:border-gray-100 transition-colors">
+            <div className="p-2 bg-primary-light rounded-lg shrink-0">
+              <Icon className="w-4 h-4 text-primary" />
             </div>
-            <div className="text-[16px] font-bold text-gray-900">{spec.value}</div>
+            <div className="overflow-hidden">
+              <div className="text-[11px] text-gray-500 uppercase tracking-wide truncate">{spec.label}</div>
+              <div className="text-[14px] font-semibold text-gray-900 truncate">{spec.value}</div>
+            </div>
           </div>
         );
       })}

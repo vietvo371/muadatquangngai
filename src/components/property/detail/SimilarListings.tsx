@@ -10,9 +10,11 @@ export function SimilarListings({ properties }: SimilarListingsProps) {
   return (
     <div className="mt-12 pt-10 border-t border-gray-100">
       <h2 className="text-[20px] font-extrabold text-gray-900 mb-6 tracking-tight">Bất động sản tương tự</h2>
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        {properties.slice(0, 3).map((prop, i) => (
-          <PropertyCard key={i} property={prop} />
+      <div className="flex overflow-x-auto gap-5 pb-4 snap-x snap-mandatory hide-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
+        {properties.map((prop, i) => (
+          <div key={i} className="min-w-[280px] sm:min-w-[320px] max-w-[320px] snap-start shrink-0">
+            <PropertyCard property={prop} />
+          </div>
         ))}
       </div>
     </div>

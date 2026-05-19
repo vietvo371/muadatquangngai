@@ -32,9 +32,9 @@ export function AgentCard({ agent }: AgentCardProps) {
         <div className="p-5">
           <div className="flex items-start gap-4 mb-4">
             <Link href={agentUrl} className="shrink-0 relative">
-              <Avatar className="h-16 w-16 border-2 border-white shadow-sm">
+              <Avatar className="h-[60px] w-[60px] border-2 border-white shadow-sm">
                 <AvatarImage src={agent.avatar || undefined} className="object-cover" />
-                <AvatarFallback className="bg-primary-light text-primary font-bold text-xl">
+                <AvatarFallback className="bg-primary-light text-primary font-bold text-lg">
                   {agent.name.charAt(0)}
                 </AvatarFallback>
               </Avatar>
@@ -47,12 +47,12 @@ export function AgentCard({ agent }: AgentCardProps) {
             
             <div className="flex-1 min-w-0">
               <Link href={agentUrl}>
-                <h3 className="font-bold text-gray-900 text-[17px] truncate group-hover:text-primary transition-colors">
+                <h3 className="font-bold text-gray-900 text-[16px] truncate group-hover:text-primary transition-colors leading-tight">
                   {agent.name}
                 </h3>
               </Link>
               
-              <div className="flex items-center gap-3 mt-1.5 mb-1 text-[13px]">
+              <div className="flex items-center gap-2 mt-1 mb-1 text-[13px]">
                 <div className="flex items-center gap-1 font-bold text-gray-900">
                   <Star className="h-3.5 w-3.5 fill-yellow-500 text-yellow-500" />
                   {agent.rating || 5.0} <span className="font-medium text-gray-400">({agent.review_count || 0})</span>
@@ -91,14 +91,14 @@ export function AgentCard({ agent }: AgentCardProps) {
         </div>
 
         <div className="grid grid-cols-2 border-t border-gray-100 divide-x divide-gray-100">
-          <Button variant="ghost" className="h-12 rounded-none text-primary hover:text-primary hover:bg-primary-light/10 font-bold">
-            <Phone className="h-4 w-4 mr-2" />
+          <Button variant="ghost" className="h-12 rounded-none text-primary hover:text-primary hover:bg-primary-light/10 font-bold text-[13px]">
+            <Phone className="h-4 w-4 mr-1.5" />
             Gọi ngay
           </Button>
-          <Link href={agentUrl} className="flex">
-            <Button variant="ghost" className="h-12 w-full rounded-none text-gray-600 hover:text-gray-900 font-bold bg-white">
+          <Link href={agentUrl} className="flex w-full">
+            <Button variant="ghost" className="h-12 w-full rounded-none text-gray-600 hover:text-gray-900 font-bold bg-white text-[13px]">
               Xem hồ sơ
-              <ChevronRight className="h-4 w-4 ml-1" />
+              <ChevronRight className="h-4 w-4 ml-0.5" />
             </Button>
           </Link>
         </div>

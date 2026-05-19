@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { PropertyCard } from '@/components/property/PropertyCard';
 import { FilterSidebar } from '@/components/search/FilterSidebar';
 import { SortBar } from '@/components/search/SortBar';
-import { ActiveFilterChips } from '@/components/search/ActiveFilterChips';
+import { FilterTags } from '@/components/shared/FilterTags';
 import { PropertyCardSkeleton } from '@/components/property/PropertyCardSkeleton';
 import { MapPin, ArrowRight, ChevronRight, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -124,7 +124,18 @@ function PropertyListingContent() {
             {/* Sort & Filters Toolbar */}
             <div className="mb-6">
               <SortBar />
-              <ActiveFilterChips />
+              {/* Active Filters */}
+          <div className="mb-4">
+            <FilterTags 
+              tags={[
+                { id: '1', label: 'Nhà phố' },
+                { id: '2', label: 'TP Quảng Ngãi' },
+                { id: '3', label: '1 - 3 tỷ' }
+              ]}
+              onRemove={() => {}}
+              onClearAll={() => {}}
+            />
+          </div>
             </div>
 
             {/* Properties Grid */}
@@ -154,7 +165,7 @@ function PropertyListingContent() {
                 : 'space-y-4'
               }>
                 {mockProperties.map((property) => (
-                  <PropertyCard key={property.id} property={property} variant={viewMode} />
+                  <PropertyCard key={property.id} property={property} variant={viewMode === 'grid' ? 'default' : 'compact'} />
                 ))}
               </div>
             )}

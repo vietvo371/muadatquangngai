@@ -20,39 +20,42 @@ export function NewsCard({ post, featured = false }: NewsCardProps) {
   if (featured) {
     return (
       <Link href={`/tin-tuc/${post.slug}`} className="group block">
-        <div className="relative rounded-2xl overflow-hidden shadow-sm mb-6 bg-gray-900 isolate">
-          <div className="relative h-[300px] md:h-[400px] w-full">
+        <div className="grid md:grid-cols-10 gap-6 lg:gap-8 rounded-2xl overflow-hidden bg-white border border-gray-100 hover:border-primary/20 hover:shadow-xl transition-all duration-300">
+          <div className="relative h-[240px] sm:h-[320px] md:h-[400px] md:col-span-6 w-full overflow-hidden">
             <Image
               src={post.thumbnail || '/images/image_data/banner_hero.jpg'}
               alt={post.title}
               fill
               className="object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
-              sizes="(max-width: 1200px) 100vw, 1200px"
+              sizes="(max-width: 768px) 100vw, 60vw"
               priority
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/40 to-transparent" />
-            <div className="absolute bottom-6 left-6 right-6 md:bottom-8 md:left-8 md:right-8 z-10">
-              <Badge className="mb-4 bg-primary hover:bg-primary-dark text-white border-0 font-bold uppercase tracking-wider text-[10px] px-2.5 py-1">
+            <div className="absolute top-4 left-4 z-10">
+              <Badge className="bg-primary hover:bg-primary-dark text-white border-0 font-bold uppercase tracking-wider text-[10px] px-2.5 py-1">
                 {post.category?.name || 'Tiêu điểm'}
               </Badge>
-              <h2 className="text-white font-bold text-2xl md:text-3xl leading-snug drop-shadow-md group-hover:text-primary-light transition-colors mb-3">
-                {post.title}
-              </h2>
-              {post.excerpt && (
-                <p className="text-gray-300 line-clamp-2 leading-relaxed max-w-3xl mb-4 text-[15px] font-medium hidden sm:block">
-                  {post.excerpt}
-                </p>
-              )}
-              <div className="flex items-center gap-4 text-xs font-medium text-gray-400">
-                <div className="flex items-center gap-1.5">
-                  <Calendar className="h-4 w-4" />
-                  <span>{publishedDate}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Eye className="h-4 w-4" />
-                  <span>{post.view_count?.toLocaleString() || 0} lượt xem</span>
-                </div>
+            </div>
+          </div>
+          <div className="p-6 md:p-8 flex flex-col justify-center md:col-span-4">
+            <span className="text-[12px] font-bold text-primary uppercase tracking-wider mb-2 block">
+              {post.category?.name || 'Tin nổi bật'}
+            </span>
+            <h2 className="text-gray-900 font-extrabold text-[22px] md:text-[28px] leading-snug group-hover:text-primary transition-colors mb-3">
+              {post.title}
+            </h2>
+            {post.excerpt && (
+              <p className="text-gray-500 line-clamp-3 leading-relaxed mb-6 text-[14px]">
+                {post.excerpt}
+              </p>
+            )}
+            <div className="flex items-center justify-between text-xs font-semibold text-gray-400 mt-auto pt-4 border-t border-gray-100 w-full">
+              <div className="flex items-center gap-1.5">
+                <Calendar className="h-4 w-4" />
+                <span>{publishedDate}</span>
               </div>
+              <span className="text-primary group-hover:underline font-bold flex items-center gap-1">
+                Đọc ngay &rarr;
+              </span>
             </div>
           </div>
         </div>

@@ -285,18 +285,16 @@ function NotificationList({
 
                   {/* Actions */}
                   <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:text-gray-900">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
+                    <DropdownMenuTrigger className="h-8 w-8 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-lg flex items-center justify-center transition-colors">
+                      <MoreVertical className="h-4 w-4" />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
-                      {notification.action_url && (
-                        <DropdownMenuItem asChild>
-                          <Link href={notification.action_url} className="cursor-pointer">
+                       {notification.action_url && (
+                        <Link href={notification.action_url} className="w-full cursor-pointer">
+                          <DropdownMenuItem className="cursor-pointer">
                             <Eye className="h-4 w-4 mr-2" /> Xem chi tiết
-                          </Link>
-                        </DropdownMenuItem>
+                          </DropdownMenuItem>
+                        </Link>
                       )}
                       {isUnread && (
                         <DropdownMenuItem onClick={() => onMarkAsRead(notification.id)} className="cursor-pointer">
