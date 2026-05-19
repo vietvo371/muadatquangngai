@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
@@ -26,6 +27,7 @@ import {
   Landmark,
   Menu,
   X,
+  ShieldCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores/authStore';
@@ -47,6 +49,7 @@ const adminNavItems = [
   { href: '/admin', label: 'Dashboard', icon: BarChart3, exact: true },
   { href: '/admin/properties', label: 'Quản lý tin', icon: Building2 },
   { href: '/admin/users', label: 'Quản lý users', icon: Users },
+  { href: '/admin/verifications', label: 'Xác thực', icon: ShieldCheck },
   { href: '/admin/categories', label: 'Danh mục', icon: Package },
   { href: '/admin/packages', label: 'Gói VIP', icon: Star },
   { href: '/admin/projects', label: 'Dự án', icon: Landmark },
@@ -90,12 +93,19 @@ export function Sidebar({
         'flex items-center h-16 border-b px-4',
         collapsed ? 'justify-center' : 'justify-between'
       )}>
-        <Link href="/" className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary flex items-center justify-center">
-            <span className="text-white font-bold">B</span>
-          </div>
+        <Link href="/" className="flex items-center gap-2.5">
+          <Image
+            src="/images/logo_xam.png"
+            alt="BatDongSan Quang Ngai"
+            width={36}
+            height={36}
+            className="object-contain"
+          />
           {!collapsed && (
-            <span className="font-bold text-lg text-gray-900">BatDongSan</span>
+            <div className="flex flex-col leading-tight">
+              <span className="font-bold text-base text-gray-900 tracking-tight">BatDongSan</span>
+              <span className="text-[10px] text-gray-400 font-medium -mt-0.5">Quang Ngai</span>
+            </div>
           )}
         </Link>
         <button

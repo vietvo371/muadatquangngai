@@ -3,10 +3,14 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { EmptyState } from '@/components/shared';
+import { PageLoader } from '@/components/shared';
+import { postApi, type Post, type PostCategory } from '@/lib/post-api';
 import {
   Search,
   Calendar,
@@ -17,95 +21,37 @@ import {
 } from 'lucide-react';
 import { SectionHeading } from '@/components/home/SectionHeading';
 
-const blogPosts = [
-  {
-    id: 1,
-    title: 'Thị trường bất động sản Quảng Ngãi 2026: Xu hướng nào đáng đầu tư?',
-    slug: 'thi-truong-bds-quang-ngai-2026',
-    excerpt: 'Năm 2026, thị trường bất động sản Quảng Ngãi được dự báo sẽ có nhiều biến động. Cùng phân tích các xu hướng đáng chú ý.',
-    thumbnail: '/images/image_data/Haus-Coastal.jpg',
-    category: 'Thị trường',
-    author: { name: 'Ban biên tập', avatar: null },
-    created_at: '2026-04-15',
-    views: 4521,
-  },
-  {
-    id: 2,
-    title: 'Hướng dẫn mua nhà lần đầu: Những điều cần biết',
-    slug: 'huong-dan-mua-nha-lan-dau',
-    excerpt: 'Mua nhà lần đầu có thể gặp nhiều bỡ ngỡ. Bài viết này sẽ giúp bạn nắm rõ các bước và lưu ý quan trọng.',
-    thumbnail: '/images/image_data/nha-pho-de-palace-river.jpg',
-    category: 'Hướng dẫn',
-    author: { name: 'Tư vấn BDS', avatar: null },
-    created_at: '2026-04-12',
-    views: 6231,
-  },
-  {
-    id: 3,
-    title: 'Top 5 khu vực có tiềm năng sinh lời cao tại Quảng Ngãi',
-    slug: 'top-5-khu-vuc-dau-tu-quang-ngai',
-    excerpt: 'Khám phá những khu vực đang thu hút nhà đầu tư với tiềm năng sinh lời hấp dẫn.',
-    thumbnail: '/images/image_data/Starlight---suc-hut-den-tu-vi-tri-dac-dia-nhat-trung-tam-Quang-Ngai-suc-hut-3-1733900371-424-width1000height563.jpg',
-    category: 'Đầu tư',
-    author: { name: 'Chuyên gia', avatar: null },
-    created_at: '2026-04-10',
-    views: 3987,
-  },
-  {
-    id: 4,
-    title: 'Những lỗi thường gặp khi làm sổ đỏ lần đầu',
-    slug: 'loi-thuong-gap-lam-so-do',
-    excerpt: 'Làm sổ đỏ là thủ tục pháp lý quan trọng. Tránh những sai lầm phổ biến để quá trình diễn ra suôn sẻ.',
-    thumbnail: '/images/image_data/du-lich-binh-son-quang-ngai-phan-van-travel-1.webp',
-    category: 'Pháp lý',
-    author: { name: 'Luật sư', avatar: null },
-    created_at: '2026-04-08',
-    views: 2109,
-  },
-  {
-    id: 5,
-    title: 'De Palace River Nam Sông Trà – Sản phẩm không dành cho số đông',
-    slug: 'de-palace-river-phan-tich',
-    excerpt: 'Phân tích chi tiết về tiềm năng tăng giá và lợi thế vị trí của dự án ven sông Trà Khúc.',
-    thumbnail: '/images/image_data/nha-pho-de-palace-river.jpg',
-    category: 'Dự án',
-    author: { name: 'Research Team', avatar: null },
-    created_at: '2026-04-05',
-    views: 3541,
-  },
-  {
-    id: 6,
-    title: 'Lý Sơn – Hòn đảo bất động sản tiếp theo cần theo dõi năm 2026',
-    slug: 'ly-son-bat-dong-san-2026',
-    excerpt: 'Phân tích chi tiết về tiềm năng tăng giá và lợi thế vị trí của dự án trên đảo Lý Sơn.',
-    thumbnail: '/images/image_data/shutterstock2065827521lyson-1701400873758.jpg',
-    category: 'Phân tích',
-    author: { name: 'Chuyên gia', avatar: null },
-    created_at: '2026-04-03',
-    views: 2876,
-  },
-];
-
-const categories = ['Tất cả', 'Thị trường', 'Đầu tư', 'Hướng dẫn', 'Pháp lý', 'Dự án', 'Phân tích'];
-
 export default function BlogListPage() {
-  const [selectedCategory, setSelectedCategory] = useState('Tất cả');
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(1);
 
-  const filteredPosts = blogPosts.filter((post) => {
-    if (selectedCategory !== 'Tất cả' && post.category !== selectedCategory) return false;
-    if (searchQuery && !post.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    return true;
+  const { data: categoriesData, isLoading: categoriesLoading } = useQuery({
+    queryKey: ['post-categories'],
+    queryFn: () => postApi.categories(),
   });
 
-  const featuredPost = filteredPosts[0];
+  const { data: postsData, isLoading } = useQuery({
+    queryKey: ['posts', selectedCategory, searchQuery, page],
+    queryFn: () => postApi.list({
+      category: selectedCategory || undefined,
+      search: searchQuery || undefined,
+      page,
+      per_page: 12,
+    }),
+  });
+
+  const categories: PostCategory[] = categoriesData?.data || [];
+  const posts: Post[] = postsData?.data || [];
+  const meta = postsData?.meta;
+
+  const featuredPost = posts[0];
+  const remainingPosts = posts.slice(1);
 
   return (
     <div className="flex flex-col bg-white">
 
-      {/* ══════════════════════════════════
-          HERO
-      ══════════════════════════════════ */}
+      {/* HERO */}
       <section className="relative h-[320px] md:h-[380px] z-10">
         <div className="absolute inset-0 overflow-hidden">
           <Image
@@ -137,7 +83,7 @@ export default function BlogListPage() {
               <Input
                 placeholder="Tìm kiếm tin tức..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
                 className="pl-11 bg-white/10 border-white/20 text-white placeholder:text-white/50 rounded-xl h-11"
               />
             </div>
@@ -145,138 +91,187 @@ export default function BlogListPage() {
         </div>
       </section>
 
-      {/* ══════════════════════════════════
-          FEATURED POST
-      ══════════════════════════════════ */}
-      <section className="py-14 px-4 bg-white">
-        <div className="max-w-6xl mx-auto">
-          <SectionHeading
-            title="Bài viết nổi bật"
-            subtitle="Những tin tức được quan tâm nhất"
-          />
+      {/* FEATURED POST */}
+      {isLoading ? (
+        <section className="py-14 px-4 bg-white">
+          <div className="max-w-6xl mx-auto"><PageLoader /></div>
+        </section>
+      ) : featuredPost ? (
+        <section className="py-14 px-4 bg-white">
+          <div className="max-w-6xl mx-auto">
+            <SectionHeading
+              title="Bài viết nổi bật"
+              subtitle="Những tin tức được quan tâm nhất"
+            />
 
-          <Link href={`/tin-tuc/${featuredPost.slug}`} className="group block">
-            <div className="relative rounded-2xl overflow-hidden shadow-md mb-8">
-              <div className="relative h-64 md:h-80">
-                <Image
-                  src={featuredPost.thumbnail}
-                  alt={featuredPost.title}
-                  fill
-                  className="object-cover group-hover:scale-105 transition-transform duration-500"
-                  sizes="(max-width: 1200px) 100vw, 1200px"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                <div className="absolute bottom-5 left-5 right-5">
-                  <Badge className="mb-3 bg-cta text-white">{featuredPost.category}</Badge>
-                  <h2 className="text-white font-bold text-xl md:text-2xl leading-snug drop-shadow-sm group-hover:text-white/80 transition-colors">
-                    {featuredPost.title}
-                  </h2>
+            <Link href={`/tin-tuc/${featuredPost.slug}`} className="group block">
+              <div className="relative rounded-2xl overflow-hidden shadow-md mb-8">
+                <div className="relative h-64 md:h-80">
+                  <Image
+                    src={featuredPost.thumbnail || '/images/image_data/banner_hero.jpg'}
+                    alt={featuredPost.title}
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                    sizes="(max-width: 1200px) 100vw, 1200px"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                  <div className="absolute bottom-5 left-5 right-5">
+                    <Badge className="mb-3 bg-cta text-white">
+                      {featuredPost.category?.name || 'Tin tức'}
+                    </Badge>
+                    <h2 className="text-white font-bold text-xl md:text-2xl leading-snug drop-shadow-sm group-hover:text-white/80 transition-colors">
+                      {featuredPost.title}
+                    </h2>
+                  </div>
                 </div>
               </div>
-            </div>
-            <p className="text-sm text-gray-400 mb-2">{featuredPost.created_at}</p>
-            {featuredPost.excerpt && (
-              <p className="text-sm text-gray-500 line-clamp-2 leading-relaxed max-w-3xl">
-                {featuredPost.excerpt}
+              <p className="text-sm text-gray-400 mb-2">
+                {new Date(featuredPost.published_at || featuredPost.created_at).toLocaleDateString('vi-VN')}
               </p>
-            )}
-          </Link>
-        </div>
-      </section>
+              {featuredPost.excerpt && (
+                <p className="text-sm text-gray-500 line-clamp-2 leading-relaxed max-w-3xl">
+                  {featuredPost.excerpt}
+                </p>
+              )}
+            </Link>
+          </div>
+        </section>
+      ) : (
+        <section className="py-14 px-4 bg-white">
+          <div className="max-w-6xl mx-auto">
+            <EmptyState
+              title="Chưa có bài viết nào"
+              description="Hãy là người đầu tiên đăng tin tức bất động sản."
+              action={{ label: 'Quay lại', onClick: () => {} }}
+            />
+          </div>
+        </section>
+      )}
 
-      {/* ══════════════════════════════════
-          CATEGORIES + POSTS
-      ══════════════════════════════════ */}
+      {/* CATEGORIES + POSTS */}
       <section className="py-6 px-4 bg-gray-50">
         <div className="max-w-6xl mx-auto">
           {/* Category pills */}
           <div className="flex items-center gap-2 mb-8 overflow-x-auto pb-2 scrollbar-hide">
+            <Button
+              variant={selectedCategory === '' ? 'default' : 'outline'}
+              onClick={() => { setSelectedCategory(''); setPage(1); }}
+              className={`shrink-0 rounded-full ${selectedCategory === '' ? 'bg-primary' : ''}`}
+            >
+              Tất cả
+            </Button>
             {categories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={`shrink-0 px-5 py-2 rounded-full text-sm font-medium transition-all ${
-                  selectedCategory === cat
-                    ? 'bg-primary text-white shadow-md'
-                    : 'bg-white text-gray-600 hover:bg-primary-light hover:text-primary border border-gray-200'
-                }`}
+              <Button
+                key={cat.id}
+                variant={selectedCategory === cat.slug ? 'default' : 'outline'}
+                onClick={() => { setSelectedCategory(cat.slug); setPage(1); }}
+                className={`shrink-0 rounded-full ${selectedCategory === cat.slug ? 'bg-primary' : ''}`}
               >
-                {cat}
-              </button>
+                {cat.name}
+              </Button>
             ))}
           </div>
 
           {/* Posts grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredPosts.slice(1).map((post) => (
-              <Link key={post.id} href={`/tin-tuc/${post.slug}`} className="group">
-                <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 h-full">
-                  <div className="relative h-44">
-                    <Image
-                      src={post.thumbnail}
-                      alt={post.title}
-                      fill
-                      className="object-cover group-hover:scale-110 transition-transform duration-500"
-                      sizes="(max-width: 768px) 100vw, 33vw"
-                    />
-                    <div className="absolute top-3 left-3">
-                      <Badge className="bg-primary text-white">{post.category}</Badge>
-                    </div>
-                  </div>
-                  <CardContent className="p-5">
-                    <h3 className="font-bold text-gray-900 line-clamp-2 mb-3 group-hover:text-primary transition-colors leading-snug">
-                      {post.title}
-                    </h3>
-                    <p className="text-sm text-gray-500 line-clamp-2 leading-relaxed mb-4">
-                      {post.excerpt}
-                    </p>
-                    <div className="flex items-center justify-between text-xs text-gray-400">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3.5 w-3.5" />
-                        <span>{post.created_at}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Eye className="h-3.5 w-3.5" />
-                        <span>{post.views.toLocaleString()}</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
-
-          {/* Empty State */}
-          {filteredPosts.length <= 1 && (
-            <div className="text-center py-20 bg-white rounded-2xl">
-              <p className="text-gray-500">Không có bài viết nào trong danh mục này</p>
+          {isLoading ? (
+            <div className="flex justify-center py-20">
+              <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full" />
             </div>
-          )}
-
-          {/* Pagination */}
-          {filteredPosts.length > 1 && (
-            <div className="flex justify-center mt-10">
-              <div className="flex gap-1.5">
-                <Button variant="outline" size="icon" className="w-9 h-9" disabled>
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button className="w-9 h-9 bg-primary hover:bg-primary/90 text-white">1</Button>
-                <Button variant="outline" className="w-9 h-9">2</Button>
-                <Button variant="outline" className="w-9 h-9">3</Button>
-                <Button variant="outline" className="w-9 h-9">...</Button>
-                <Button variant="outline" className="w-9 h-9">10</Button>
-                <Button variant="outline" size="icon" className="w-9 h-9">
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
+          ) : remainingPosts.length > 0 ? (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {remainingPosts.map((post) => (
+                  <Link key={post.id} href={`/tin-tuc/${post.slug}`} className="group">
+                    <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 h-full">
+                      <div className="relative h-44">
+                        <Image
+                          src={post.thumbnail || '/images/image_data/banner_hero.jpg'}
+                          alt={post.title}
+                          fill
+                          className="object-cover group-hover:scale-110 transition-transform duration-500"
+                          sizes="(max-width: 768px) 100vw, 33vw"
+                        />
+                        <div className="absolute top-3 left-3">
+                          <Badge className="bg-primary text-white">
+                            {post.category?.name || 'Tin tức'}
+                          </Badge>
+                        </div>
+                      </div>
+                      <CardContent className="p-5">
+                        <h3 className="font-bold text-gray-900 line-clamp-2 group-hover:text-primary transition-colors leading-snug">
+                          {post.title}
+                        </h3>
+                        {post.excerpt && (
+                          <p className="text-sm text-gray-500 line-clamp-2 leading-relaxed mb-4">
+                            {post.excerpt}
+                          </p>
+                        )}
+                        <div className="flex items-center justify-between text-xs text-gray-400">
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-3.5 w-3.5" />
+                            <span>{new Date(post.published_at || post.created_at).toLocaleDateString('vi-VN')}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Eye className="h-3.5 w-3.5" />
+                            <span>{post.view_count.toLocaleString()}</span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ))}
               </div>
-            </div>
+
+              {/* Pagination */}
+              {meta && meta.last_page > 1 && (
+                <div className="flex justify-center mt-10">
+                  <div className="flex gap-1.5">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="w-9 h-9"
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={page === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    {Array.from({ length: Math.min(5, meta.last_page) }, (_, i) => {
+                      const p = i + 1;
+                      return (
+                        <Button
+                          key={p}
+                          variant={p === page ? 'default' : 'outline'}
+                          className={`w-9 h-9 ${p === page ? 'bg-primary hover:bg-primary/90' : ''}`}
+                          onClick={() => setPage(p)}
+                        >
+                          {p}
+                        </Button>
+                      );
+                    })}
+                    {meta.last_page > 5 && <span className="px-2 self-center text-gray-400">...</span>}
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="w-9 h-9"
+                      onClick={() => setPage((p) => Math.min(meta.last_page, p + 1))}
+                      disabled={page === meta.last_page}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <EmptyState
+              title="Không có bài viết nào"
+              description="Hãy thử tìm kiếm với từ khóa khác."
+            />
           )}
         </div>
       </section>
 
-      {/* ══════════════════════════════════
-          NEWSLETTER CTA
-      ══════════════════════════════════ */}
+      {/* NEWSLETTER CTA */}
       <section className="py-14 px-4 bg-white">
         <div className="max-w-6xl mx-auto">
           <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary to-primary/80 p-8 md:p-12">
@@ -297,7 +292,6 @@ export default function BlogListPage() {
                 </Button>
               </div>
             </div>
-            {/* Decorative */}
             <div className="absolute right-0 top-0 bottom-0 w-1/3 opacity-10">
               <Image
                 src="/images/image_data/banner_hero.jpg"

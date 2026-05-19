@@ -2,106 +2,55 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { 
-  Search, 
-  Filter, 
-  Plus, 
-  MoreHorizontal, 
-  Eye, 
-  Edit, 
+import { useQuery } from '@tanstack/react-query';
+import {
+  Search,
+  Plus,
+  Edit,
   Trash2,
-  EyeOff,
-  Copy,
+  Eye,
   ExternalLink,
-  Clock
+  Zap,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { StatusBadge } from '@/components/ui/status-badge';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select';
-import { PropertyCard } from '@/components/property/PropertyCard';
+import { EmptyState, BoostModal } from '@/components/shared';
+import api from '@/lib/axios';
 import { formatPrice } from '@/lib/formatters';
-
-const mockProperties = [
-  {
-    id: '1',
-    title: 'Căn hộ cao cấp 2PN view biển Mỹ Khê',
-    slug: 'can-ho-cao-cap-2pn-view-bien-my-khe',
-    price: 2800000000,
-    priceUnit: 'total',
-    area: 75,
-    type: 'sale' as const,
-    status: 'active' as const,
-    isVip: 'vip' as string,
-    thumbnail: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=600&h=400&fit=crop',
-    location: 'Đà Nẵng, Mỹ An',
-    views: 1234,
-    createdAt: '2024-01-15',
-  },
-  {
-    id: '2',
-    title: 'Nhà mặt phố 4 tầng mặt tiền 5m Quang Trung',
-    slug: 'nha-mat-pho-4-tang-mat-tien-5m-quang-trung',
-    price: 6500000000,
-    priceUnit: 'total',
-    area: 120,
-    type: 'sale' as const,
-    status: 'pending' as const,
-    isVip: 'normal' as string,
-    thumbnail: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=600&h=400&fit=crop',
-    location: 'Quảng Ngãi, Quảng Phú',
-    views: 456,
-    createdAt: '2024-01-14',
-  },
-  {
-    id: '3',
-    title: 'Đất nền dự án ven biển 500m2 có sổ đỏ',
-    slug: 'dat-nen-du-an-ven-bien-500m2-co-so-do',
-    price: 1800000000,
-    priceUnit: 'total',
-    area: 500,
-    type: 'sale' as const,
-    status: 'active' as const,
-    isVip: 'diamond' as string,
-    thumbnail: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600&h=400&fit=crop',
-    location: 'Quảng Ngãi, Tịnh An',
-    views: 789,
-    createdAt: '2024-01-13',
-  },
-  {
-    id: '4',
-    title: 'Căn hộ chung cư mini cho thuê 35m2',
-    slug: 'can-ho-chung-cu-mini-cho-thue-35m2',
-    price: 5000000,
-    priceUnit: 'per_month',
-    area: 35,
-    type: 'rent' as const,
-    status: 'inactive' as const,
-    isVip: 'normal' as string,
-    thumbnail: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=600&h=400&fit=crop',
-    location: 'Đà Nẵng, Sơn Trà',
-    views: 234,
-    createdAt: '2024-01-12',
-  },
-];
 
 export default function PropertyManagementPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [boostProperty, setBoostProperty] = useState<{ id: number; title: string } | null>(null);
 
-  const filteredProperties = mockProperties.filter((property) => {
-    const matchesSearch = property.title.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || property.status === statusFilter;
-    return matchesSearch && matchesStatus;
+  const { data, isLoading } = useQuery({
+    queryKey: ['my-properties', statusFilter, searchQuery],
+    queryFn: () =>
+      api.get('/my/properties', {
+        params: {
+          status: statusFilter === 'all' ? undefined : statusFilter,
+          search: searchQuery || undefined,
+        },
+      }),
+    select: (res) => res.data,
+  });
+
+  const properties = data?.data || [];
+
+  const filtered = properties.filter((p: any) => {
+    if (searchQuery && !p.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    return true;
   });
 
   return (
@@ -109,15 +58,13 @@ export default function PropertyManagementPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Quản lý tin đăng</h1>
-          <p className="text-gray-500 mt-1">
-            Quản lý và chỉnh sửa các tin đăng của bạn
-          </p>
+          <h1 className="text-2xl font-bold text-gray-900">Quan ly tin dang</h1>
+          <p className="text-gray-500 mt-1">Quan ly va chinh sua cac tin dang cua ban</p>
         </div>
         <Link href="/dashboard/dang-tin">
-          <Button className="bg-orange-500 hover:bg-orange-600">
+          <Button className="bg-cta hover:bg-cta-dark">
             <Plus className="h-4 w-4 mr-2" />
-            Đăng tin mới
+            Dang tin moi
           </Button>
         </Link>
       </div>
@@ -126,35 +73,30 @@ export default function PropertyManagementPage() {
       <Card>
         <CardContent className="p-4">
           <div className="flex flex-col md:flex-row gap-4">
-            {/* Search */}
             <div className="flex-1">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
-                  placeholder="Tìm kiếm tin đăng..."
+                  placeholder="Tim kiem tin dang..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
                 />
               </div>
             </div>
-
-            {/* Status Filter */}
             <Select value={statusFilter} onValueChange={(v) => v && setStatusFilter(v)}>
               <SelectTrigger className="w-full md:w-48">
-                <SelectValue placeholder="Trạng thái" />
+                <SelectValue placeholder="Trang thai" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tất cả trạng thái</SelectItem>
-                <SelectItem value="active">Đang hiển thị</SelectItem>
-                <SelectItem value="pending">Chờ duyệt</SelectItem>
-                <SelectItem value="inactive">Tạm ẩn</SelectItem>
-                <SelectItem value="rejected">Từ chối</SelectItem>
-                <SelectItem value="expired">Hết hạn</SelectItem>
+                <SelectItem value="all">Tat ca trang thai</SelectItem>
+                <SelectItem value="active">Dang hien thi</SelectItem>
+                <SelectItem value="pending">Cho duyet</SelectItem>
+                <SelectItem value="inactive">Tam an</SelectItem>
+                <SelectItem value="rejected">Tu choi</SelectItem>
+                <SelectItem value="expired">Het han</SelectItem>
               </SelectContent>
             </Select>
-
-            {/* View Toggle */}
             <div className="flex gap-1">
               <Button
                 variant={viewMode === 'grid' ? 'default' : 'outline'}
@@ -180,48 +122,46 @@ export default function PropertyManagementPage() {
       </Card>
 
       {/* Properties Grid/List */}
-      {filteredProperties.length === 0 ? (
+      {isLoading ? (
+        <div className="flex justify-center py-20">
+          <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full" />
+        </div>
+      ) : filtered.length === 0 ? (
         <Card>
           <CardContent className="py-16 text-center">
-            <div className="w-16 h-16 mx-auto rounded-full bg-gray-100 flex items-center justify-center mb-4">
-              <Search className="h-8 w-8 text-gray-400" />
-            </div>
-            <h3 className="font-semibold text-gray-900 mb-2">Không tìm thấy tin đăng</h3>
-            <p className="text-gray-500 mb-4">
-              {searchQuery ? 'Thử thay đổi từ khóa tìm kiếm' : 'Bạn chưa có tin đăng nào'}
-            </p>
-            <Link href="/dashboard/dang-tin">
-              <Button className="bg-orange-500 hover:bg-orange-600">
-                <Plus className="h-4 w-4 mr-2" />
-                Đăng tin mới
-              </Button>
-            </Link>
+            <EmptyState
+              title="Khong co tin dang nao"
+              description={searchQuery ? 'Thu thay doi tu khoa tim kiem' : 'Ban chua co tin dang nao. Hay la nguoi dau tien dang tin!'}
+              action={{ label: 'Dang tin moi', onClick: () => {} }}
+            />
           </CardContent>
         </Card>
       ) : viewMode === 'grid' ? (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredProperties.map((property) => (
-            <div key={property.id} className="group">
-              <PropertyCard property={property} />
-              <div className="flex items-center gap-2 mt-2 px-1">
+          {filtered.map((property: any) => (
+            <div key={property.id} className="group space-y-2">
+              <PropertyCardWrapper property={property} />
+              <div className="flex items-center gap-2 px-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => setBoostProperty({ id: property.id, title: property.title })}
+                >
+                  <Zap className="h-3 w-3 mr-1 text-primary" />
+                  VIP
+                </Button>
                 <Link href={`/dashboard/quan-ly-tin/${property.id}/edit`} className="flex-1">
                   <Button variant="outline" size="sm" className="w-full">
                     <Edit className="h-3 w-3 mr-1" />
-                    Sửa
+                    Sua
                   </Button>
                 </Link>
-                <Link href={`/mua-ban/${property.slug}`} target="_blank">
+                <Link href={`/${property.type === 'sale' ? 'mua-ban' : 'cho-thue'}/${property.slug}`} target="_blank">
                   <Button variant="ghost" size="sm">
                     <ExternalLink className="h-3 w-3" />
                   </Button>
                 </Link>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                >
-                  <Trash2 className="h-3 w-3" />
-                </Button>
               </div>
             </div>
           ))}
@@ -229,85 +169,112 @@ export default function PropertyManagementPage() {
       ) : (
         <Card>
           <div className="divide-y">
-            {filteredProperties.map((property) => (
-                <div
-                  key={property.id}
-                  className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors"
-                >
-                  {/* Thumbnail */}
-                  <div className="h-20 w-28 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                    {property.thumbnail ? (
-                      <img
-                        src={property.thumbnail}
-                        alt={property.title}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="h-full w-full flex items-center justify-center text-gray-400">
-                        No image
-                      </div>
+            {filtered.map((property: any) => (
+              <div key={property.id} className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors">
+                {/* Thumbnail */}
+                <div className="h-20 w-28 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                  {property.thumbnail ? (
+                    <img src={property.thumbnail} alt={property.title} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="h-full w-full flex items-center justify-center text-gray-400 text-xs">Khong co anh</div>
+                  )}
+                </div>
+
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Link href={`/dashboard/quan-ly-tin/${property.id}/edit`} className="font-medium text-gray-900 hover:text-primary truncate">
+                      {property.title}
+                    </Link>
+                    <StatusBadge status={property.status} />
+                    {property.is_vip && property.is_vip !== 'normal' && (
+                      <Badge className="bg-yellow-100 text-yellow-700">
+                        {property.is_vip === 'diamond' ? '★ VIP' : property.is_vip === 'vip_plus' ? 'VIP+' : 'VIP'}
+                      </Badge>
                     )}
                   </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <Link
-                        href={`/dashboard/quan-ly-tin/${property.id}/edit`}
-                        className="font-medium text-gray-900 hover:text-primary truncate"
-                      >
-                        {property.title}
-                      </Link>
-                      <StatusBadge status={property.status as 'active' | 'pending' | 'inactive' | 'rejected' | 'expired'} />
-                      {property.isVip !== 'normal' && (
-                        <Badge variant="outline" className="text-yellow-600 border-yellow-300">
-                          {property.isVip === 'vip' && 'VIP'}
-                          {property.isVip === 'vip_plus' && 'VIP+'}
-                          {property.isVip === 'diamond' && '★ VIP'}
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
-                      <span className="font-semibold text-red-600">
-                        {formatPrice(property.price, property.priceUnit)}
-                      </span>
-                      <span>{property.area}m²</span>
-                      <span className="flex items-center gap-1">
-                        <Eye className="h-3 w-3" />
-                        {property.views}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {property.createdAt}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-2">
-                    <Link href={`/mua-ban/${property.slug}`} target="_blank">
-                      <Button variant="ghost" size="sm">
-                        <ExternalLink className="h-4 w-4" />
-                      </Button>
-                    </Link>
-                    <Link href={`/dashboard/quan-ly-tin/${property.id}/edit`}>
-                      <Button variant="ghost" size="sm">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                    </Link>
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                  <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
+                    <span className="font-semibold text-red-600">{formatPrice(property.price)}</span>
+                    <span>{property.area}m2</span>
+                    <span className="flex items-center gap-1">
+                      <Eye className="h-3 w-3" />
+                      {property.view_count || 0}
+                    </span>
                   </div>
                 </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setBoostProperty({ id: property.id, title: property.title })}
+                    className="text-primary"
+                    title="Nang cap VIP"
+                  >
+                    <Zap className="h-4 w-4" />
+                  </Button>
+                  <Link href={`/${property.type === 'sale' ? 'mua-ban' : 'cho-thue'}/${property.slug}`} target="_blank">
+                    <Button variant="ghost" size="sm">
+                      <ExternalLink className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                  <Link href={`/dashboard/quan-ly-tin/${property.id}/edit`}>
+                    <Button variant="ghost" size="sm">
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                  <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
             ))}
           </div>
         </Card>
       )}
+
+      {/* Boost Modal */}
+      {boostProperty && (
+        <BoostModal
+          open={!!boostProperty}
+          onOpenChange={(open) => !open && setBoostProperty(null)}
+          propertyId={boostProperty.id}
+          propertyTitle={boostProperty.title}
+        />
+      )}
     </div>
+  );
+}
+
+function PropertyCardWrapper({ property }: { property: any }) {
+  return (
+    <Link
+      href={`/${property.type === 'sale' ? 'mua-ban' : 'cho-thue'}/${property.slug}`}
+      className="group block bg-white rounded-xl overflow-hidden border hover:shadow-lg hover:border-gray-300 transition-all"
+    >
+      <div className="relative aspect-[4/3] bg-gray-100 overflow-hidden">
+        {property.thumbnail ? (
+          <img src={property.thumbnail} alt={property.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-400 text-sm">Khong co anh</div>
+        )}
+        {property.is_vip && property.is_vip !== 'normal' && (
+          <div className="absolute top-3 left-3">
+            <Badge className="bg-cta text-white">
+              {property.is_vip === 'diamond' ? '★ VIP' : property.is_vip === 'vip_plus' ? 'VIP+' : 'VIP'}
+            </Badge>
+          </div>
+        )}
+        <Badge className={`absolute top-3 right-3 ${property.type === 'sale' ? 'bg-primary' : 'bg-green-600'} text-white border-0`}>
+          {property.type === 'sale' ? 'Ban' : 'Cho thue'}
+        </Badge>
+      </div>
+      <div className="p-4">
+        <h3 className="font-semibold text-gray-900 line-clamp-2 mb-2 group-hover:text-primary transition-colors">{property.title}</h3>
+        <p className="text-lg font-bold text-red-600">{formatPrice(property.price)}</p>
+        <p className="text-sm text-gray-500 mt-1">{property.area}m2</p>
+      </div>
+    </Link>
   );
 }

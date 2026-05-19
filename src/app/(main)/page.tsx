@@ -7,6 +7,7 @@ import { ProjectCard } from '@/components/home/ProjectCard';
 import { ListingsSection } from '@/components/home/ListingsSection';
 import { NewsCarousel } from '@/components/home/NewsCarousel';
 import { PartnerCarousel } from '@/components/home/PartnerCarousel';
+import { BannerSection } from '@/components/home/BannerSection';
 
 /* ─────────────────────── DATA ─────────────────────── */
 
@@ -291,20 +292,11 @@ export default function HomePage() {
       <ListingsSection />
 
       {/* ══════════════════════════════════
-          SECTION 4 — CTA BANNER
+          SECTION 4 — BANNER (from CMS)
       ══════════════════════════════════ */}
       <section className="py-6 px-4 bg-white">
         <div className="max-w-6xl mx-auto">
-          <div className="relative overflow-hidden rounded-2xl">
-            <Image
-              src="/images/image_data/cta_banner.png"
-              alt="CTA Banner"
-              width={1200}
-              height={400}
-              className="w-full h-auto object-cover"
-              sizes="(max-width: 1200px) 100vw, 1200px"
-            />
-          </div>
+          <BannerSection position="homepage_hero" />
         </div>
       </section>
 

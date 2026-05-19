@@ -1,5 +1,6 @@
 import api from './axios';
 
+// Types
 export interface Category {
   id: number;
   name: string;
@@ -232,6 +233,123 @@ export const transactionApi = {
 
   refund: async (id: number, reason?: string) => {
     const { data } = await api.put<Transaction>(`/admin/transactions/${id}/refund`, { reason });
+    return data;
+  },
+};
+
+// Verifications
+export interface Verification {
+  id: number;
+  user_id: number;
+  user?: {
+    id: number;
+    name: string;
+    email: string;
+    phone?: string;
+    avatar?: string;
+    role: string;
+  };
+  type: 'agent' | 'agency';
+  status: 'pending' | 'approved' | 'rejected';
+  license_number?: string;
+  agency_name?: string;
+  documents?: string[];
+  verified_at?: string;
+  rejected_at?: string;
+  rejection_reason?: string;
+  admin?: { id: number; name: string };
+  created_at: string;
+}
+
+export interface VerificationStats {
+  pending: number;
+  approved: number;
+  rejected: number;
+}
+
+export const verificationApi = {
+  list: async (params?: { type?: string; page?: number; per_page?: number }) => {
+    const { data } = await api.get<{ data: Verification[]; meta: Record<string, number> }>(
+      '/admin/verifications', { params }
+    );
+    return data;
+  },
+
+  get: async (id: number) => {
+    const { data } = await api.get<{ data: Verification }>(`/admin/verifications/${id}`);
+    return data;
+  },
+
+  approve: async (id: number) => {
+    const { data } = await api.put(`/admin/verifications/${id}/approve`);
+    return data;
+  },
+
+  reject: async (id: number, rejection_reason: string) => {
+    const { data } = await api.put(`/admin/verifications/${id}/reject`, { rejection_reason });
+    return data;
+  },
+
+  stats: async () => {
+    const { data } = await api.get<{ data: VerificationStats }>('/admin/verifications/stats');
+    return data;
+  },
+};
+
+// Banners (admin)
+export interface AdminBanner {
+  id: number;
+  title: string;
+  slug: string;
+  image: string;
+  url?: string;
+  position: string;
+  is_active: boolean;
+  click_count: number;
+  view_count: number;
+  start_date?: string;
+  end_date?: string;
+  created_at: string;
+}
+
+export const bannerAdminApi = {
+  list: async (params?: { position?: string; page?: number }) => {
+    const { data } = await api.get<{ data: AdminBanner[]; meta: Record<string, number> }>(
+      '/admin/banners', { params }
+    );
+    return data;
+  },
+
+  get: async (id: number) => {
+    const { data } = await api.get<{ data: AdminBanner }>(`/admin/banners/${id}`);
+    return data;
+  },
+
+  create: async (payload: Partial<AdminBanner>) => {
+    const { data } = await api.post<AdminBanner>('/admin/banners', payload);
+    return data;
+  },
+
+  update: async (id: number, payload: Partial<AdminBanner>) => {
+    const { data } = await api.put<AdminBanner>(`/admin/banners/${id}`, payload);
+    return data;
+  },
+
+  delete: async (id: number) => {
+    await api.delete(`/admin/banners/${id}`);
+  },
+
+  toggle: async (id: number) => {
+    const { data } = await api.put<AdminBanner>(`/admin/banners/${id}/toggle`);
+    return data;
+  },
+
+  reorder: async (order: number[]) => {
+    await api.post('/admin/banners/reorder', { order });
+  },
+
+  stats: async (id: number) => {
+    const { data } = await api.get(`/admin/banners/${id}/stats`);
     return data;
   },
 };
