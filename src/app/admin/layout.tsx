@@ -20,7 +20,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -34,16 +33,34 @@ export default function AdminLayout({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
+  const [mounted, setMounted] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const { isAuthenticated, user, logout } = useAuthStore();
 
   const CLIENT_URL = process.env.NEXT_PUBLIC_CLIENT_URL || 'http://localhost:3000';
 
-  // Sync initial state to avoid loading flash for already-authenticated admin users
-  const [authorized, setAuthorized] = useState(
-    isAuthenticated && user && (user.role === 'admin' || user.role === 'super_admin')
-  );
+  const [authorized, setAuthorized] = useState(false);
+
+  // Handle Mount and Zustand Hydration in Client
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setMounted(true);
+      if (useAuthStore.persist.hasHydrated()) {
+        setIsHydrated(true);
+      }
+    }, 0);
+
+    const unsub = useAuthStore.persist.onFinishHydration(() => {
+      setIsHydrated(true);
+    });
+
+    return () => {
+      clearTimeout(timer);
+      unsub();
+    };
+  }, []);
 
   // Fetch pending items count for Bell Notification icon
   const fetchPendingStats = async () => {
@@ -58,10 +75,22 @@ export default function AdminLayout({
   };
 
   useEffect(() => {
+    if (!mounted) return;
+
     let cancelled = false;
 
     const verifyAuth = async () => {
-      // Quick local check: if no auth data in store, redirect immediately
+      // 1. Kiểm tra nhanh bằng localStorage token để tránh race condition đẩy về login ngay khi F5
+      const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+      if (!token) {
+        router.replace('/login');
+        return;
+      }
+
+      // 2. Chờ Zustand khôi phục dữ liệu từ localStorage xong
+      if (!isHydrated) return;
+
+      // Nếu đã hydrate xong mà store báo không có auth hoặc không có user thì mới redirect
       if (!isAuthenticated || !user) {
         router.replace('/login');
         return;
@@ -74,7 +103,13 @@ export default function AdminLayout({
         return;
       }
 
-      // Server-side verification: confirm token is still valid
+      if (!cancelled) {
+        setAuthorized(true);
+        // Fetch pending notifications after authorization
+        fetchPendingStats();
+      }
+
+      // 3. Server-side verification: confirm token is still valid
       try {
         const response = await axios.get('/api/user/me');
         const fetchedUser = response.data.data;
@@ -83,12 +118,6 @@ export default function AdminLayout({
         if (!fetchedIsAdmin) {
           router.replace('/dashboard');
           return;
-        }
-
-        if (!cancelled) {
-          setAuthorized(true);
-          // Fetch pending notifications after authorization
-          fetchPendingStats();
         }
       } catch {
         // Token expired or invalid — clear and redirect to login
@@ -104,7 +133,7 @@ export default function AdminLayout({
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, user, logout]);
+  }, [mounted, isHydrated, isAuthenticated, user, logout, router]);
 
   // Handle standard logout with Zustand authStore
   const handleLogout = () => {
@@ -226,21 +255,84 @@ export default function AdminLayout({
               Xem website
             </a>
 
-            {/* Notification Bell */}
-            <div className="relative">
-              <Link 
-                href="/admin/properties" 
-                className="p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors block"
-                title="Kiểm duyệt tin đăng"
-              >
+            {/* Notification Bell Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger className="p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors block relative focus:outline-none select-none">
                 <Bell className="h-5 w-5" />
                 {pendingCount > 0 && (
                   <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-cta text-[10px] font-bold text-white leading-none">
                     {pendingCount}
                   </span>
                 )}
-              </Link>
-            </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80 mt-1 p-1">
+                <div className="px-3 py-2 text-xs font-semibold text-gray-900 border-b border-gray-100 flex items-center justify-between">
+                  <span>Công việc chờ duyệt</span>
+                  {pendingCount > 0 && (
+                    <span className="bg-red-50 text-cta text-[10px] px-2 py-0.5 rounded-full font-bold">
+                      {pendingCount} tin chờ duyệt
+                    </span>
+                  )}
+                </div>
+                <div className="max-h-72 overflow-y-auto py-1">
+                  {pendingCount > 0 ? (
+                    <>
+                      <Link href="/admin/properties?status=pending" className="block w-full">
+                        <DropdownMenuItem className="p-2.5 text-xs flex flex-col items-start gap-1 cursor-pointer hover:bg-gray-50">
+                          <div className="flex items-center gap-2 w-full justify-between">
+                            <span className="font-semibold text-gray-800">Tin đăng chờ duyệt</span>
+                            <span className="bg-primary-light text-primary text-[10px] px-1.5 py-0.5 rounded font-bold">
+                              {pendingCount} tin
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-gray-500 font-normal">
+                            Có tin đăng mới đang chờ quản trị viên phê duyệt để hiển thị.
+                          </p>
+                        </DropdownMenuItem>
+                      </Link>
+                      
+                      <Link href="/admin/verifications?status=pending" className="block w-full">
+                        <DropdownMenuItem className="p-2.5 text-xs flex flex-col items-start gap-1 cursor-pointer hover:bg-gray-50">
+                          <div className="flex items-center gap-2 w-full justify-between">
+                            <span className="font-semibold text-gray-800">Xác thực môi giới</span>
+                            <span className="bg-yellow-50 text-yellow-600 text-[10px] px-1.5 py-0.5 rounded font-bold border border-yellow-100">
+                              Yêu cầu mới
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-gray-500 font-normal">
+                            Kiểm tra hồ sơ đăng ký xác thực của các môi giới trên hệ thống.
+                          </p>
+                        </DropdownMenuItem>
+                      </Link>
+
+                      <Link href="/admin/reports" className="block w-full">
+                        <DropdownMenuItem className="p-2.5 text-xs flex flex-col items-start gap-1 cursor-pointer hover:bg-gray-50">
+                          <div className="flex items-center gap-2 w-full justify-between">
+                            <span className="font-semibold text-gray-800">Báo cáo vi phạm</span>
+                            <span className="bg-red-50 text-red-600 text-[10px] px-1.5 py-0.5 rounded font-bold border border-red-100">
+                              Cảnh báo
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-gray-500 font-normal">
+                            Người dùng báo cáo tin đăng vi phạm quy chế hoặc thông tin sai lệch.
+                          </p>
+                        </DropdownMenuItem>
+                      </Link>
+                    </>
+                  ) : (
+                    <div className="py-6 px-4 text-center text-xs text-gray-400 font-medium">
+                      Không có thông báo mới nào cần xử lý.
+                    </div>
+                  )}
+                </div>
+                <DropdownMenuSeparator />
+                <Link href="/admin/properties" className="block w-full">
+                  <div className="p-2 text-center text-xs font-semibold text-primary hover:bg-primary-light/30 transition-colors cursor-pointer select-none">
+                    Xem tất cả tin đăng
+                  </div>
+                </Link>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {/* Profile Dropdown */}
             <DropdownMenu>
@@ -259,7 +351,7 @@ export default function AdminLayout({
                 <ChevronDown className="h-3.5 w-3.5 text-gray-400 hidden lg:block" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 mt-1 p-1">
-                <DropdownMenuLabel className="p-2 font-normal">
+                <div className="px-2.5 py-2 text-xs font-normal text-gray-500 select-none">
                   <div className="flex flex-col space-y-0.5">
                     <p className="text-sm font-semibold text-gray-900 truncate">
                       {user?.name}
@@ -268,13 +360,19 @@ export default function AdminLayout({
                       {user?.email}
                     </p>
                   </div>
-                </DropdownMenuLabel>
+                </div>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="p-2 text-xs flex items-center gap-2 cursor-pointer">
+                <DropdownMenuItem 
+                  onClick={() => router.push('/admin/profile')}
+                  className="p-2 text-xs flex items-center gap-2 cursor-pointer"
+                >
                   <UserIcon className="h-4 w-4 text-gray-400" />
                   Trang cá nhân
                 </DropdownMenuItem>
-                <DropdownMenuItem className="p-2 text-xs flex items-center gap-2 cursor-pointer">
+                <DropdownMenuItem 
+                  onClick={() => router.push('/admin/settings')}
+                  className="p-2 text-xs flex items-center gap-2 cursor-pointer"
+                >
                   <Settings className="h-4 w-4 text-gray-400" />
                   Cấu hình hệ thống
                 </DropdownMenuItem>

@@ -3,20 +3,17 @@
 import { useState, useEffect } from 'react';
 import { 
   Building2, 
-  Users, 
   AlertTriangle, 
   Coins, 
   ShieldCheck, 
   ArrowRight, 
   PlusCircle, 
-  CheckCircle2, 
   CreditCard,
   UserCheck,
   Compass,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/status-badge';
-import { Button } from '@/components/ui/button';
 import { 
   dashboardApi, 
   propertyAdminApi, 

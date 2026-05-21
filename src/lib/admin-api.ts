@@ -475,3 +475,46 @@ export const userAdminApi = {
   },
 };
 
+export interface AdminSetting {
+  id: number;
+  key: string;
+  group: string;
+  type: string;
+  label: string;
+  value: string | null;
+  options: string | null;
+  description: string | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export const settingAdminApi = {
+  getGrouped: async () => {
+    const { data } = await api.get<{
+      success: boolean;
+      data: Record<string, AdminSetting[]>;
+    }>('/api/admin/settings/grouped');
+    return data;
+  },
+
+  update: async (settings: Record<string, string | null>) => {
+    const { data } = await api.put<{
+      success: boolean;
+      message: string;
+      data: Record<string, string | null>;
+    }>('/api/admin/settings', { settings });
+    return data;
+  },
+};
+
+export const fileUploadApi = {
+  upload: async (file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    const { data } = await api.post('/api/files/upload', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return data.data;
+  },
+};

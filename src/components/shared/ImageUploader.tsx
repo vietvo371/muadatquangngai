@@ -4,14 +4,18 @@ import { useState, useCallback, useRef } from 'react';
 import { Upload, X, Image as ImageIcon, Loader2, GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+import { fileUploadApi } from '@/lib/admin-api';
 
-interface UploadedFile {
+export interface UploadedFile {
   id?: number;
   url: string;
   thumbnail?: string;
   name: string;
   size: number;
   isPrimary?: boolean;
+  /** Original File object for newly uploaded items */
+  file?: File;
 }
 
 interface ImageUploaderProps {
@@ -68,20 +72,24 @@ export function ImageUploader({
     setError(null);
     setUploadingCount(prev => prev + newFiles.length);
 
-    // Upload files (mock for now - replace with actual S3 upload)
+    // Upload files to S3 via backend
     const uploadedFiles: UploadedFile[] = await Promise.all(
-      newFiles.map(async (file) => {
-        // TODO: Replace with actual S3 upload
-        // For now, create local object URL
-        const url = URL.createObjectURL(file);
-        return {
-          url,
-          name: file.name,
-          size: file.size,
-          isPrimary: files.length === 0,
-        };
+      newFiles.map(async (file, idx) => {
+        try {
+          const res = await fileUploadApi.upload(file);
+          return {
+            url: (res as any).url ?? (res as any).data?.url,
+            name: file.name,
+            size: file.size,
+            isPrimary: files.length === 0 && idx === 0,
+            file,
+          };
+        } catch (e) {
+          toast.error('Upload thất bại: ' + (e as any).message);
+          return null;
+        }
       })
-    );
+    ).then((arr) => arr.filter((item): item is UploadedFile => item !== null));
 
     setUploadingCount(prev => prev - newFiles.length);
     onChange([...files, ...uploadedFiles]);
@@ -154,7 +162,7 @@ export function ImageUploader({
           className={cn(
             'border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors',
             isDragging
-              ? 'border-blue-500 bg-blue-50'
+              ? 'border-primary bg-primary-light'
               : 'border-gray-300 hover:border-gray-400',
             disabled && 'opacity-50 cursor-not-allowed'
           )}
@@ -318,10 +326,15 @@ export function VideoUploader({
 
     const uploadedVideos: UploadedFile[] = await Promise.all(
       newFiles.map(async (file) => {
-        const url = URL.createObjectURL(file);
-        return { url, name: file.name, size: file.size };
+        try {
+          const res = await fileUploadApi.upload(file);
+          return { url: res.url, name: file.name, size: file.size };
+        } catch (e) {
+          toast.error('Upload video thất bại: ' + (e as any).message);
+          return null;
+        }
       })
-    );
+    ).then((arr) => arr.filter((v): v is UploadedFile => v !== null));
 
     setUploadingCount(prev => prev - newFiles.length);
     onChange([...videos, ...uploadedVideos]);
@@ -347,7 +360,7 @@ export function VideoUploader({
           onClick={() => !disabled && fileInputRef.current?.click()}
           className={cn(
             'border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors',
-            isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400',
+            isDragging ? 'border-primary bg-primary-light' : 'border-gray-300 hover:border-gray-400',
             disabled && 'opacity-50 cursor-not-allowed'
           )}
         >

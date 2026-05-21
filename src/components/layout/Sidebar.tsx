@@ -55,6 +55,7 @@ const adminNavItems = [
   { href: '/admin/projects', label: 'Dự án', icon: Landmark },
   { href: '/admin/transactions', label: 'Giao dịch', icon: CreditCard },
   { href: '/admin/reports', label: 'Báo cáo', icon: AlertTriangle },
+  { href: '/admin/settings', label: 'Cấu hình', icon: Settings },
 ];
 
 interface SidebarProps {
