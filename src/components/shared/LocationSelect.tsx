@@ -1,15 +1,26 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronDown, MapPin, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import axios from '@/lib/axios';
 
 interface Location {
   id: number;
   name: string;
   code?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+interface LocationValue {
+  province_id?: number;
+  district_id?: number;
+  ward_id?: number;
+  province_name?: string;
+  district_name?: string;
+  ward_name?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 interface LocationSelectProps {
@@ -18,14 +29,7 @@ interface LocationSelectProps {
     district_id?: number;
     ward_id?: number;
   };
-  onChange?: (value: {
-    province_id?: number;
-    district_id?: number;
-    ward_id?: number;
-    province_name?: string;
-    district_name?: string;
-    ward_name?: string;
-  }) => void;
+  onChange?: (value: LocationValue) => void;
   disabled?: boolean;
   className?: string;
   showWard?: boolean;
@@ -121,41 +125,56 @@ export function LocationSelect({
     fetchWards();
   }, [selectedDistrict]);
 
-  // Notify parent of changes
-  const notifyChange = useCallback(() => {
-    const province = provinces.find(p => p.id === selectedProvince);
-    const district = districts.find(d => d.id === selectedDistrict);
-    const ward = wards.find(w => w.id === selectedWard);
-
-    onChange?.({
-      province_id: selectedProvince,
-      district_id: selectedDistrict,
-      ward_id: selectedWard,
-      province_name: province?.name,
-      district_name: district?.name,
-      ward_name: ward?.name,
-    });
-  }, [selectedProvince, selectedDistrict, selectedWard, provinces, districts, wards, onChange]);
-
+  // Sync prop changes to local state
   useEffect(() => {
-    notifyChange();
-  }, [notifyChange]);
+    if (value.province_id !== undefined) setSelectedProvince(value.province_id);
+    if (value.district_id !== undefined) setSelectedDistrict(value.district_id);
+    if (value.ward_id !== undefined) setSelectedWard(value.ward_id);
+  }, [value.province_id, value.district_id, value.ward_id]);
 
   const handleSelect = (type: 'province' | 'district' | 'ward', id: number, name: string) => {
+    let nextProvince = selectedProvince;
+    let nextDistrict = selectedDistrict;
+    let nextWard = selectedWard;
+
     switch (type) {
       case 'province':
+        nextProvince = id;
+        nextDistrict = undefined;
+        nextWard = undefined;
         setSelectedProvince(id);
+        setSelectedDistrict(undefined);
+        setSelectedWard(undefined);
         setOpenProvince(false);
         break;
       case 'district':
+        nextDistrict = id;
+        nextWard = undefined;
         setSelectedDistrict(id);
+        setSelectedWard(undefined);
         setOpenDistrict(false);
         break;
       case 'ward':
+        nextWard = id;
         setSelectedWard(id);
         setOpenWard(false);
         break;
     }
+
+    const province = provinces.find(p => p.id === nextProvince);
+    const district = districts.find(d => d.id === nextDistrict);
+    const ward = wards.find(w => w.id === nextWard);
+
+    onChange?.({
+      province_id: nextProvince,
+      district_id: nextDistrict,
+      ward_id: nextWard,
+      province_name: province?.name || (type === 'province' ? name : undefined),
+      district_name: district?.name || (type === 'district' ? name : undefined),
+      ward_name: ward?.name || (type === 'ward' ? name : undefined),
+      latitude: province?.latitude ?? undefined,
+      longitude: province?.longitude ?? undefined,
+    });
   };
 
   const getSelectedName = (type: 'province' | 'district' | 'ward') => {

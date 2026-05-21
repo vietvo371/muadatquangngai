@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
+import api from '@/lib/axios';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,6 +34,8 @@ interface PropertyFormData {
   province_id?: number;
   district_id?: number;
   ward_id?: number;
+  latitude?: number;
+  longitude?: number;
   street: string;
   
   // Step 2: Media
@@ -67,14 +71,17 @@ const PACKAGES = [
   { id: 'diamond', name: 'Gói Diamond', price: 200000, duration: 30, color: 'diamond' as const, features: ['Luôn nằm trên cùng trang chủ', 'Huy hiệu Diamond đỏ độc quyền', 'Hỗ trợ đẩy tin 2 lần/ngày', 'Thiết kế thẻ to nhất'] },
 ];
 
-const categories = [
-  { id: 'nha-dat', name: 'Nhà đất', type: 'sale' },
-  { id: 'can-ho', name: 'Căn hộ', type: 'sale' },
-  { id: 'dat-nen', name: 'Đất nền', type: 'sale' },
-  { id: 'nha-cho-thue', name: 'Nhà cho thuê', type: 'rent' },
-  { id: 'can-ho-cho-thue', name: 'Căn hộ cho thuê', type: 'rent' },
-  { id: 'van-phong', name: 'Văn phòng', type: 'rent' },
-];
+// Direction mapping: Vietnamese full names → API slug format
+const DIRECTION_MAP: Record<string, string> = {
+  'Đông': 'dong',
+  'Tây': 'tay',
+  'Nam': 'nam',
+  'Bắc': 'bac',
+  'Đông Bắc': 'dong_bac',
+  'Đông Nam': 'dong_nam',
+  'Tây Bắc': 'tay_bac',
+  'Tây Nam': 'tay_nam',
+};
 
 const featuresList = [
   { id: 1, name: 'Hồ bơi' },
@@ -90,6 +97,7 @@ const featuresList = [
 export default function DangTinPage() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
+  const [apiCategories, setApiCategories] = useState<Array<{id: number; name: string; type: string}>>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<PropertyFormData>({
     type: 'sale',
@@ -97,6 +105,8 @@ export default function DangTinPage() {
     title: '',
     description: '',
     street: '',
+    latitude: undefined,
+    longitude: undefined,
     images: [],
     price: 0,
     price_unit: 'total',
@@ -110,6 +120,21 @@ export default function DangTinPage() {
     features: [],
     package_id: 'normal',
   });
+
+  // Fetch categories from API on mount
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const res = await api.get('/api/categories');
+        const data = res.data?.data || [];
+        setApiCategories(data);
+      } catch (err) {
+        console.error('Failed to load categories:', err);
+        toast.error('Không thể tải danh mục');
+      }
+    };
+    loadCategories();
+  }, []);
 
   const updateFormData = (updates: Partial<PropertyFormData>) => {
     setFormData((prev) => ({ ...prev, ...updates }));
@@ -154,10 +179,62 @@ export default function DangTinPage() {
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      router.push('/dashboard/quan-ly-tin');
-    } catch (error) {
-      console.error('Submit error:', error);
+      // Build address from available data
+      const address = [
+        formData.street,
+        formData.district_id ? 'Quảng Ngãi' : '',
+      ].filter(Boolean).join(', ');
+
+      const payload = {
+        title: formData.title,
+        description: formData.description,
+        type: formData.type,
+        category_id: parseInt(formData.category_id, 10),
+        price: formData.price,
+        price_unit: formData.price_unit,
+        price_negotiable: formData.price_negotiable,
+        area: formData.area,
+        bedrooms: formData.bedrooms || 0,
+        bathrooms: formData.bathrooms || 0,
+        direction: DIRECTION_MAP[formData.direction || ''] || formData.direction || undefined,
+        furniture: formData.furniture || 'none',
+        legal: formData.legal || undefined,
+        province_id: formData.province_id,
+        district_id: formData.district_id,
+        ward_id: formData.ward_id || undefined,
+        latitude: formData.latitude ?? undefined,
+        longitude: formData.longitude ?? undefined,
+        street: formData.street || undefined,
+        address: address || formData.street || 'Việt Nam',
+        feature_ids: formData.features.length > 0 ? formData.features : undefined,
+      };
+
+      const response = await api.post('/api/properties', payload);
+
+      if (response.data?.success || response.status === 201) {
+        toast.success('Đăng tin thành công!', {
+          description: 'Tin của bạn đã được gửi và đang chờ phê duyệt.',
+        });
+        router.push('/dashboard/quan-ly-tin');
+      } else {
+        throw new Error(response.data?.message || 'Đăng tin thất bại');
+      }
+    } catch (err: any) {
+      const errors = err.response?.data?.errors;
+      const message = err.response?.data?.message || err.message || 'Có lỗi xảy ra khi đăng tin';
+      
+      if (errors) {
+        // Join all validation error messages
+        const errorMessages = Object.values(errors).flat() as string[];
+        toast.error('Vui lòng kiểm tra lại thông tin', {
+          description: errorMessages.join(', '),
+        });
+      } else {
+        toast.error('Đăng tin thất bại', {
+          description: message,
+        });
+      }
+      console.error('Submit error:', err);
     } finally {
       setIsSubmitting(false);
     }
@@ -221,12 +298,17 @@ export default function DangTinPage() {
                       <SelectValue placeholder="-- Chọn phân khúc --" />
                     </SelectTrigger>
                     <SelectContent>
-                      {categories
+                      {apiCategories
                         .filter(c => c.type === formData.type)
                         .map(cat => (
-                          <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                          <SelectItem key={cat.id} value={String(cat.id)}>{cat.name}</SelectItem>
                         ))
                       }
+                      {apiCategories.filter(c => c.type === formData.type).length === 0 && (
+                        <div className="px-3 py-6 text-center text-sm text-gray-400">
+                          Đang tải danh mục...
+                        </div>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -269,6 +351,8 @@ export default function DangTinPage() {
                     province_id: location.province_id,
                     district_id: location.district_id,
                     ward_id: location.ward_id,
+                    latitude: location.latitude,
+                    longitude: location.longitude,
                   })}
                   required
                 />
@@ -536,7 +620,7 @@ export default function DangTinPage() {
             ) : (
               <>
                 <Check className="h-5 w-5" />
-                Thanh toán & Đăng tin
+                Đăng tin ngay
               </>
             )}
           </Button>

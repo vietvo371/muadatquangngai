@@ -62,42 +62,42 @@ export const postApi = {
     page?: number;
     per_page?: number;
   }) => {
-    const { data } = await api.get<PostPaginatedResponse>('/posts', { params });
+    const { data } = await api.get<PostPaginatedResponse>('/api/posts', { params });
     return data;
   },
 
   featured: async () => {
-    const { data } = await api.get<{ data: Post[] }>('/posts/featured');
+    const { data } = await api.get<{ data: Post[] }>('/api/posts/featured');
     return data;
   },
 
   get: async (slug: string) => {
-    const { data } = await api.get<{ data: Post }>(`/posts/${slug}`);
+    const { data } = await api.get<{ data: Post }>(`/api/posts/${slug}`);
     return data;
   },
 
   related: async (id: number, params?: { limit?: number }) => {
-    const { data } = await api.get<{ data: Post[] }>(`/posts/${id}/related`, { params });
+    const { data } = await api.get<{ data: Post[] }>(`/api/posts/${id}/related`, { params });
     return data;
   },
 
   categories: async () => {
-    const { data } = await api.get<{ data: PostCategory[] }>('/post-categories');
+    const { data } = await api.get<{ data: PostCategory[] }>('/api/post-categories');
     return data;
   },
 
   create: async (payload: Partial<Post>) => {
-    const { data } = await api.post<Post>('/posts', payload);
+    const { data } = await api.post<Post>('/api/posts', payload);
     return data;
   },
 
   update: async (id: number, payload: Partial<Post>) => {
-    const { data } = await api.put<Post>(`/posts/${id}`, payload);
+    const { data } = await api.put<Post>(`/api/posts/${id}`, payload);
     return data;
   },
 
   delete: async (id: number) => {
-    await api.delete(`/posts/${id}`);
+    await api.delete(`/api/posts/${id}`);
   },
 };
 
@@ -119,15 +119,15 @@ export interface Banner {
 
 export const bannerApi = {
   list: async (params?: { position?: string; active_only?: boolean }) => {
-    const { data } = await api.get<{ data: Banner[] }>('/banners', { params });
+    const { data } = await api.get<{ data: Banner[] }>('/api/banners', { params });
     return data;
   },
 
   trackClick: async (slug: string) => {
-    await api.post(`/banners/${slug}/click`);
+    await api.post(`/api/banners/${slug}/click`);
   },
 
   trackView: async (slug: string) => {
-    await api.post(`/banners/${slug}/view`);
+    await api.post(`/api/banners/${slug}/view`);
   },
 };

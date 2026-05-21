@@ -88,7 +88,7 @@ export default function DashboardLayout({
             const Icon = item.icon;
             const isActive = item.href === '/dashboard'
               ? pathname === '/dashboard'
-              : pathname.startsWith(item.href);
+              : pathname?.startsWith(item.href) || false;
 
             if (item.isCta) {
               return (

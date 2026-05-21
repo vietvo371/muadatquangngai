@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
@@ -15,21 +15,38 @@ import { ImageUploader } from '@/components/shared/ImageUploader';
 import { PostStepper } from '@/components/dashboard/PostStepper';
 import { PackageCard } from '@/components/dashboard/PackageCard';
 import { toast } from 'sonner';
-import { 
-  ArrowLeft, 
-  ArrowRight, 
-  Check, 
-  Home, 
+import api from '@/lib/axios';
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Home,
   DollarSign,
   Loader2,
   ChevronLeft,
   Save,
-  Eye
+  Eye,
 } from 'lucide-react';
+
+// Direction mapping: Vietnamese → API slug
+const DIRECTION_MAP: Record<string, string> = {
+  'Đông': 'dong',
+  'Tây': 'tay',
+  'Nam': 'nam',
+  'Bắc': 'bac',
+  'Đông Bắc': 'dong_bac',
+  'Đông Nam': 'dong_nam',
+  'Tây Bắc': 'tay_bac',
+  'Tây Nam': 'tay_nam',
+};
+
+// Reverse direction mapping: API slug → Vietnamese
+const REVERSE_DIRECTION_MAP: Record<string, string> = Object.fromEntries(
+  Object.entries(DIRECTION_MAP).map(([k, v]) => [v, k])
+);
 
 // Form data interface
 interface PropertyFormData {
-  // Step 1: Basic Info & Location
   type: 'sale' | 'rent';
   category_id: string;
   title: string;
@@ -37,12 +54,12 @@ interface PropertyFormData {
   province_id?: number;
   district_id?: number;
   ward_id?: number;
+  latitude?: number;
+  longitude?: number;
   street: string;
-  
-  // Step 2: Media
+
   images: Array<{ url: string; name: string; size: number; isPrimary?: boolean }>;
-  
-  // Step 3: Details & Pricing
+
   price: number;
   price_unit: 'total' | 'per_m2' | 'per_month';
   price_negotiable: boolean;
@@ -54,7 +71,6 @@ interface PropertyFormData {
   legal?: string;
   features: number[];
 
-  // Step 4: Package
   package_id: string;
 }
 
@@ -72,15 +88,6 @@ const PACKAGES = [
   { id: 'diamond', name: 'Gói Diamond', price: 200000, duration: 30, features: ['Luôn nằm trên cùng trang chủ', 'Huy hiệu Diamond đỏ độc quyền', 'Hỗ trợ đẩy tin 2 lần/ngày', 'Thiết kế thẻ to nhất'] },
 ];
 
-const categories = [
-  { id: 'nha-dat', name: 'Nhà đất', type: 'sale' },
-  { id: 'can-ho', name: 'Căn hộ', type: 'sale' },
-  { id: 'dat-nen', name: 'Đất nền', type: 'sale' },
-  { id: 'nha-cho-thue', name: 'Nhà cho thuê', type: 'rent' },
-  { id: 'can-ho-cho-thue', name: 'Căn hộ cho thuê', type: 'rent' },
-  { id: 'van-phong', name: 'Văn phòng', type: 'rent' },
-];
-
 const featuresList = [
   { id: 1, name: 'Hồ bơi' },
   { id: 2, name: 'Gym' },
@@ -92,38 +99,39 @@ const featuresList = [
   { id: 8, name: 'Chỗ để xe' },
 ];
 
-// Mock prefill data
-const mockPrefillData: PropertyFormData = {
+const emptyFormData: PropertyFormData = {
   type: 'sale',
-  category_id: 'can-ho',
-  title: 'Căn hộ cao cấp 2PN view biển Mỹ Khê',
-  description: 'Căn hộ cao cấp 2 phòng ngủ view biển Mỹ Khê tuyệt đẹp, đầy đủ nội thất sang trọng, tiện nghi hiện đại khép kín. Thích hợp mua để ở hoặc đầu tư cho thuê sinh lời cực cao.',
-  province_id: 1,
-  district_id: 1,
-  ward_id: 1,
-  street: 'Võ Nguyên Giáp',
-  images: [
-    { url: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400', name: 'living-room.jpg', size: 1024 * 500, isPrimary: true },
-    { url: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400', name: 'bedroom.jpg', size: 1024 * 400 },
-  ],
-  price: 3500000000,
+  category_id: '',
+  title: '',
+  description: '',
+  province_id: undefined,
+  district_id: undefined,
+  ward_id: undefined,
+  latitude: undefined,
+  longitude: undefined,
+  street: '',
+  images: [],
+  price: 0,
   price_unit: 'total',
-  price_negotiable: true,
-  area: 75,
-  bedrooms: 2,
-  bathrooms: 2,
-  direction: 'Đông',
-  furniture: 'full',
-  legal: 'so_hong',
-  features: [1, 3, 5, 8],
-  package_id: 'vip_plus',
+  price_negotiable: false,
+  area: 0,
+  bedrooms: 0,
+  bathrooms: 0,
+  direction: '',
+  furniture: 'none',
+  legal: '',
+  features: [],
+  package_id: 'normal',
 };
 
 export default function EditPropertyPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState<PropertyFormData>(mockPrefillData);
+  const [isLoading, setIsLoading] = useState(true);
+  const [apiCategories, setApiCategories] = useState<Array<{ id: number; name: string; type: string }>>([]);
+  const [formData, setFormData] = useState<PropertyFormData>(emptyFormData);
+  const [propertySlug, setPropertySlug] = useState<string>('');
 
   const updateFormData = (updates: Partial<PropertyFormData>) => {
     setFormData((prev) => ({ ...prev, ...updates }));
@@ -136,10 +144,74 @@ export default function EditPropertyPage({ params }: { params: { id: string } })
     updateFormData({ features: newFeatures });
   };
 
+  // Fetch categories
+  useEffect(() => {
+    api.get('/categories')
+      .then(res => {
+        const data = res.data?.data ?? res.data ?? [];
+        setApiCategories(data);
+      })
+      .catch(() => toast.error('Không thể tải danh mục'));
+  }, []);
+
+  // Fetch property data
+  useEffect(() => {
+    const propertyId = params.id;
+    if (!propertyId) return;
+
+    setIsLoading(true);
+    api.get(`/my/properties/${propertyId}`)
+      .then(res => {
+        const data = res.data?.data ?? res.data;
+        if (!data) throw new Error('Không có dữ liệu');
+
+        setPropertySlug(data.slug || '');
+
+        setFormData({
+          type: data.type || 'sale',
+          category_id: String(data.category?.id ?? ''),
+          title: data.title || '',
+          description: data.description || '',
+          province_id: data.location?.province?.id,
+          district_id: data.location?.district?.id,
+          ward_id: data.location?.ward?.id,
+          latitude: data.location?.latitude ?? undefined,
+          longitude: data.location?.longitude ?? undefined,
+          street: data.street || '',
+          images: (data.media ?? []).map((m: any) => ({
+            url: m.url || m.thumbnail || '',
+            name: m.name || 'image',
+            size: m.size || 0,
+            isPrimary: m.is_primary ?? false,
+          })),
+          price: data.price ?? 0,
+          price_unit: data.price_unit || 'total',
+          price_negotiable: data.price_negotiable ?? false,
+          area: data.area ?? 0,
+          bedrooms: data.bedrooms ?? 0,
+          bathrooms: data.bathrooms ?? 0,
+          direction: REVERSE_DIRECTION_MAP[data.direction] || data.direction || '',
+          furniture: data.furniture || 'none',
+          legal: data.legal || '',
+          features: (data.features ?? []).map((f: any) => f.id ?? f),
+          package_id: data.is_vip === 'diamond' ? 'diamond'
+            : data.is_vip === 'vip_plus' ? 'vip_plus'
+            : data.is_vip === 'vip' ? 'vip'
+            : 'normal',
+        });
+      })
+      .catch((err) => {
+        const msg = err?.response?.data?.message || 'Không thể tải thông tin tin đăng';
+        toast.error(msg);
+        router.push('/dashboard/quan-ly-tin');
+      })
+      .finally(() => setIsLoading(false));
+  }, [params.id, router]);
+
   const canProceed = () => {
     switch (currentStep) {
       case 1:
-        return formData.type && formData.category_id && formData.title.length >= 10 && formData.description.length >= 20 && formData.province_id && formData.district_id;
+        return formData.type && formData.category_id && formData.title.length >= 10 && formData.description.length >= 50 && formData.province_id && formData.district_id;
       case 2:
         return formData.images.length > 0;
       case 3:
@@ -165,14 +237,53 @@ export default function EditPropertyPage({ params }: { params: { id: string } })
     }
   };
 
+  const buildPayload = () => {
+    const address = [
+      formData.street,
+      formData.district_id ? 'Quảng Ngãi' : '',
+    ].filter(Boolean).join(', ');
+
+    return {
+      title: formData.title,
+      description: formData.description,
+      type: formData.type,
+      category_id: parseInt(formData.category_id, 10),
+      price: formData.price,
+      price_unit: formData.price_unit,
+      price_negotiable: formData.price_negotiable,
+      area: formData.area,
+      bedrooms: formData.bedrooms || 0,
+      bathrooms: formData.bathrooms || 0,
+      direction: DIRECTION_MAP[formData.direction || ''] || formData.direction || undefined,
+      furniture: formData.furniture || 'none',
+      legal: formData.legal || undefined,
+      province_id: formData.province_id,
+      district_id: formData.district_id,
+      ward_id: formData.ward_id || undefined,
+      street: formData.street || undefined,
+      address: address || formData.street || 'Việt Nam',
+      latitude: formData.latitude ?? undefined,
+      longitude: formData.longitude ?? undefined,
+      feature_ids: formData.features.length > 0 ? formData.features : undefined,
+      is_vip: formData.package_id === 'normal' ? undefined : formData.package_id,
+    };
+  };
+
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1200));
+      const payload = buildPayload();
+      await api.put(`/properties/${params.id}`, payload);
       toast.success('Cập nhật tin đăng thành công!');
       router.push('/dashboard/quan-ly-tin');
-    } catch (error) {
-      toast.error('Lỗi khi cập nhật tin đăng');
+    } catch (error: any) {
+      const errData = error?.response?.data;
+      if (errData?.errors) {
+        const messages = Object.values(errData.errors).flat().join('\n');
+        toast.error(messages);
+      } else {
+        toast.error(errData?.message || 'Lỗi khi cập nhật tin đăng');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -181,14 +292,31 @@ export default function EditPropertyPage({ params }: { params: { id: string } })
   const handleSaveDraft = async () => {
     setIsSubmitting(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      toast.success('Đã lưu bản nháp thành công!');
-    } catch {
-      toast.error('Lỗi khi lưu nháp');
+      const payload = buildPayload();
+      await api.put(`/properties/${params.id}`, payload);
+      toast.success('Đã lưu thay đổi thành công!');
+    } catch (error: any) {
+      const errData = error?.response?.data;
+      if (errData?.errors) {
+        const messages = Object.values(errData.errors).flat().join('\n');
+        toast.error(messages);
+      } else {
+        toast.error(errData?.message || 'Lỗi khi lưu thay đổi');
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="max-w-4xl mx-auto py-20 flex flex-col items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
+        <p className="text-gray-500 font-medium">Đang tải thông tin tin đăng...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto py-2">
@@ -209,14 +337,16 @@ export default function EditPropertyPage({ params }: { params: { id: string } })
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={handleSaveDraft} disabled={isSubmitting} className="h-10 px-4 border-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-50">
             <Save className="h-4 w-4 mr-2" />
-            Lưu nháp
+            Lưu thay đổi
           </Button>
-          <Link href={`/mua-ban/can-ho-cao-cap-2pn-view-bien-my-khe`} target="_blank">
-            <Button variant="outline" className="h-10 px-4 border-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-50">
-              <Eye className="h-4 w-4 mr-2" />
-              Xem trước
-            </Button>
-          </Link>
+          {propertySlug && (
+            <Link href={`/mua-ban/${propertySlug}`} target="_blank">
+              <Button variant="outline" className="h-10 px-4 border-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-50">
+                <Eye className="h-4 w-4 mr-2" />
+                Xem trước
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 
@@ -224,13 +354,13 @@ export default function EditPropertyPage({ params }: { params: { id: string } })
 
       <Card className="border-0 shadow-xl shadow-gray-200/40 rounded-2xl overflow-hidden mt-6 bg-white">
         <CardContent className="p-6 sm:p-8">
-          
+
           {/* Step 1: Basic Info & Location */}
           {currentStep === 1 && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <section>
                 <h3 className="text-lg font-bold text-gray-900 mb-5 pb-2 border-b">Thông tin cơ bản</h3>
-                
+
                 <div className="mb-6">
                   <Label className="mb-3 block font-semibold text-gray-700">Loại tin đăng</Label>
                   <div className="grid grid-cols-2 gap-4">
@@ -271,12 +401,15 @@ export default function EditPropertyPage({ params }: { params: { id: string } })
                       <SelectValue placeholder="-- Chọn phân khúc --" />
                     </SelectTrigger>
                     <SelectContent>
-                      {categories
-                        .filter(c => c.type === formData.type)
-                        .map(cat => (
-                          <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                        ))
-                      }
+                      {apiCategories.length === 0 ? (
+                        <SelectItem value="loading" disabled>Đang tải danh mục...</SelectItem>
+                      ) : (
+                        apiCategories
+                          .filter(c => c.type === formData.type)
+                          .map(cat => (
+                            <SelectItem key={cat.id} value={String(cat.id)}>{cat.name}</SelectItem>
+                          ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -319,6 +452,8 @@ export default function EditPropertyPage({ params }: { params: { id: string } })
                     province_id: location.province_id,
                     district_id: location.district_id,
                     ward_id: location.ward_id,
+                    latitude: location.latitude,
+                    longitude: location.longitude,
                   })}
                   required
                 />
@@ -339,7 +474,7 @@ export default function EditPropertyPage({ params }: { params: { id: string } })
           {currentStep === 2 && (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <h3 className="text-lg font-bold text-gray-900 mb-2 pb-2 border-b">Hình ảnh & Video</h3>
-              
+
               <div className="bg-[#e8f4fb] border border-primary/20 rounded-xl p-4 mb-6">
                 <ul className="text-[13px] text-primary space-y-1.5 list-disc list-inside">
                   <li>Tải lên tối thiểu <strong>1 ảnh</strong>, tối đa <strong>10 ảnh</strong>.</li>
@@ -362,7 +497,7 @@ export default function EditPropertyPage({ params }: { params: { id: string } })
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <section>
                 <h3 className="text-lg font-bold text-gray-900 mb-5 pb-2 border-b">Mức giá & Diện tích</h3>
-                
+
                 <div className="grid md:grid-cols-2 gap-6 mb-6">
                   <div>
                     <Label className="font-semibold text-gray-700">Mức giá <span className="text-red-500">*</span></Label>
@@ -388,7 +523,7 @@ export default function EditPropertyPage({ params }: { params: { id: string } })
                         </SelectContent>
                       </Select>
                     </div>
-                    
+
                     <div className="mt-3 flex items-center">
                       <Checkbox
                         id="negotiable"
@@ -400,7 +535,7 @@ export default function EditPropertyPage({ params }: { params: { id: string } })
                       </Label>
                     </div>
                   </div>
-                  
+
                   <div>
                     <Label className="font-semibold text-gray-700">Diện tích <span className="text-red-500">*</span></Label>
                     <div className="relative mt-2 shadow-sm rounded-lg overflow-hidden">
@@ -419,7 +554,7 @@ export default function EditPropertyPage({ params }: { params: { id: string } })
 
               <section>
                 <h3 className="text-lg font-bold text-gray-900 mb-5 pb-2 border-b">Thông tin chi tiết</h3>
-                
+
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-5 mb-6">
                   <div>
                     <Label className="text-sm font-medium text-gray-600">Phòng ngủ</Label>
@@ -529,7 +664,7 @@ export default function EditPropertyPage({ params }: { params: { id: string } })
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <h3 className="text-lg font-bold text-gray-900 mb-2 pb-2 border-b text-center">Gói hiển thị tin đăng</h3>
               <p className="text-center text-gray-500 text-sm mb-8">Tin đăng sẽ được cập nhật hiển thị ngay lập tức sau khi bạn xác nhận.</p>
-              
+
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {PACKAGES.map((pkg) => (
                   <PackageCard

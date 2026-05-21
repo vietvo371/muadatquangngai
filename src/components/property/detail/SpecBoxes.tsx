@@ -1,33 +1,46 @@
-import { Banknote, Maximize, Bed, Bath, Compass } from 'lucide-react';
+import { Banknote, Maximize, Bed, Bath, Compass, SquareStack } from 'lucide-react';
 import { formatPrice } from '@/lib/formatters';
 
 interface SpecBoxesProps {
   price: number;
   priceUnit?: string;
+  priceNegotiable?: boolean;
   area: number;
   bedrooms?: number;
   bathrooms?: number;
   direction?: string;
 }
 
-export function SpecBoxes({ price, priceUnit, area, bedrooms, bathrooms, direction }: SpecBoxesProps) {
-  const specs = [
-    { icon: Banknote, label: 'Mức giá', value: formatPrice(price, priceUnit) },
+export function SpecBoxes({ price, priceUnit, priceNegotiable, area, bedrooms, bathrooms, direction }: SpecBoxesProps) {
+  const pricePerM2 = area > 0 ? Math.round(price / area) : null;
+
+  const specs: { icon: React.ElementType; label: string; value: string; sub?: string }[] = [
+    {
+      icon: Banknote,
+      label: 'Mức giá',
+      value: priceNegotiable ? 'Thỏa thuận' : formatPrice(price, priceUnit),
+      sub: pricePerM2 && !priceNegotiable ? `${formatPrice(pricePerM2)}/m²` : undefined,
+    },
     { icon: Maximize, label: 'Diện tích', value: `${area} m²` },
   ];
 
-  if (bedrooms !== undefined) {
-    specs.push({ icon: Bed, label: 'Phòng ngủ', value: `${bedrooms} PN` });
+  if (bedrooms !== undefined && bedrooms > 0) {
+    specs.push({ icon: Bed, label: 'Phòng ngủ', value: `${bedrooms} phòng` });
   }
-  if (bathrooms !== undefined) {
-    specs.push({ icon: Bath, label: 'Phòng tắm', value: `${bathrooms} PT` });
+  if (bathrooms !== undefined && bathrooms > 0) {
+    specs.push({ icon: Bath, label: 'Phòng tắm', value: `${bathrooms} phòng` });
   }
   if (direction) {
     specs.push({ icon: Compass, label: 'Hướng nhà', value: direction });
   }
+  if (pricePerM2 && !priceNegotiable && priceUnit !== 'per_month') {
+    specs.push({ icon: SquareStack, label: 'Giá/m²', value: formatPrice(pricePerM2) });
+  }
+
+  const cols = specs.length <= 4 ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5';
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 py-5 border-y border-gray-100 mb-8">
+    <div className={`grid ${cols} gap-3 py-5 border-y border-gray-100 mb-8`}>
       {specs.map((spec, i) => {
         const Icon = spec.icon;
         return (
@@ -38,6 +51,7 @@ export function SpecBoxes({ price, priceUnit, area, bedrooms, bathrooms, directi
             <div className="overflow-hidden">
               <div className="text-[11px] text-gray-500 uppercase tracking-wide truncate">{spec.label}</div>
               <div className="text-[14px] font-semibold text-gray-900 truncate">{spec.value}</div>
+              {spec.sub && <div className="text-[11px] text-gray-400 truncate">{spec.sub}</div>}
             </div>
           </div>
         );

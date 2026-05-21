@@ -1,7 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { useAuthStore } from '@/stores/authStore';
+import axios from '@/lib/axios';
 
 export default function AdminLayout({
   children,
@@ -10,6 +13,70 @@ export default function AdminLayout({
 }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const router = useRouter();
+  const { isAuthenticated, user, logout } = useAuthStore();
+
+  // Sync initial state to avoid loading flash for already-authenticated admin users
+  const [authorized, setAuthorized] = useState(
+    isAuthenticated && user && (user.role === 'admin' || user.role === 'super_admin')
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const verifyAuth = async () => {
+      // Quick local check: if no auth data in store, redirect immediately
+      if (!isAuthenticated || !user) {
+        router.replace('/login');
+        return;
+      }
+
+      // Check role locally first
+      const isAdmin = user.role === 'admin' || user.role === 'super_admin';
+      if (!isAdmin) {
+        router.replace('/dashboard');
+        return;
+      }
+
+      // Server-side verification: confirm token is still valid
+      try {
+        const response = await axios.get('/api/user/me');
+        const fetchedUser = response.data.data;
+        const fetchedIsAdmin = fetchedUser.role === 'admin' || fetchedUser.role === 'super_admin';
+
+        if (!fetchedIsAdmin) {
+          router.replace('/dashboard');
+          return;
+        }
+
+        if (!cancelled) setAuthorized(true);
+      } catch {
+        // Token expired or invalid — clear and redirect to login
+        if (!cancelled) {
+          logout();
+          router.replace('/login');
+        }
+      }
+    };
+
+    verifyAuth();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, user, logout]);
+
+  // Show loading spinner while verifying
+  if (!authorized) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
+          <p className="text-sm text-gray-500">Đang xác thực...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-100">

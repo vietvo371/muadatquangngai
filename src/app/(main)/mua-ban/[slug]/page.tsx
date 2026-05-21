@@ -2,21 +2,24 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { 
-  Heart, 
-  Share2, 
-  MapPin, 
+import {
+  Heart,
+  Share2,
+  MapPin,
   Clock,
   Eye,
   CheckCircle,
   Home,
-  ChevronRight
+  ChevronRight,
+  Phone,
+  MessageSquare,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { HeroGallery } from '@/components/property/detail/HeroGallery';
 import { SpecBoxes } from '@/components/property/detail/SpecBoxes';
 import { ContactSidebar } from '@/components/property/detail/ContactSidebar';
 import { SimilarListings } from '@/components/property/detail/SimilarListings';
+import { timeAgo } from '@/lib/formatters';
 
 // Mock property data
 const property = {
@@ -178,9 +181,10 @@ export default function PropertyDetailPage({ params }: { params: { slug: string 
             </div>
 
             {/* Spec Boxes */}
-            <SpecBoxes 
-              price={property.price} 
+            <SpecBoxes
+              price={property.price}
               priceUnit={property.priceUnit}
+              priceNegotiable={property.priceNegotiable}
               area={property.area}
               bedrooms={property.bedrooms}
               bathrooms={property.bathrooms}
@@ -189,15 +193,16 @@ export default function PropertyDetailPage({ params }: { params: { slug: string 
 
             {/* Stats and Actions row */}
             <div className="flex items-center justify-between border-y border-gray-100 py-4 mb-8">
-              <div className="flex items-center gap-6 text-[13px] text-gray-500 font-medium">
+              <div className="flex items-center gap-4 sm:gap-6 text-[13px] text-gray-500 font-medium flex-wrap">
                 <span className="flex items-center gap-1.5">
                   <Eye className="h-4 w-4 text-gray-400" />
-                  {property.viewCount} lượt xem
+                  {property.viewCount.toLocaleString('vi-VN')} lượt xem
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Clock className="h-4 w-4 text-gray-400" />
-                  Đăng {property.publishedAt}
+                  Đăng {timeAgo(property.publishedAt)}
                 </span>
+                <span className="text-gray-400 hidden sm:inline">Mã tin: #{property.id}</span>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -219,8 +224,20 @@ export default function PropertyDetailPage({ params }: { params: { slug: string 
             {/* Description */}
             <div className="mb-8">
               <h2 className="text-[18px] font-bold text-gray-900 mb-4 tracking-tight">Thông tin mô tả</h2>
-              <div className="prose prose-sm max-w-none text-gray-600 whitespace-pre-line leading-relaxed">
-                {property.description}
+              <div className="text-[14px] text-gray-600 leading-relaxed space-y-2">
+                {property.description.split('\n').map((line, i) => {
+                  if (!line.trim()) return <div key={i} className="h-1" />;
+                  const rendered = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+                  if (line.trim().startsWith('- ')) {
+                    return (
+                      <div key={i} className="flex gap-2">
+                        <span className="text-primary mt-1 shrink-0">•</span>
+                        <span dangerouslySetInnerHTML={{ __html: rendered.replace(/^-\s+/, '') }} />
+                      </div>
+                    );
+                  }
+                  return <p key={i} dangerouslySetInnerHTML={{ __html: rendered }} />;
+                })}
               </div>
             </div>
 
@@ -243,16 +260,16 @@ export default function PropertyDetailPage({ params }: { params: { slug: string 
             {property.legal && (
               <div className="mb-8 pt-8 border-t border-gray-100">
                 <h2 className="text-[18px] font-bold text-gray-900 mb-4 tracking-tight">Thông tin pháp lý</h2>
-                <div className="bg-green-50/50 border border-green-100 rounded-xl p-4 flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                <div className="bg-primary-light border border-primary/20 rounded-xl p-4 flex items-start gap-3">
+                  <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-bold text-green-800 text-[14px]">
-                      {property.legal === 'so_do' ? 'Sổ đỏ' : 
-                       property.legal === 'so_hong' ? 'Sổ hồng' : 
+                    <p className="font-bold text-primary text-[14px]">
+                      {property.legal === 'so_do' ? 'Sổ đỏ' :
+                       property.legal === 'so_hong' ? 'Sổ hồng' :
                        property.legal === 'contract' ? 'Hợp đồng mua bán' : 'Pháp lý khác'}
                     </p>
                     {property.legalNote && (
-                      <p className="text-[13px] text-green-700 mt-1">{property.legalNote}</p>
+                      <p className="text-[13px] text-gray-600 mt-1">{property.legalNote}</p>
                     )}
                   </div>
                 </div>
@@ -272,6 +289,24 @@ export default function PropertyDetailPage({ params }: { params: { slug: string 
         <SimilarListings properties={similarProperties} />
 
       </div>
+
+      {/* Mobile sticky bottom contact bar */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 px-4 py-3 flex gap-3 shadow-[0_-4px_12px_rgba(0,0,0,0.08)]">
+        <a
+          href={`tel:${property.user.phone}`}
+          className="flex-1 flex items-center justify-center gap-2 h-12 rounded-xl bg-primary text-white font-bold text-[15px] transition-colors"
+        >
+          <Phone className="w-5 h-5" />
+          Gọi điện
+        </a>
+        <button className="flex-1 flex items-center justify-center gap-2 h-12 rounded-xl border-2 border-primary text-primary font-bold text-[15px] transition-colors hover:bg-primary-light">
+          <MessageSquare className="w-5 h-5" />
+          Nhắn tin
+        </button>
+      </div>
+
+      {/* Bottom padding for mobile sticky bar */}
+      <div className="lg:hidden h-[72px]" />
     </div>
   );
 }
