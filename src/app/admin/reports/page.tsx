@@ -18,7 +18,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -213,9 +212,14 @@ export default function AdminReportsPage() {
 
   // Simulate loading on filter/page change
   useEffect(() => {
-    setIsFiltering(true);
+    const handle = requestAnimationFrame(() => {
+      setIsFiltering(true);
+    });
     const timer = setTimeout(() => setIsFiltering(false), 250);
-    return () => clearTimeout(timer);
+    return () => {
+      cancelAnimationFrame(handle);
+      clearTimeout(timer);
+    };
   }, [searchQuery, typeFilter, statusFilter, page, perPage]);
 
   const filteredReports = useMemo(() => {
@@ -243,7 +247,8 @@ export default function AdminReportsPage() {
   // Keep page in bound
   useEffect(() => {
     if (page > totalPages) {
-      setPage(totalPages);
+      const timer = setTimeout(() => setPage(totalPages), 0);
+      return () => clearTimeout(timer);
     }
   }, [totalPages, page]);
 
