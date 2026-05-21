@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Heart,
@@ -21,6 +21,79 @@ import { ContactSidebar } from '@/components/property/detail/ContactSidebar';
 import { SimilarListings } from '@/components/property/detail/SimilarListings';
 import { timeAgo } from '@/lib/formatters';
 import { CONFIG } from '@/lib/config';
+import { useProperties } from '@/hooks/useProperties';
+
+const mapApiProperty = (apiProp: any) => {
+  return {
+    id: apiProp.id,
+    title: apiProp.title,
+    slug: apiProp.slug,
+    price: Number(apiProp.price),
+    priceUnit: apiProp.price_unit === 'month' || apiProp.price_unit === 'per_month' ? 'per_month' : (apiProp.price_unit === 'per_m2' || apiProp.price_unit === 'm2' ? 'per_m2' : 'total'),
+    area: Number(apiProp.area),
+    type: apiProp.type,
+    category: apiProp.category?.name || 'Bất động sản',
+    thumbnail: apiProp.thumbnail || '/images/image_data/Haus-Coastal.jpg',
+    location: apiProp.district ? `${apiProp.district.name}, Quảng Ngãi` : apiProp.address || 'Quảng Ngãi',
+    bedrooms: Number(apiProp.bedrooms || 0),
+    bathrooms: Number(apiProp.bathrooms || 0),
+    isVip: apiProp.is_vip || 'normal',
+    user: {
+      name: apiProp.user?.name || 'Môi giới',
+      avatar: apiProp.user?.avatar || null,
+    },
+    created_at: apiProp.created_at,
+    views: apiProp.view_count || 0,
+  };
+};
+
+const mapApiPropertyDetail = (apiProp: any) => {
+  let mediaUrls = apiProp.media && apiProp.media.length > 0 
+    ? apiProp.media.map((m: any) => m.url) 
+    : [];
+  if (mediaUrls.length === 0 && apiProp.thumbnail) {
+    mediaUrls = [apiProp.thumbnail];
+  }
+  if (mediaUrls.length === 0) {
+    mediaUrls = ['/images/image_data/Haus-Coastal.jpg'];
+  }
+
+  return {
+    id: apiProp.id.toString(),
+    slug: apiProp.slug,
+    title: apiProp.title,
+    type: apiProp.type,
+    isVip: apiProp.is_vip || 'normal',
+    price: Number(apiProp.price),
+    priceUnit: apiProp.price_unit === 'month' || apiProp.price_unit === 'per_month' ? 'per_month' : (apiProp.price_unit === 'per_m2' || apiProp.price_unit === 'm2' ? 'per_m2' : 'total'),
+    priceNegotiable: Boolean(apiProp.price_negotiable),
+    area: Number(apiProp.area),
+    bedrooms: Number(apiProp.bedrooms || 0),
+    bathrooms: Number(apiProp.bathrooms || 0),
+    direction: apiProp.direction || 'Không xác định',
+    legal: apiProp.legal || 'other',
+    legalNote: null,
+    description: apiProp.description || '',
+    media: mediaUrls,
+    address: apiProp.address || 'Quảng Ngãi',
+    viewCount: Number(apiProp.stats?.view_count || apiProp.view_count || 0),
+    publishedAt: apiProp.published_at || apiProp.created_at,
+    category: {
+      id: apiProp.category?.id || 1,
+      name: apiProp.category?.name || 'Bất động sản',
+      slug: apiProp.category?.slug || 'nha-dat',
+    },
+    user: {
+      id: apiProp.owner?.id || 1,
+      name: apiProp.owner?.name || 'Môi giới',
+      avatar: apiProp.owner?.avatar || null,
+      phone: apiProp.owner?.phone || '0901234567',
+      is_verified: true,
+      joinDate: '2024',
+    },
+    features: apiProp.features || [],
+  };
+};
 
 // Mock property data
 const property = {
@@ -127,6 +200,53 @@ const similarProperties = [
 
 export default function PropertyDetailPage({ params }: { params: { slug: string } }) {
   const [isFavorite, setIsFavorite] = useState(false);
+  const { fetchProperty, fetchSimilar, isLoading } = useProperties();
+  const [propertyData, setPropertyData] = useState<any>(null);
+  const [similarData, setSimilarData] = useState<any[]>([]);
+
+  useEffect(() => {
+    const loadDetail = async () => {
+      const res = await fetchProperty(params.slug);
+      if (res.success && res.data) {
+        const mapped = mapApiPropertyDetail(res.data);
+        setPropertyData(mapped);
+
+        // Fetch similar properties
+        if (res.data.id) {
+          const simRes = await fetchSimilar(res.data.id, 3);
+          if (simRes.success && simRes.data && simRes.data.length > 0) {
+            setSimilarData(simRes.data.map(mapApiProperty));
+          } else {
+            setSimilarData(similarProperties);
+          }
+        }
+      } else {
+        // Fallback to static mock property
+        setPropertyData(property);
+        setSimilarData(similarProperties);
+      }
+    };
+
+    loadDetail();
+  }, [params.slug, fetchProperty, fetchSimilar]);
+
+  if (isLoading || !propertyData) {
+    return (
+      <div className="max-w-[1200px] mx-auto px-4 py-8">
+        <div className="h-6 w-1/4 bg-gray-200 rounded animate-pulse mb-6" />
+        <div className="h-[300px] md:h-[450px] w-full bg-gray-200 rounded-2xl animate-pulse mb-8" />
+        <div className="flex flex-col lg:flex-row gap-8">
+          <div className="flex-1 space-y-6">
+            <div className="h-10 w-3/4 bg-gray-200 rounded animate-pulse" />
+            <div className="h-6 w-1/2 bg-gray-200 rounded animate-pulse" />
+            <div className="h-24 w-full bg-gray-200 rounded animate-pulse" />
+            <div className="h-40 w-full bg-gray-200 rounded animate-pulse" />
+          </div>
+          <div className="w-full lg:w-[320px] h-[300px] bg-gray-200 rounded-2xl animate-pulse animate-pulse shrink-0" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white">
@@ -141,11 +261,11 @@ export default function PropertyDetailPage({ params }: { params: { slug: string 
             <ChevronRight className="w-3.5 h-3.5" />
             <Link href="/mua-ban" className="hover:text-primary transition-colors">Mua bán</Link>
             <ChevronRight className="w-3.5 h-3.5" />
-            <Link href={`/mua-ban?cat=${property.category.slug}`} className="hover:text-primary transition-colors">
-              {property.category.name}
+            <Link href={`/mua-ban?cat=${propertyData.category.slug}`} className="hover:text-primary transition-colors">
+              {propertyData.category.name}
             </Link>
             <ChevronRight className="w-3.5 h-3.5" />
-            <span className="text-gray-900 truncate max-w-[200px] sm:max-w-none">{property.title}</span>
+            <span className="text-gray-900 truncate max-w-[200px] sm:max-w-none">{propertyData.title}</span>
           </nav>
         </div>
       </div>
@@ -153,7 +273,7 @@ export default function PropertyDetailPage({ params }: { params: { slug: string 
       <div className="max-w-[1200px] mx-auto px-4 py-6">
         
         {/* Gallery */}
-        <HeroGallery images={property.media} />
+        <HeroGallery images={propertyData.media} />
 
         <div className="flex flex-col lg:flex-row gap-8 items-start">
           
@@ -166,30 +286,30 @@ export default function PropertyDetailPage({ params }: { params: { slug: string 
                 <Badge className="bg-primary text-white border-0 shadow-sm uppercase text-[11px] font-bold tracking-wider">
                   Bán
                 </Badge>
-                {CONFIG.enableVip && property.isVip !== 'normal' && (
+                {CONFIG.enableVip && propertyData.isVip !== 'normal' && (
                   <Badge className="bg-[#e03131] text-white border-0 shadow-sm uppercase text-[11px] font-bold tracking-wider">
-                    {property.isVip === 'vip' ? 'VIP' : property.isVip === 'vip_plus' ? 'VIP+' : 'DIAMOND'}
+                    {propertyData.isVip === 'vip' ? 'VIP' : propertyData.isVip === 'vip_plus' ? 'VIP+' : 'DIAMOND'}
                   </Badge>
                 )}
               </div>
               <h1 className="text-[24px] sm:text-[28px] font-extrabold text-gray-900 leading-[1.3] mb-3 tracking-tight">
-                {property.title}
+                {propertyData.title}
               </h1>
               <div className="flex items-center gap-2 text-[14px] text-gray-500 font-medium">
                 <MapPin className="h-4 w-4 text-gray-400" />
-                <span>{property.address}</span>
+                <span>{propertyData.address}</span>
               </div>
             </div>
 
             {/* Spec Boxes */}
             <SpecBoxes
-              price={property.price}
-              priceUnit={property.priceUnit}
-              priceNegotiable={property.priceNegotiable}
-              area={property.area}
-              bedrooms={property.bedrooms}
-              bathrooms={property.bathrooms}
-              direction={property.direction}
+              price={propertyData.price}
+              priceUnit={propertyData.priceUnit}
+              priceNegotiable={propertyData.priceNegotiable}
+              area={propertyData.area}
+              bedrooms={propertyData.bedrooms}
+              bathrooms={propertyData.bathrooms}
+              direction={propertyData.direction}
             />
 
             {/* Stats and Actions row */}
@@ -197,13 +317,13 @@ export default function PropertyDetailPage({ params }: { params: { slug: string 
               <div className="flex items-center gap-4 sm:gap-6 text-[13px] text-gray-500 font-medium flex-wrap">
                 <span className="flex items-center gap-1.5">
                   <Eye className="h-4 w-4 text-gray-400" />
-                  {property.viewCount.toLocaleString('vi-VN')} lượt xem
+                  {propertyData.viewCount.toLocaleString('vi-VN')} lượt xem
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Clock className="h-4 w-4 text-gray-400" />
-                  Đăng {timeAgo(property.publishedAt)}
+                  Đăng {timeAgo(propertyData.publishedAt)}
                 </span>
-                <span className="text-gray-400 hidden sm:inline">Mã tin: #{property.id}</span>
+                <span className="text-gray-400 hidden sm:inline">Mã tin: #{propertyData.id}</span>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -226,7 +346,7 @@ export default function PropertyDetailPage({ params }: { params: { slug: string 
             <div className="mb-8">
               <h2 className="text-[18px] font-bold text-gray-900 mb-4 tracking-tight">Thông tin mô tả</h2>
               <div className="text-[14px] text-gray-600 leading-relaxed space-y-2">
-                {property.description.split('\n').map((line, i) => {
+                {propertyData.description.split('\n').map((line: string, i: number) => {
                   if (!line.trim()) return <div key={i} className="h-1" />;
                   const rendered = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
                   if (line.trim().startsWith('- ')) {
@@ -243,11 +363,11 @@ export default function PropertyDetailPage({ params }: { params: { slug: string 
             </div>
 
             {/* Features */}
-            {property.features.length > 0 && (
+            {propertyData.features && propertyData.features.length > 0 && (
               <div className="mb-8 pt-8 border-t border-gray-100">
                 <h2 className="text-[18px] font-bold text-gray-900 mb-4 tracking-tight">Đặc điểm bất động sản</h2>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-y-4 gap-x-6">
-                  {property.features.map((feature) => (
+                  {propertyData.features.map((feature: any) => (
                     <div key={feature.id} className="flex items-center gap-2.5">
                       <CheckCircle className="h-4 w-4 text-primary flex-shrink-0" />
                       <span className="text-[14px] text-gray-700 font-medium">{feature.name}</span>
@@ -258,19 +378,19 @@ export default function PropertyDetailPage({ params }: { params: { slug: string 
             )}
 
             {/* Legal */}
-            {property.legal && (
+            {propertyData.legal && (
               <div className="mb-8 pt-8 border-t border-gray-100">
                 <h2 className="text-[18px] font-bold text-gray-900 mb-4 tracking-tight">Thông tin pháp lý</h2>
                 <div className="bg-primary-light border border-primary/20 rounded-xl p-4 flex items-start gap-3">
                   <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="font-bold text-primary text-[14px]">
-                      {property.legal === 'so_do' ? 'Sổ đỏ' :
-                       property.legal === 'so_hong' ? 'Sổ hồng' :
-                       property.legal === 'contract' ? 'Hợp đồng mua bán' : 'Pháp lý khác'}
+                      {propertyData.legal === 'so_do' ? 'Sổ đỏ' :
+                       propertyData.legal === 'so_hong' ? 'Sổ hồng' :
+                       propertyData.legal === 'contract' ? 'Hợp đồng mua bán' : 'Pháp lý khác'}
                     </p>
-                    {property.legalNote && (
-                      <p className="text-[13px] text-gray-600 mt-1">{property.legalNote}</p>
+                    {propertyData.legalNote && (
+                      <p className="text-[13px] text-gray-600 mt-1">{propertyData.legalNote}</p>
                     )}
                   </div>
                 </div>
@@ -281,20 +401,20 @@ export default function PropertyDetailPage({ params }: { params: { slug: string 
 
           {/* Right Sidebar */}
           <aside className="w-full lg:w-[320px] xl:w-[340px] shrink-0">
-            <ContactSidebar user={property.user} />
+            <ContactSidebar user={propertyData.user} />
           </aside>
           
         </div>
 
         {/* Similar Listings */}
-        <SimilarListings properties={similarProperties} />
+        <SimilarListings properties={similarData} />
 
       </div>
 
       {/* Mobile sticky bottom contact bar */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 px-4 py-3 flex gap-3 shadow-[0_-4px_12px_rgba(0,0,0,0.08)]">
         <a
-          href={`tel:${property.user.phone}`}
+          href={`tel:${propertyData.user.phone}`}
           className="flex-1 flex items-center justify-center gap-2 h-12 rounded-xl bg-primary text-white font-bold text-[15px] transition-colors"
         >
           <Phone className="w-5 h-5" />

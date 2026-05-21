@@ -25,14 +25,14 @@ interface FilterHorizontalProps {
   onSearchSubmit?: () => void;
 }
 
-const PRICE_PRESETS = [
+const PRICE_PRESETS: Array<{ label: string; min: number | ''; max: number | '' }> = [
   { label: 'Dưới 1 tỷ', min: '', max: 1000000000 },
   { label: '1 - 3 tỷ', min: 1000000000, max: 3000000000 },
   { label: '3 - 5 tỷ', min: 3000000000, max: 5000000000 },
   { label: 'Trên 5 tỷ', min: 5000000000, max: '' },
 ];
 
-const AREA_PRESETS = [
+const AREA_PRESETS: Array<{ label: string; min: number | ''; max: number | '' }> = [
   { label: 'Dưới 50 m²', min: '', max: 50 },
   { label: '50 - 100 m²', min: 50, max: 100 },
   { label: '100 - 200 m²', min: 100, max: 200 },
@@ -105,9 +105,9 @@ export function FilterHorizontal({
 
   const getPriceLabel = () => {
     if (filters.priceMin === '' && filters.priceMax === '') return 'Khoảng giá';
-    if (filters.priceMin !== '' && filters.priceMax === '') return `Trên ${formatPrice(filters.priceMin)}`;
-    if (filters.priceMin === '' && filters.priceMax !== '') return `Dưới ${formatPrice(filters.priceMax)}`;
-    return `${formatPrice(filters.priceMin)} - ${formatPrice(filters.priceMax)}`;
+    if (filters.priceMin !== '' && filters.priceMax === '') return `Trên ${formatPrice(filters.priceMin as number)}`;
+    if (filters.priceMin === '' && filters.priceMax !== '') return `Dưới ${formatPrice(filters.priceMax as number)}`;
+    return `${formatPrice(filters.priceMin as number)} - ${formatPrice(filters.priceMax as number)}`;
   };
 
   const getAreaLabel = () => {

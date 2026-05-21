@@ -42,8 +42,9 @@ const vipConfig: Record<string, { border: string; badge: string; label: string; 
 };
 
 export function PropertyCard({ property, className, variant = 'default' }: PropertyCardProps) {
-  const isVipActive = CONFIG.enableVip && property.isVip && property.isVip !== 'normal';
-  const vip = isVipActive ? vipConfig[property.isVip || 'normal'] : vipConfig.normal;
+  const isVipValue = property.isVip || (property as any).is_vip || 'normal';
+  const isVipActive = CONFIG.enableVip && isVipValue && isVipValue !== 'normal';
+  const vip = isVipActive ? vipConfig[isVipValue] : vipConfig.normal;
   const location = property.location || property.address || '';
   const typeLabel = property.type === 'sale' ? 'Bán' : property.type === 'rent' ? 'Cho thuê' : property.type;
   const href = `/${property.type === 'sale' ? 'mua-ban' : 'cho-thue'}/${property.slug}`;

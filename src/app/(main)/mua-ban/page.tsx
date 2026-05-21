@@ -16,8 +16,9 @@ import { formatPrice } from '@/lib/formatters';
 import { ContactDialog } from '@/components/shared/ContactDialog';
 import { Switch } from '@/components/ui/switch';
 import { CONFIG } from '@/lib/config';
+import { useProperties } from '@/hooks/useProperties';
 
-const QUICK_PRICE_PRESETS_SALE = [
+const QUICK_PRICE_PRESETS_SALE: Array<{ label: string; min: number | ''; max: number | '' }> = [
   { label: 'Thỏa thuận', min: '', max: '' },
   { label: 'Dưới 1 tỷ', min: '', max: 1000000000 },
   { label: '1 - 3 tỷ', min: 1000000000, max: 3000000000 },
@@ -26,7 +27,7 @@ const QUICK_PRICE_PRESETS_SALE = [
   { label: 'Trên 10 tỷ', min: 10000000000, max: '' },
 ];
 
-const QUICK_AREA_PRESETS = [
+const QUICK_AREA_PRESETS: Array<{ label: string; min: number | ''; max: number | '' }> = [
   { label: 'Dưới 30 m²', min: '', max: 30 },
   { label: '30 - 50 m²', min: 30, max: 50 },
   { label: '50 - 80 m²', min: 50, max: 80 },
@@ -135,9 +136,45 @@ const mockProperties: MockProperty[] = [
   },
 ];
 
+const mapApiProperty = (apiProp: any) => {
+  return {
+    id: apiProp.id,
+    title: apiProp.title,
+    slug: apiProp.slug,
+    price: Number(apiProp.price),
+    priceUnit: apiProp.price_unit === 'month' ? 'per_month' : 'total',
+    area: Number(apiProp.area),
+    type: apiProp.type,
+    category: apiProp.category?.name || 'Bất động sản',
+    thumbnail: apiProp.thumbnail || '/images/image_data/Haus-Coastal.jpg',
+    location: apiProp.district ? `${apiProp.district.name}, Quảng Ngãi` : apiProp.address || 'Quảng Ngãi',
+    bedrooms: Number(apiProp.bedrooms || 0),
+    bathrooms: Number(apiProp.bathrooms || 0),
+    isVip: apiProp.is_vip || 'normal',
+    user: {
+      name: apiProp.user?.name || 'Môi giới',
+      avatar: apiProp.user?.avatar || null,
+    },
+    created_at: apiProp.created_at,
+    views: apiProp.view_count || 0,
+  };
+};
+
 function PropertyListingContent() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [isLoading] = useState(false);
+  
+  // Real API integration state
+  const { fetchProperties, isLoading: isApiLoading } = useProperties();
+  const [apiProperties, setApiProperties] = useState<any[]>([]);
+  const [apiPagination, setApiPagination] = useState({
+    current_page: 1,
+    last_page: 1,
+    per_page: 6,
+    total: 0,
+  });
+  const [page, setPage] = useState(1);
+  const [useRealApi, setUseRealApi] = useState(true);
+
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [searchQuery, setSearchQuery] = useState('');
   const [isFiltering, setIsFiltering] = useState(false);
@@ -147,51 +184,105 @@ function PropertyListingContent() {
   const [contactOpen, setContactOpen] = useState(false);
   const [receiveEmail, setReceiveEmail] = useState(false);
 
+  // Fetch real properties from the API
+  useEffect(() => {
+    const loadProperties = async () => {
+      let sortParam = 'newest';
+      if (sort === 'newest') sortParam = 'newest';
+      else if (sort === 'oldest') sortParam = 'oldest';
+      else if (sort === 'price_asc') sortParam = 'price_asc';
+      else if (sort === 'price_desc') sortParam = 'price_desc';
+      else if (sort === 'area_asc') sortParam = 'area_asc';
+      else if (sort === 'area_desc') sortParam = 'area_desc';
+
+      const apiFilters: any = {
+        type: 'sale',
+        page,
+        per_page: 6,
+        sort: sortParam,
+      };
+
+      if (filters.priceMin !== '') apiFilters.price_min = filters.priceMin;
+      if (filters.priceMax !== '') apiFilters.price_max = filters.priceMax;
+      
+      if (filters.bedrooms !== 'any') {
+        const bedVal = parseInt(filters.bedrooms);
+        if (!isNaN(bedVal)) apiFilters.bedrooms = bedVal;
+      }
+
+      const res = await fetchProperties(apiFilters);
+      if (res.success && res.data && res.data.length > 0) {
+        setApiProperties(res.data.map(mapApiProperty));
+        if (res.meta) {
+          setApiPagination({
+            current_page: res.meta.current_page || 1,
+            last_page: res.meta.last_page || 1,
+            per_page: res.meta.per_page || 6,
+            total: res.meta.total || 0,
+          });
+        }
+        setUseRealApi(true);
+      } else {
+        setUseRealApi(false);
+      }
+    };
+
+    loadProperties();
+  }, [page, filters, sort, fetchProperties]);
+
   const updateFilters = useCallback((updates: Partial<FilterState>) => {
     setFilters(prev => ({ ...prev, ...updates }));
+    setPage(1); // Reset page on filter change
     setIsFiltering(true);
     setTimeout(() => setIsFiltering(false), 300);
   }, []);
 
   const resetFilters = useCallback(() => {
     setFilters(DEFAULT_FILTERS);
+    setPage(1);
   }, []);
-
 
   // Compute active filter tags from filter state
   const activeTags = useMemo(() => buildFilterTags(filters), [filters]);
 
   const handleRemoveTag = useCallback((tagId: string) => {
     setFilters(prev => ({ ...prev, ...removeTag(prev, tagId) }));
+    setPage(1);
   }, []);
 
   const clearAllTags = useCallback(() => resetFilters(), [resetFilters]);
 
-  // Filtered properties
-  const filteredProperties = useMemo(() => {
+  // Combined property listing logic (API or client fallback)
+  const displayProperties = useMemo(() => {
+    if (useRealApi) {
+      return apiProperties;
+    }
     let res = filterProperties(mockProperties, filters);
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       res = res.filter(p => p.title.toLowerCase().includes(q) || p.location.toLowerCase().includes(q));
     }
     return res;
-  }, [filters, searchQuery]);
+  }, [useRealApi, apiProperties, filters, searchQuery]);
+
+  const isLoading = isApiLoading;
 
   // VIP Properties for Hero Slider & Featured Sidebar
   const sliderProperties = useMemo(() => {
     if (!CONFIG.enableVip) return [];
-    return mockProperties.filter(p => p.isVip !== 'normal');
-  }, []);
+    const sourceList = useRealApi && apiProperties.length > 0 ? apiProperties : mockProperties;
+    return sourceList.filter(p => p.isVip !== 'normal');
+  }, [useRealApi, apiProperties]);
 
   const featuredProperties = useMemo(() => {
+    const sourceList = useRealApi && apiProperties.length > 0 ? apiProperties : mockProperties;
     if (CONFIG.enableVip) {
-      return mockProperties.filter(p => p.isVip !== 'normal').slice(0, 5);
+      return sourceList.filter(p => p.isVip !== 'normal').slice(0, 5);
     }
-    // Return top properties sorted by views
-    return [...mockProperties]
+    return [...sourceList]
       .sort((a, b) => (b.views || 0) - (a.views || 0))
       .slice(0, 5);
-  }, []);
+  }, [useRealApi, apiProperties]);
 
   // Automatic slide rotation
   useEffect(() => {
@@ -338,7 +429,7 @@ function PropertyListingContent() {
                 Mua bán nhà đất tại Quảng Ngãi
               </h1>
               <p className="text-[14px] text-gray-500 mt-1">
-                Hiện có {filteredProperties.length} bất động sản.
+                Hiện có {useRealApi ? apiPagination.total : displayProperties.length} bất động sản.
               </p>
             </div>
 
@@ -361,7 +452,7 @@ function PropertyListingContent() {
                 <SortBar 
                   viewMode={viewMode} 
                   onViewModeChange={setViewMode} 
-                  totalResults={filteredProperties.length}
+                  totalResults={useRealApi ? apiPagination.total : displayProperties.length}
                   sort={sort}
                   onSortChange={setSort}
                 />
@@ -389,7 +480,7 @@ function PropertyListingContent() {
                   <PropertyCardSkeleton key={i} variant={viewMode} />
                 ))}
               </div>
-            ) : filteredProperties.length === 0 ? (
+            ) : displayProperties.length === 0 ? (
               <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-gray-50 via-white to-gray-50 shadow-sm p-16 text-center border border-gray-100">
                 {/* Decorative dots */}
                 <svg className="absolute inset-0 w-full h-full opacity-[0.04] pointer-events-none">
@@ -423,7 +514,7 @@ function PropertyListingContent() {
                 ? 'grid sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-5'
                 : 'space-y-4'
               }>
-                {filteredProperties.map((property, index) => (
+                {displayProperties.map((property, index) => (
                   <div
                     key={property.id}
                     className={`animate-fade-in-up stagger-${Math.min(index + 1, 8)} opacity-0`}
@@ -435,18 +526,69 @@ function PropertyListingContent() {
             )}
 
             {/* Pagination */}
-            {filteredProperties.length > 0 && (
+            {displayProperties.length > 0 && (useRealApi ? apiPagination.last_page > 1 : false) && (
               <div className="flex justify-center mt-10">
                 <div className="flex items-center gap-1.5">
-                  <button className="w-9 h-9 rounded-lg border border-gray-200 text-gray-400 flex items-center justify-center cursor-not-allowed">
-                    <ChevronRight className="h-4 w-4 rotate-180" />
+                  <button
+                    onClick={() => setPage(p => Math.max(p - 1, 1))}
+                    disabled={apiPagination.current_page === 1}
+                    className={`w-9 h-9 rounded-lg border border-gray-200 text-gray-700 flex items-center justify-center transition-colors ${
+                      apiPagination.current_page === 1 ? 'cursor-not-allowed text-gray-300 border-gray-100' : 'hover:bg-gray-50'
+                    }`}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
                   </button>
-                  <button className="w-9 h-9 rounded-lg bg-primary text-white font-medium shadow-sm">1</button>
-                  <button className="w-9 h-9 rounded-lg border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors">2</button>
-                  <button className="w-9 h-9 rounded-lg border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors">3</button>
-                  <button className="w-9 h-9 rounded-lg text-gray-400 font-medium" disabled>…</button>
-                  <button className="w-9 h-9 rounded-lg border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors">10</button>
-                  <button className="w-9 h-9 rounded-lg border border-gray-200 text-gray-700 flex items-center justify-center hover:bg-gray-50 transition-colors">
+                  
+                  {(() => {
+                    const pages = [];
+                    const currentPage = apiPagination.current_page;
+                    const lastPage = apiPagination.last_page;
+                    
+                    if (lastPage <= 5) {
+                      for (let i = 1; i <= lastPage; i++) pages.push(i);
+                    } else {
+                      pages.push(1);
+                      const start = Math.max(2, currentPage - 1);
+                      const end = Math.min(lastPage - 1, currentPage + 1);
+                      if (start > 2) pages.push('...');
+                      for (let i = start; i <= end; i++) pages.push(i);
+                      if (end < lastPage - 1) pages.push('...');
+                      pages.push(lastPage);
+                    }
+                    
+                    return pages.map((p, idx) => {
+                      if (p === '...') {
+                        return (
+                          <span key={`ellipsis-${idx}`} className="w-9 h-9 flex items-center justify-center text-gray-400 font-medium">
+                            …
+                          </span>
+                        );
+                      }
+                      
+                      const isCurrent = p === currentPage;
+                      return (
+                        <button
+                          key={`page-${p}`}
+                          onClick={() => setPage(Number(p))}
+                          className={`w-9 h-9 rounded-lg font-medium transition-colors ${
+                            isCurrent
+                              ? 'bg-primary text-white font-semibold shadow-sm'
+                              : 'border border-gray-200 text-gray-700 hover:bg-gray-50'
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      );
+                    });
+                  })()}
+
+                  <button
+                    onClick={() => setPage(p => Math.min(p + 1, apiPagination.last_page))}
+                    disabled={apiPagination.current_page === apiPagination.last_page}
+                    className={`w-9 h-9 rounded-lg border border-gray-200 text-gray-700 flex items-center justify-center transition-colors ${
+                      apiPagination.current_page === apiPagination.last_page ? 'cursor-not-allowed text-gray-300 border-gray-100' : 'hover:bg-gray-50'
+                    }`}
+                  >
                     <ChevronRight className="h-4 w-4" />
                   </button>
                 </div>
