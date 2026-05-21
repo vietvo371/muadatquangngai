@@ -1,15 +1,38 @@
 'use client';
 
-import { Suspense, useState, useMemo, useCallback } from 'react';
+import { Suspense, useState, useMemo, useCallback, useEffect } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { PropertyCard } from '@/components/property/PropertyCard';
 import { FilterSidebar, FilterState, DEFAULT_FILTERS } from '@/components/search/FilterSidebar';
+import { FilterHorizontal } from '@/components/search/FilterHorizontal';
 import { SortBar } from '@/components/search/SortBar';
 import { FilterTags } from '@/components/shared/FilterTags';
 import { PropertyCardSkeleton } from '@/components/property/PropertyCardSkeleton';
 import { filterProperties, buildFilterTags, removeTag } from '@/lib/filter-properties';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { SearchX, ChevronRight, Home, SlidersHorizontal } from 'lucide-react';
+import { SearchX, ChevronRight, ChevronLeft, Home, MapPin, Bell } from 'lucide-react';
+import { formatPrice } from '@/lib/formatters';
+import { ContactDialog } from '@/components/shared/ContactDialog';
+import { Switch } from '@/components/ui/switch';
+import { CONFIG } from '@/lib/config';
+
+const QUICK_PRICE_PRESETS_RENT = [
+  { label: 'Thỏa thuận', min: '', max: '' },
+  { label: 'Dưới 2 triệu', min: '', max: 2000000 },
+  { label: '2 - 5 triệu', min: 2000000, max: 5000000 },
+  { label: '5 - 10 triệu', min: 5000000, max: 10000000 },
+  { label: 'Trên 10 triệu', min: 10000000, max: '' },
+];
+
+const QUICK_AREA_PRESETS = [
+  { label: 'Dưới 30 m²', min: '', max: 30 },
+  { label: '30 - 50 m²', min: 30, max: 50 },
+  { label: '50 - 80 m²', min: 50, max: 80 },
+  { label: '80 - 100 m²', min: 80, max: 100 },
+  { label: 'Trên 100 m²', min: 100, max: '' },
+];
+
 
 interface MockProperty {
   id: string;
@@ -99,9 +122,13 @@ function PropertyListingContent() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isLoading] = useState(false);
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
+  const [searchQuery, setSearchQuery] = useState('');
   const [isFiltering, setIsFiltering] = useState(false);
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const [sort, setSort] = useState('newest');
+  const [slide, setSlide] = useState(0);
+  const [contactOpen, setContactOpen] = useState(false);
+  const [receiveEmail, setReceiveEmail] = useState(false);
 
   const updateFilters = useCallback((updates: Partial<FilterState>) => {
     setFilters(prev => ({ ...prev, ...updates }));
@@ -113,7 +140,6 @@ function PropertyListingContent() {
     setFilters(DEFAULT_FILTERS);
   }, []);
 
-  const applyFilters = useCallback(() => {}, []);
 
   const activeTags = useMemo(() => buildFilterTags(filters), [filters]);
 
@@ -123,68 +149,141 @@ function PropertyListingContent() {
 
   const clearAllTags = useCallback(() => resetFilters(), [resetFilters]);
 
-  const filteredProperties = useMemo(() => filterProperties(mockProperties, filters), [filters]);
+  const filteredProperties = useMemo(() => {
+    let res = filterProperties(mockProperties, filters);
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      res = res.filter(p => p.title.toLowerCase().includes(q) || p.location.toLowerCase().includes(q));
+    }
+    return res;
+  }, [filters, searchQuery]);
+
+  // VIP Properties for Hero Slider & Featured Sidebar
+  const sliderProperties = useMemo(() => {
+    if (!CONFIG.enableVip) return [];
+    return mockProperties.filter(p => p.isVip !== 'normal');
+  }, []);
+
+  const featuredProperties = useMemo(() => {
+    if (CONFIG.enableVip) {
+      return mockProperties.filter(p => p.isVip !== 'normal').slice(0, 5);
+    }
+    // Return top properties sorted by views
+    return [...mockProperties]
+      .sort((a, b) => (b.views || 0) - (a.views || 0))
+      .slice(0, 5);
+  }, []);
+
+  // Automatic slide rotation
+  useEffect(() => {
+    if (sliderProperties.length <= 1) return;
+    const timer = setInterval(() => {
+      setSlide((s) => (s + 1) % sliderProperties.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [sliderProperties.length]);
 
   return (
-    <div className="bg-gray-50 min-h-screen py-6">
-      <div className="max-w-[1200px] mx-auto px-4">
+    <div className="bg-gray-50 min-h-screen">
+      {/* ══ HERO SLIDER ══ */}
+      {sliderProperties.length > 0 && (
+        <div className="relative w-full h-[320px] md:h-[420px] overflow-hidden bg-gray-900 select-none">
+          {sliderProperties.map((p, i) => (
+            <div
+              key={p.id}
+              className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+                i === slide ? 'opacity-100 z-10' : 'opacity-0 z-0'
+              }`}
+            >
+              <Image
+                src={p.thumbnail}
+                alt={p.title}
+                fill
+                className="object-cover object-center transition-transform duration-[5000ms] ease-out"
+                style={{
+                  transform: i === slide ? 'scale(1.05)' : 'scale(1)',
+                }}
+                priority={i === 0}
+                sizes="100vw"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
 
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-[13px] text-gray-500 mb-4 font-medium">
-          <Link href="/" className="hover:text-primary transition-colors flex items-center gap-1">
-            <Home className="w-3.5 h-3.5" />
-            Trang chủ
-          </Link>
-          <ChevronRight className="w-3.5 h-3.5" />
-          <span className="text-gray-900">Cho thuê nhà đất</span>
-        </div>
+              {/* Slide content */}
+              <div className="absolute bottom-0 left-0 right-0 px-6 md:px-10 pb-8 md:pb-10 z-10">
+                <div className="max-w-[1200px] mx-auto">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider mb-2.5 bg-cta text-white shadow-md">
+                    ★ {p.isVip === 'diamond' ? 'DIAMOND' : p.isVip === 'vip_plus' ? 'VIP+' : 'VIP'}
+                  </span>
+                  <Link href={`/${p.type === 'sale' ? 'mua-ban' : 'cho-thue'}/${p.slug}`}>
+                    <h2 className="text-xl md:text-2xl font-black text-white hover:text-primary transition-colors drop-shadow-md leading-tight mb-2 max-w-3xl cursor-pointer line-clamp-2">
+                      {p.title}
+                    </h2>
+                  </Link>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-white/90 text-sm">
+                    <p className="flex items-center gap-1">
+                      <MapPin className="h-3.5 w-3.5 shrink-0 text-white/70" />
+                      {p.location}
+                    </p>
+                    <span className="text-white/30 hidden sm:inline">|</span>
+                    <p className="font-semibold text-white">
+                      Giá: <span className="text-yellow-400 font-extrabold text-base">{formatPrice(p.price)}</span>
+                    </p>
+                    <span className="text-white/30 hidden sm:inline">|</span>
+                    <p className="font-semibold text-white">
+                      Diện tích: <span className="text-yellow-400 font-extrabold text-base">{p.area} m²</span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
 
-        {/* Page Header */}
-        <div className="mb-6">
-          <h1 className="text-[22px] font-bold text-gray-900 tracking-tight">
-            Cho thuê nhà đất tại Quảng Ngãi
-          </h1>
-          <p className="text-[14px] text-gray-500 mt-1">
-            {filteredProperties.length} bất động sản đang cho thuê
-          </p>
-        </div>
+          {/* Arrows */}
+          {sliderProperties.length > 1 && (
+            <>
+              <button
+                onClick={() => setSlide((s) => (s - 1 + sliderProperties.length) % sliderProperties.length)}
+                className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-black/30 hover:bg-black/50 text-white flex items-center justify-center transition-all hover:scale-105"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <button
+                onClick={() => setSlide((s) => (s + 1) % sliderProperties.length)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-black/30 hover:bg-black/50 text-white flex items-center justify-center transition-all hover:scale-105"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+            </>
+          )}
 
-        {/* Mobile filter trigger */}
-        <div className="lg:hidden sticky top-[64px] z-20 bg-white border-b border-gray-100 px-4 py-2.5 flex items-center gap-2 shadow-sm -mx-4">
-          <button
-            onClick={() => setMobileFilterOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 text-[13px] font-medium text-gray-700 hover:bg-gray-50"
-          >
-            <SlidersHorizontal className="w-4 h-4" />
-            Lọc
-            {activeTags.length > 0 && (
-              <span className="bg-primary text-white text-[11px] rounded-full px-1.5">{activeTags.length}</span>
-            )}
-          </button>
-          <select
-            value={sort}
-            onChange={(e) => setSort(e.target.value)}
-            className="h-9 border border-gray-200 rounded-lg px-3 text-[13px] font-medium text-gray-700 focus:outline-none focus:ring-[3px] focus:ring-primary/15 focus:border-primary bg-white"
-          >
-            <option value="newest">Mới nhất</option>
-            <option value="price_asc">Giá tăng dần</option>
-            <option value="price_desc">Giá giảm dần</option>
-            <option value="area_desc">Diện tích lớn nhất</option>
-          </select>
+          {/* Dots */}
+          {sliderProperties.length > 1 && (
+            <div className="absolute bottom-4 right-6 md:right-10 z-20 flex items-center gap-1.5">
+              {sliderProperties.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setSlide(i)}
+                  className={`rounded-full transition-all duration-300 ${
+                    i === slide ? 'w-5 h-2 bg-white' : 'w-2 h-2 bg-white/40 hover:bg-white/70'
+                  }`}
+                />
+              ))}
+            </div>
+          )}
         </div>
+      )}
+
+      <div className="max-w-[1200px] mx-auto px-4 py-6">
+        {/* Horizontal Search & Filters */}
+        <FilterHorizontal
+          filters={filters}
+          onFilterChange={updateFilters}
+          onReset={resetFilters}
+          searchQuery={searchQuery}
+          onSearchQueryChange={setSearchQuery}
+        />
 
         <div className="flex gap-8 items-start">
-
-          {/* Left Sidebar Filters — desktop only */}
-          <div className="hidden lg:block">
-            <FilterSidebar
-              filters={filters}
-              onFilterChange={updateFilters}
-              onApply={applyFilters}
-              onReset={resetFilters}
-            />
-          </div>
-
           {/* Mobile Filter Sheet */}
           <Sheet open={mobileFilterOpen} onOpenChange={setMobileFilterOpen}>
             <SheetContent side="left" className="w-[300px] p-0 overflow-y-auto">
@@ -204,25 +303,67 @@ function PropertyListingContent() {
 
           {/* Main Content */}
           <div className="flex-1 min-w-0">
-
-            {/* Sort & Filters Toolbar */}
-            <div className="sticky top-[64px] lg:top-0 z-10 bg-gray-50 pb-3 pt-1 mb-3">
-              <SortBar viewMode={viewMode} onViewModeChange={setViewMode} totalResults={filteredProperties.length} sort={sort} onSortChange={setSort} />
-              {activeTags.length > 0 && (
-                <div className="mt-2">
-                  <FilterTags
-                    tags={activeTags}
-                    onRemove={handleRemoveTag}
-                    onClearAll={clearAllTags}
-                  />
-                </div>
-              )}
+            {/* Breadcrumb (Nested Inside Left Column) */}
+            <div className="flex items-center gap-2 text-[13px] text-gray-500 mb-3.5 font-medium">
+              <Link href="/" className="hover:text-primary transition-colors flex items-center gap-1">
+                <Home className="w-3.5 h-3.5" />
+                Trang chủ
+              </Link>
+              <ChevronRight className="w-3.5 h-3.5" />
+              <span className="text-gray-900">Cho thuê nhà đất</span>
             </div>
+
+            {/* Page Header (Nested Inside Left Column) */}
+            <div className="mb-5">
+              <h1 className="text-[22px] font-bold text-gray-900 tracking-tight" style={{ fontFamily: 'var(--font-heading)' }}>
+                Cho thuê nhà đất tại Quảng Ngãi
+              </h1>
+              <p className="text-[14px] text-gray-500 mt-1">
+                Hiện có {filteredProperties.length} bất động sản.
+              </p>
+            </div>
+
+            {/* Email Notification & Sort Row */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5 pb-3 border-b border-gray-150">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center text-white shrink-0 relative">
+                  <Bell className="w-4 h-4 fill-white" />
+                  <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-red-550 rounded-full border border-white" />
+                </div>
+                <span className="text-[13px] font-semibold text-gray-750">Nhận email tin mới</span>
+                <Switch
+                  checked={receiveEmail}
+                  onCheckedChange={setReceiveEmail}
+                  className="data-[state=checked]:bg-primary scale-90"
+                />
+              </div>
+
+              <div className="flex-1 sm:flex-none">
+                <SortBar 
+                  viewMode={viewMode} 
+                  onViewModeChange={setViewMode} 
+                  totalResults={filteredProperties.length}
+                  sort={sort}
+                  onSortChange={setSort}
+                />
+              </div>
+            </div>
+
+            {/* Active Tags Toolbar */}
+            {activeTags.length > 0 && (
+              <div className="mb-4">
+                <FilterTags
+                  tags={activeTags}
+                  onRemove={handleRemoveTag}
+                  onClearAll={clearAllTags}
+                />
+              </div>
+            )}
 
             {/* Properties Grid */}
             {isLoading || isFiltering ? (
               <div className={viewMode === 'grid'
-                ? 'grid sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-5'
+                ? 'grid sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-5'
                 : 'space-y-4'
               }>
                 {[...Array(6)].map((_, i) => (
@@ -260,7 +401,7 @@ function PropertyListingContent() {
               </div>
             ) : (
               <div className={viewMode === 'grid'
-                ? 'grid sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-5'
+                ? 'grid sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-5'
                 : 'space-y-4'
               }>
                 {filteredProperties.map((property, index) => (
@@ -292,57 +433,119 @@ function PropertyListingContent() {
                 </div>
               </div>
             )}
-
           </div>
 
-          {/* Right sidebar — quick filter links (desktop only) */}
-          <aside className="hidden xl:block w-[200px] shrink-0 pt-1">
-            <div className="sticky top-6 space-y-6">
-              <div>
-                <h4 className="text-[12px] font-bold text-gray-500 uppercase tracking-wider mb-2">Lọc theo khoảng giá</h4>
-                <ul className="space-y-1">
-                  {[
-                    'Thỏa thuận',
-                    'Dưới 3 triệu',
-                    '3 - 5 triệu',
-                    '5 - 10 triệu',
-                    '10 - 20 triệu',
-                    '20 - 50 triệu',
-                    'Trên 50 triệu',
-                  ].map((label) => (
-                    <li key={label}>
-                      <button className="text-[13px] text-gray-600 hover:text-primary hover:underline transition-colors text-left w-full py-0.5">
-                        {label}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+          {/* Right sidebar — Featured properties, CTA, and Quick filters (desktop only) */}
+          <aside className="hidden xl:block w-64 shrink-0 space-y-6 sticky top-[80px]">
+            {/* Lọc theo khoảng giá */}
+            <div className="bg-white rounded-2xl border border-gray-105 p-4 shadow-sm">
+              <h3 className="text-[14px] font-bold text-gray-800 tracking-tight mb-3 flex items-center gap-2">
+                <div className="w-1 h-4 bg-primary rounded-full" />
+                Lọc theo khoảng giá
+              </h3>
+              <div className="flex flex-col gap-2">
+                {QUICK_PRICE_PRESETS_RENT.map((preset) => {
+                  const isSel = filters.priceMin === preset.min && filters.priceMax === preset.max;
+                  return (
+                    <button
+                      key={preset.label}
+                      onClick={() => updateFilters({ priceMin: preset.min, priceMax: preset.max })}
+                      className={`text-left text-[13px] py-0.5 transition-colors hover:text-primary ${
+                        isSel ? 'text-primary font-bold' : 'text-gray-600 font-medium'
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  );
+                })}
               </div>
-              <div>
-                <h4 className="text-[12px] font-bold text-gray-500 uppercase tracking-wider mb-2">Lọc theo diện tích</h4>
-                <ul className="space-y-1">
-                  {[
-                    'Dưới 30 m²',
-                    '30 - 50 m²',
-                    '50 - 80 m²',
-                    '80 - 100 m²',
-                    '100 - 150 m²',
-                    '150 - 200 m²',
-                    'Trên 200 m²',
-                  ].map((label) => (
-                    <li key={label}>
-                      <button className="text-[13px] text-gray-600 hover:text-primary hover:underline transition-colors text-left w-full py-0.5">
-                        {label}
-                      </button>
-                    </li>
+            </div>
+
+            {/* Lọc theo diện tích */}
+            <div className="bg-white rounded-2xl border border-gray-105 p-4 shadow-sm">
+              <h3 className="text-[14px] font-bold text-gray-800 tracking-tight mb-3 flex items-center gap-2">
+                <div className="w-1 h-4 bg-primary rounded-full" />
+                Lọc theo diện tích
+              </h3>
+              <div className="flex flex-col gap-2">
+                {QUICK_AREA_PRESETS.map((preset) => {
+                  const isSel = filters.areaMin === preset.min && filters.areaMax === preset.max;
+                  return (
+                    <button
+                      key={preset.label}
+                      onClick={() => updateFilters({ areaMin: preset.min, areaMax: preset.max })}
+                      className={`text-left text-[13px] py-0.5 transition-colors hover:text-primary ${
+                        isSel ? 'text-primary font-bold' : 'text-gray-600 font-medium'
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Tin đăng nổi bật */}
+            {featuredProperties.length > 0 && (
+              <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+                <div className="px-4 py-3.5 border-b border-gray-100 flex items-center gap-2">
+                  <div className="w-1 h-4 bg-primary rounded-full" />
+                  <h3 className="text-[14px] font-bold text-gray-800 tracking-tight">Tin đăng nổi bật</h3>
+                </div>
+                <div className="divide-y divide-gray-50">
+                  {featuredProperties.map((property) => (
+                    <Link
+                      key={property.id}
+                      href={`/${property.type === 'sale' ? 'mua-ban' : 'cho-thue'}/${property.slug}`}
+                      className="flex gap-3 p-3.5 hover:bg-gray-50 transition-colors group"
+                    >
+                      <div className="relative w-20 h-16 shrink-0 rounded-xl overflow-hidden bg-gray-50">
+                        <Image
+                          src={property.thumbnail}
+                          alt={property.title}
+                          fill
+                          className="object-cover group-hover:scale-105 transition-transform duration-300"
+                          sizes="80px"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[12px] font-bold text-gray-800 line-clamp-2 group-hover:text-primary transition-colors leading-snug mb-1">
+                          {property.title}
+                        </p>
+                        <div className="flex items-center gap-2 justify-between mt-1">
+                          <p className="text-[13px] font-black text-cta">{formatPrice(property.price)}</p>
+                          <p className="text-[11px] font-medium text-gray-400">{property.area} m²</p>
+                        </div>
+                      </div>
+                    </Link>
                   ))}
-                </ul>
+                </div>
+              </div>
+            )}
+
+            {/* CTA tư vấn */}
+            <div className="bg-primary rounded-2xl p-5 text-white shadow-md relative overflow-hidden group">
+              <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-white/10 rounded-full blur-xl group-hover:bg-white/15 transition-all" />
+              <div className="absolute -left-6 -top-6 w-20 h-20 bg-white/5 rounded-full blur-lg" />
+              
+              <div className="relative z-10">
+                <h3 className="text-[15px] font-black mb-1.5 tracking-tight">Ký gửi & Tư vấn</h3>
+                <p className="text-[12px] text-white/80 mb-4 leading-relaxed">
+                  Bạn muốn bán, cho thuê hoặc tìm mua bất động sản tại Quảng Ngãi? Liên hệ ngay!
+                </p>
+                <button
+                  onClick={() => setContactOpen(true)}
+                  className="block w-full text-center bg-white text-primary text-[13px] font-bold py-2 rounded-xl hover:bg-primary-light transition-all shadow-sm active:scale-95"
+                >
+                  Gửi yêu cầu ngay
+                </button>
               </div>
             </div>
           </aside>
-
         </div>
       </div>
+
+      <ContactDialog open={contactOpen} onClose={() => setContactOpen(false)} />
     </div>
   );
 }

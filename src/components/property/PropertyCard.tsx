@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Heart, MapPin, Bed, Bath, Square, User, CheckCircle, Camera, Eye } from 'lucide-react';
 import { formatPrice, timeAgo } from '@/lib/formatters';
+import { CONFIG } from '@/lib/config';
 
 interface PropertyCardProps {
   property: {
@@ -41,10 +42,12 @@ const vipConfig: Record<string, { border: string; badge: string; label: string; 
 };
 
 export function PropertyCard({ property, className, variant = 'default' }: PropertyCardProps) {
-  const vip = vipConfig[property.isVip || 'normal'];
+  const isVipActive = CONFIG.enableVip && property.isVip && property.isVip !== 'normal';
+  const vip = isVipActive ? vipConfig[property.isVip || 'normal'] : vipConfig.normal;
   const location = property.location || property.address || '';
   const typeLabel = property.type === 'sale' ? 'Bán' : property.type === 'rent' ? 'Cho thuê' : property.type;
   const href = `/${property.type === 'sale' ? 'mua-ban' : 'cho-thue'}/${property.slug}`;
+  // eslint-disable-next-line react-hooks/purity
   const isNew = property.created_at && (Date.now() - new Date(property.created_at).getTime() < 86400000);
 
   if (variant === 'compact') {

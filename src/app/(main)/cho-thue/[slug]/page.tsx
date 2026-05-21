@@ -17,6 +17,7 @@ import { HeroGallery } from '@/components/property/detail/HeroGallery';
 import { SpecBoxes } from '@/components/property/detail/SpecBoxes';
 import { ContactSidebar } from '@/components/property/detail/ContactSidebar';
 import { SimilarListings } from '@/components/property/detail/SimilarListings';
+import { CONFIG } from '@/lib/config';
 
 // Mock property data
 const property = {
@@ -144,7 +145,7 @@ export default function ChoThueDetailPage({ params }: { params: { slug: string }
                 <Badge className="bg-green-600 text-white border-0 shadow-sm uppercase text-[11px] font-bold tracking-wider">
                   Cho thuê
                 </Badge>
-                {property.isVip !== 'normal' && (
+                {CONFIG.enableVip && property.isVip !== 'normal' && (
                   <Badge className="bg-[#e03131] text-white border-0 shadow-sm uppercase text-[11px] font-bold tracking-wider">
                     {property.isVip === 'vip' ? 'VIP' : property.isVip === 'vip_plus' ? 'VIP+' : 'DIAMOND'}
                   </Badge>

@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import api from '@/lib/axios';
 import { formatPrice } from '@/lib/formatters';
+import { CONFIG } from '@/lib/config';
 
 interface PropertyMapItem {
   id: number;
@@ -141,7 +142,7 @@ export default function BanDoMapInner() {
       const lat = bounds.getSouth() + Math.random() * (bounds.getNorth() - bounds.getSouth());
       const lng = bounds.getWest() + Math.random() * (bounds.getEast() - bounds.getWest());
       
-      const isVip = property.is_vip && property.is_vip !== 'normal';
+      const isVip = CONFIG.enableVip && property.is_vip && property.is_vip !== 'normal';
       
       // Modern Custom Marker
       const color = isVip ? '#e03131' : '#0ea5e9';
@@ -268,7 +269,7 @@ export default function BanDoMapInner() {
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-gray-400 text-[10px]">No Image</div>
                   )}
-                  {property.is_vip && property.is_vip !== 'normal' && (
+                  {CONFIG.enableVip && property.is_vip && property.is_vip !== 'normal' && (
                     <Badge className="absolute top-2 left-2 bg-cta text-white border-0 text-[9px] uppercase px-1.5 py-0 scale-90 origin-top-left font-bold shadow-sm">
                       {property.is_vip === 'diamond' ? '★ VIP' : 'VIP+'}
                     </Badge>
@@ -361,7 +362,7 @@ export default function BanDoMapInner() {
                       alt={selectedProperty.title} 
                       className="w-full h-full object-cover" 
                     />
-                    {selectedProperty.is_vip && selectedProperty.is_vip !== 'normal' && (
+                    {CONFIG.enableVip && selectedProperty.is_vip && selectedProperty.is_vip !== 'normal' && (
                       <Badge className="absolute top-3 left-3 bg-cta text-white font-bold tracking-wide uppercase border-0 shadow-sm">
                         VIP
                       </Badge>

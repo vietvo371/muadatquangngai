@@ -20,6 +20,7 @@ import { SpecBoxes } from '@/components/property/detail/SpecBoxes';
 import { ContactSidebar } from '@/components/property/detail/ContactSidebar';
 import { SimilarListings } from '@/components/property/detail/SimilarListings';
 import { timeAgo } from '@/lib/formatters';
+import { CONFIG } from '@/lib/config';
 
 // Mock property data
 const property = {
@@ -165,7 +166,7 @@ export default function PropertyDetailPage({ params }: { params: { slug: string 
                 <Badge className="bg-primary text-white border-0 shadow-sm uppercase text-[11px] font-bold tracking-wider">
                   Bán
                 </Badge>
-                {property.isVip !== 'normal' && (
+                {CONFIG.enableVip && property.isVip !== 'normal' && (
                   <Badge className="bg-[#e03131] text-white border-0 shadow-sm uppercase text-[11px] font-bold tracking-wider">
                     {property.isVip === 'vip' ? 'VIP' : property.isVip === 'vip_plus' ? 'VIP+' : 'DIAMOND'}
                   </Badge>
