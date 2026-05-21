@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
@@ -11,9 +11,10 @@ import {
   Search,
   RotateCcw,
 } from 'lucide-react';
-import { formatPrice } from '@/lib/formatters';
+import { formatPrice, slugify } from '@/lib/formatters';
 import { ProjectListCard } from '@/components/project/ProjectListCard';
 import { ContactDialog } from '@/components/shared/ContactDialog';
+import { useProjects } from '@/hooks/useProjects';
 
 const PAGE_SIZE = 4;
 
@@ -179,7 +180,29 @@ function matchPrice(priceFrom: number, range: string) {
   return true;
 }
 
-const sliderProjects = projects.filter((p) => p.featured);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mapApiProject = (apiProj: any) => {
+  return {
+    id: apiProj.id.toString(),
+    slug: apiProj.slug,
+    name: apiProj.name,
+    developer: apiProj.developer || 'Chủ đầu tư',
+    thumbnail: apiProj.thumbnail || '/images/image_data/nha-pho-de-palace-river.jpg',
+    status: apiProj.status || 'selling',
+    type: apiProj.type || 'apartment',
+    district: apiProj.location?.district?.name ? slugify(apiProj.location.district.name) : 'tp-quang-ngai',
+    address: apiProj.location?.address || 'Quảng Ngãi',
+    priceFrom: Number(apiProj.price?.from || 0),
+    priceTo: apiProj.price?.to ? Number(apiProj.price.to) : undefined,
+    totalUnits: apiProj.scale?.total_units || 0,
+    totalBlocks: apiProj.scale?.total_blocks || 0,
+    totalFloors: apiProj.scale?.total_floors || 0,
+    handoverDate: apiProj.handover_date || '2025-12-31',
+    description: apiProj.description || 'Dự án bất động sản Quảng Ngãi',
+    area: apiProj.scale?.total_area ? `${apiProj.scale.total_area} ha` : 'N/A',
+    featured: true,
+  };
+};
 
 export default function DuAnPage() {
   const [slide, setSlide] = useState(0);
@@ -191,6 +214,25 @@ export default function DuAnPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
 
+  // Real API integration state
+  const { fetchProjects } = useProjects();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [apiProjects, setApiProjects] = useState<any[]>([]);
+  const [useRealApi, setUseRealApi] = useState(true);
+
+  useEffect(() => {
+    const loadProjects = async () => {
+      const res = await fetchProjects();
+      if (res.success && res.data && res.data.length > 0) {
+        setApiProjects(res.data.map(mapApiProject));
+        setUseRealApi(true);
+      } else {
+        setUseRealApi(false);
+      }
+    };
+    loadProjects();
+  }, [fetchProjects]);
+
   const resetFilters = () => {
     setTypeFilter('all'); setDistrictFilter('all');
     setStatusFilter('all'); setPriceFilter('all');
@@ -199,8 +241,12 @@ export default function DuAnPage() {
 
   const isDirty = typeFilter !== 'all' || districtFilter !== 'all' || statusFilter !== 'all' || priceFilter !== 'all' || search !== '';
 
+  const activeProjectsList = useMemo(() => {
+    return useRealApi ? apiProjects : projects;
+  }, [useRealApi, apiProjects]);
+
   const filtered = useMemo(() => {
-    return projects.filter((p) => {
+    return activeProjectsList.filter((p) => {
       if (typeFilter !== 'all' && p.type !== typeFilter) return false;
       if (districtFilter !== 'all' && p.district !== districtFilter) return false;
       if (statusFilter !== 'all' && p.status !== statusFilter) return false;
@@ -211,16 +257,21 @@ export default function DuAnPage() {
       }
       return true;
     });
-  }, [typeFilter, districtFilter, statusFilter, priceFilter, search]);
+  }, [activeProjectsList, typeFilter, districtFilter, statusFilter, priceFilter, search]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const featured = projects.filter((p) => p.featured).slice(0, 4);
+  const featured = useMemo(() => {
+    return activeProjectsList.filter((p) => p.featured).slice(0, 4);
+  }, [activeProjectsList]);
+
+  const sliderProjects = useMemo(() => {
+    return activeProjectsList.filter((p) => p.featured);
+  }, [activeProjectsList]);
 
   const prevSlide = () => setSlide((s) => (s - 1 + sliderProjects.length) % sliderProjects.length);
   const nextSlide = () => setSlide((s) => (s + 1) % sliderProjects.length);
-
   return (
     <div className="min-h-screen bg-gray-50">
 

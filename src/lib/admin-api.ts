@@ -353,3 +353,125 @@ export const bannerAdminApi = {
     return data;
   },
 };
+
+// Admin Properties & Users Interfaces
+export interface AdminProperty {
+  id: number;
+  title: string;
+  slug: string;
+  price: number;
+  price_unit?: string;
+  area: number;
+  thumbnail?: string;
+  status: string;
+  type: string;
+  category?: {
+    id: number;
+    name: string;
+  };
+  province?: {
+    id: number;
+    name: string;
+  };
+  district?: {
+    id: number;
+    name: string;
+  };
+  user?: {
+    id: number;
+    name: string;
+    email: string;
+    avatar?: string | null;
+  };
+  created_at: string;
+}
+
+export interface AdminUser {
+  id: number;
+  name: string;
+  email: string;
+  phone?: string | null;
+  avatar?: string | null;
+  role: string;
+  status: string;
+  email_verified_at?: string | null;
+  total_listings?: number;
+  created_at: string;
+}
+
+// Dashboard Api
+export const dashboardApi = {
+  getStats: async () => {
+    const { data } = await api.get<{
+      success: boolean;
+      data: {
+        total_users: number;
+        total_properties: number;
+        active_properties: number;
+        pending_properties: number;
+        total_revenue: number;
+        new_users_today: number;
+        new_listings_today: number;
+        pending_reports: number;
+      };
+    }>('/api/admin/dashboard');
+    return data;
+  },
+};
+
+// Properties Admin Api
+export const propertyAdminApi = {
+  list: async (params?: {
+    status?: string;
+    type?: string;
+    q?: string;
+    page?: number;
+  }) => {
+    const { data } = await api.get<PaginatedResponse<AdminProperty>>('/api/admin/properties', { params });
+    return data;
+  },
+
+  approve: async (id: number) => {
+    const { data } = await api.put<{ success: boolean; message?: string }>(`/api/admin/properties/${id}/approve`);
+    return data;
+  },
+
+  reject: async (id: number, reason?: string) => {
+    const { data } = await api.put<{ success: boolean; message?: string }>(`/api/admin/properties/${id}/reject`, { reason });
+    return data;
+  },
+
+  delete: async (id: number) => {
+    const { data } = await api.delete<{ success: boolean; message?: string }>(`/api/admin/properties/${id}`);
+    return data;
+  },
+};
+
+// Users Admin Api
+export const userAdminApi = {
+  list: async (params?: {
+    role?: string;
+    status?: string;
+    search?: string;
+    page?: number;
+  }) => {
+    const { data } = await api.get<PaginatedResponse<AdminUser>>('/api/admin/users', { params });
+    return data;
+  },
+
+  ban: async (id: number) => {
+    const { data } = await api.put<{ success: boolean; message?: string }>(`/api/admin/users/${id}/ban`);
+    return data;
+  },
+
+  unban: async (id: number) => {
+    const { data } = await api.put<{ success: boolean; message?: string }>(`/api/admin/users/${id}/unban`);
+    return data;
+  },
+
+  updateRole: async (id: number, role: string) => {
+    const { data } = await api.put<{ success: boolean; message?: string }>(`/api/admin/users/${id}/role`, { role });
+    return data;
+  },
+};
+
