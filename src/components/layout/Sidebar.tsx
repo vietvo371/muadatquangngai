@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { 
   LayoutDashboard, 
@@ -73,10 +73,16 @@ export function Sidebar({
   onMobileClose,
 }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, logout } = useAuthStore();
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
   
   const navItems = variant === 'admin' ? adminNavItems : mainNavItems;
+
+  const handleLogout = () => {
+    logout();
+    router.push('/login');
+  };
 
   const toggleCollapse = () => {
     onCollapsedChange?.(!collapsed);
@@ -93,19 +99,27 @@ export function Sidebar({
         'flex items-center h-16 border-b px-4',
         collapsed ? 'justify-center' : 'justify-between'
       )}>
-        <Link href="/" className="flex items-center gap-2.5">
-          <Image
-            src="/images/logo_xam.png"
-            alt="BatDongSan Quang Ngai"
-            width={36}
-            height={36}
-            className="object-contain"
-          />
-          {!collapsed && (
-            <div className="flex flex-col leading-tight">
-              <span className="font-bold text-base text-gray-900 tracking-tight">BatDongSan</span>
-              <span className="text-[10px] text-gray-400 font-medium -mt-0.5">Quang Ngai</span>
+        <Link href="/" className="flex items-center gap-2">
+          {collapsed ? (
+            <div className="w-9 h-9 overflow-hidden flex items-center justify-start rounded-lg">
+              <Image
+                src="/images/logo_mai.png"
+                alt="BatDongSan"
+                width={150}
+                height={40}
+                className="max-w-none h-9 w-auto object-cover object-left"
+                priority
+              />
             </div>
+          ) : (
+            <Image
+              src="/images/logo_mai.png"
+              alt="BatDongSan Quang Ngai"
+              width={150}
+              height={40}
+              className="object-contain h-10 w-auto"
+              priority
+            />
           )}
         </Link>
         <button
@@ -200,7 +214,7 @@ export function Sidebar({
                 </div>
               )}
             </div>
-            <Button variant="ghost" size="sm" onClick={logout} className="p-2">
+            <Button variant="ghost" size="sm" onClick={handleLogout} className="p-2">
               <LogOut className="h-4 w-4 text-gray-500" />
             </Button>
           </div>
@@ -223,7 +237,7 @@ export function Sidebar({
                 {user?.email}
               </p>
             </div>
-            <Button variant="ghost" size="sm" onClick={logout} className="p-2">
+            <Button variant="ghost" size="sm" onClick={handleLogout} className="p-2">
               <LogOut className="h-4 w-4 text-gray-500" />
             </Button>
           </div>

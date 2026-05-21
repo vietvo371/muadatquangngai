@@ -32,8 +32,14 @@ export default function LoginPage() {
       const response = await axios.post('/api/auth/login', formData);
       
       if (response.data.success) {
-        login(response.data.data.user, response.data.data.access_token);
-        router.push('/dashboard');
+        const loggedInUser = response.data.data.user;
+        login(loggedInUser, response.data.data.access_token);
+        
+        if (loggedInUser.role === 'admin' || loggedInUser.role === 'super_admin') {
+          router.push('/admin');
+        } else {
+          router.push('/dashboard');
+        }
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Đăng nhập thất bại. Vui lòng thử lại.');
