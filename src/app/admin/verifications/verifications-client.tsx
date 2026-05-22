@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -345,17 +345,46 @@ export default function VerificationsClient() {
     mutationFn: async (id: number) => {
       return await verificationApi.approve(id);
     },
-    onSuccess: (res, id) => {
-      toast.success('Đã duyệt yêu cầu xác thực thành công!');
-      setSelectedVerification(null);
-      queryClient.invalidateQueries({ queryKey: ['admin-verifications'] });
-    },
-    onError: (error, id) => {
+    onMutate: async (id: number) => {
+      await queryClient.cancelQueries({ queryKey: ['admin-verifications'] });
+      const queryKey = ['admin-verifications', statusFilter];
+      const previousData = queryClient.getQueryData(queryKey);
+      const previousMockVerifications = mockVerifications;
+
       setMockVerifications((prev) =>
         prev.map((v) => (v.id === id ? { ...v, status: 'approved' } : v))
       );
-      toast.success('[Mock] Đã duyệt yêu cầu xác thực thành công!');
+
+      queryClient.setQueryData(queryKey, (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          verifications: old.verifications.map((v: any) =>
+            v.id === id ? { ...v, status: 'approved' } : v
+          )
+        };
+      });
+
+      return { previousData, previousMockVerifications };
+    },
+    onSuccess: (res, id) => {
+      toast.success('Đã duyệt yêu cầu xác thực thành công!');
       setSelectedVerification(null);
+    },
+    onError: (error, id, context: any) => {
+      if (data?.useRealApi) {
+        if (context) {
+          queryClient.setQueryData(['admin-verifications', statusFilter], context.previousData);
+          setMockVerifications(context.previousMockVerifications);
+        }
+        toast.error('Có lỗi xảy ra khi phê duyệt yêu cầu xác thực.');
+      } else {
+        toast.success('[Mock] Đã duyệt yêu cầu xác thực thành công!');
+      }
+      setSelectedVerification(null);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-verifications'] });
     }
   });
 
@@ -363,25 +392,56 @@ export default function VerificationsClient() {
     mutationFn: async ({ id, reason }: { id: number; reason: string }) => {
       return await verificationApi.reject(id, reason);
     },
+    onMutate: async ({ id, reason }) => {
+      await queryClient.cancelQueries({ queryKey: ['admin-verifications'] });
+      const queryKey = ['admin-verifications', statusFilter];
+      const previousData = queryClient.getQueryData(queryKey);
+      const previousMockVerifications = mockVerifications;
+
+      setMockVerifications((prev) =>
+        prev.map((v) =>
+          v.id === id
+            ? { ...v, status: 'rejected', reject_reason: reason }
+            : v
+        )
+      );
+
+      queryClient.setQueryData(queryKey, (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          verifications: old.verifications.map((v: any) =>
+            v.id === id
+              ? { ...v, status: 'rejected', reject_reason: reason }
+              : v
+          )
+        };
+      });
+
+      return { previousData, previousMockVerifications };
+    },
     onSuccess: (res, variables) => {
       toast.success('Đã từ chối yêu cầu xác thực thành công.');
       setShowRejectDialog(false);
       setSelectedVerification(null);
       setRejectReason('');
-      queryClient.invalidateQueries({ queryKey: ['admin-verifications'] });
     },
-    onError: (error, variables) => {
-      setMockVerifications((prev) =>
-        prev.map((v) =>
-          v.id === variables.id
-            ? { ...v, status: 'rejected', reject_reason: variables.reason }
-            : v
-        )
-      );
-      toast.success('[Mock] Đã từ chối yêu cầu xác thực thành công.');
+    onError: (error, variables, context: any) => {
+      if (data?.useRealApi) {
+        if (context) {
+          queryClient.setQueryData(['admin-verifications', statusFilter], context.previousData);
+          setMockVerifications(context.previousMockVerifications);
+        }
+        toast.error('Có lỗi xảy ra khi từ chối yêu cầu xác thực.');
+      } else {
+        toast.success('[Mock] Đã từ chối yêu cầu xác thực thành công.');
+      }
       setShowRejectDialog(false);
       setSelectedVerification(null);
       setRejectReason('');
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-verifications'] });
     }
   });
 

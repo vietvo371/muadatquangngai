@@ -28,7 +28,11 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   async (error) => {
-    if (error.response?.status === 401) {
+    if (
+      error.response?.status === 401 &&
+      !error.config?.url?.includes("/api/auth/login") &&
+      !error.config?.url?.includes("/api/auth/otp/login")
+    ) {
       if (typeof window !== "undefined") {
         localStorage.removeItem("access_token");
         window.location.href = "/login";

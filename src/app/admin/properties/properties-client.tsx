@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -245,6 +245,68 @@ export default function PropertiesClient() {
     }
   });
 
+  // Prefetch the next page of properties if available
+  useEffect(() => {
+    if (data?.useRealApi && page < data.pagination.last_page) {
+      const nextPage = page + 1;
+      const params: Record<string, string | number> = {
+        page: nextPage,
+        limit: perPage,
+      };
+      if (statusFilter !== 'all') params.status = statusFilter;
+      if (typeFilter !== 'all') params.type = typeFilter;
+      if (searchQuery.trim()) params.q = searchQuery.trim();
+
+      queryClient.prefetchQuery({
+        queryKey: ['admin-properties', nextPage, perPage, searchQuery, statusFilter, typeFilter],
+        queryFn: async () => {
+          try {
+            const res = await propertyAdminApi.list(params);
+            if (res && res.data) {
+              const mapped = res.data.map((p: AdminProperty) => ({
+                id: p.id,
+                title: p.title,
+                slug: p.slug,
+                price: Number(p.price),
+                area: Number(p.area),
+                thumbnail: p.thumbnail || 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=100&h=100&fit=crop',
+                status: p.status,
+                verification_status: p.status === 'active' ? 'verified' : p.status === 'rejected' ? 'rejected' : 'pending',
+                type: p.type,
+                category: p.category?.name || 'Bất động sản',
+                province: p.province?.name || 'Quảng Ngãi',
+                user: { id: p.user?.id || 0, name: p.user?.name || 'Môi giới' },
+                created_at: p.created_at,
+              }));
+              return {
+                properties: mapped,
+                pagination: {
+                  current_page: res.meta.current_page || 1,
+                  last_page: res.meta.last_page || 1,
+                  per_page: res.meta.per_page || perPage,
+                  total: res.meta.total || 0,
+                },
+                useRealApi: true,
+              };
+            }
+          } catch (error) {
+            console.error('Error prefetching admin properties:', error);
+          }
+          return {
+            properties: [],
+            pagination: {
+              current_page: 1,
+              last_page: 1,
+              per_page: perPage,
+              total: 0,
+            },
+            useRealApi: false,
+          };
+        }
+      });
+    }
+  }, [data, page, perPage, searchQuery, statusFilter, typeFilter, queryClient]);
+
   const handleSearchChange = (val: string) => {
     setSearchQuery(val);
     setPage(1);
@@ -303,23 +365,68 @@ export default function PropertiesClient() {
     mutationFn: async (property: LocalProperty) => {
       return await propertyAdminApi.approve(property.id);
     },
+    onMutate: async (property: LocalProperty) => {
+      await queryClient.cancelQueries({ queryKey: ['admin-properties'] });
+      const queryKey = ['admin-properties', page, perPage, searchQuery, statusFilter, typeFilter];
+      const previousData = queryClient.getQueryData(queryKey);
+      const previousMockProperties = mockProperties;
+
+      // Optimistically update states
+      setMockProperties(prev => prev.map(p => p.id === property.id ? { ...p, status: 'active', verification_status: 'verified' } : p));
+      queryClient.setQueryData(queryKey, (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          properties: old.properties.map((p: any) => p.id === property.id ? { ...p, status: 'active', verification_status: 'verified' } : p)
+        };
+      });
+
+      return { previousData, previousMockProperties };
+    },
     onSuccess: (res, property) => {
       if (res && res.success) {
         toast.success(res.message || `Đã phê duyệt tin đăng "${property.title}"!`);
       } else {
         toast.error('Không thể phê duyệt tin đăng.');
       }
-      queryClient.invalidateQueries({ queryKey: ['admin-properties'] });
     },
-    onError: (error, property) => {
-      setMockProperties(prev => prev.map(p => p.id === property.id ? { ...p, status: 'active', verification_status: 'verified' } : p));
-      toast.success(`[Mock] Đã phê duyệt tin đăng "${property.title}"!`);
+    onError: (error, property, context: any) => {
+      if (data?.useRealApi) {
+        if (context) {
+          const queryKey = ['admin-properties', page, perPage, searchQuery, statusFilter, typeFilter];
+          queryClient.setQueryData(queryKey, context.previousData);
+          setMockProperties(context.previousMockProperties);
+        }
+        toast.error('Có lỗi xảy ra khi phê duyệt tin đăng.');
+      } else {
+        toast.success(`[Mock] Đã phê duyệt tin đăng "${property.title}"!`);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-properties'] });
     }
   });
 
   const rejectMutation = useMutation({
     mutationFn: async ({ id, reason }: { id: number; reason: string }) => {
       return await propertyAdminApi.reject(id, reason);
+    },
+    onMutate: async ({ id, reason }) => {
+      await queryClient.cancelQueries({ queryKey: ['admin-properties'] });
+      const queryKey = ['admin-properties', page, perPage, searchQuery, statusFilter, typeFilter];
+      const previousData = queryClient.getQueryData(queryKey);
+      const previousMockProperties = mockProperties;
+
+      setMockProperties(prev => prev.map(p => p.id === id ? { ...p, status: 'rejected', verification_status: 'rejected' } : p));
+      queryClient.setQueryData(queryKey, (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          properties: old.properties.map((p: any) => p.id === id ? { ...p, status: 'rejected', verification_status: 'rejected' } : p)
+        };
+      });
+
+      return { previousData, previousMockProperties };
     },
     onSuccess: (res, variables) => {
       if (res && res.success) {
@@ -330,14 +437,24 @@ export default function PropertiesClient() {
       setShowRejectDialog(false);
       setSelectedProperty(null);
       setRejectReason('');
-      queryClient.invalidateQueries({ queryKey: ['admin-properties'] });
     },
-    onError: (error, variables) => {
-      setMockProperties(prev => prev.map(p => p.id === variables.id ? { ...p, status: 'rejected', verification_status: 'rejected' } : p));
-      toast.success(`[Mock] Đã từ chối duyệt tin đăng!`);
+    onError: (error, variables, context: any) => {
+      if (data?.useRealApi) {
+        if (context) {
+          const queryKey = ['admin-properties', page, perPage, searchQuery, statusFilter, typeFilter];
+          queryClient.setQueryData(queryKey, context.previousData);
+          setMockProperties(context.previousMockProperties);
+        }
+        toast.error('Có lỗi xảy ra khi từ chối duyệt tin đăng.');
+      } else {
+        toast.success(`[Mock] Đã từ chối duyệt tin đăng!`);
+      }
       setShowRejectDialog(false);
       setSelectedProperty(null);
       setRejectReason('');
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-properties'] });
     }
   });
 
@@ -345,17 +462,44 @@ export default function PropertiesClient() {
     mutationFn: async (property: LocalProperty) => {
       return await propertyAdminApi.delete(property.id);
     },
+    onMutate: async (property: LocalProperty) => {
+      await queryClient.cancelQueries({ queryKey: ['admin-properties'] });
+      const queryKey = ['admin-properties', page, perPage, searchQuery, statusFilter, typeFilter];
+      const previousData = queryClient.getQueryData(queryKey);
+      const previousMockProperties = mockProperties;
+
+      setMockProperties(prev => prev.filter(p => p.id !== property.id));
+      queryClient.setQueryData(queryKey, (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          properties: old.properties.filter((p: any) => p.id !== property.id)
+        };
+      });
+
+      return { previousData, previousMockProperties };
+    },
     onSuccess: (res, property) => {
       if (res && res.success) {
         toast.success(res.message || 'Xóa tin đăng thành công!');
       } else {
         toast.error('Không thể xóa tin đăng.');
       }
-      queryClient.invalidateQueries({ queryKey: ['admin-properties'] });
     },
-    onError: (error, property) => {
-      setMockProperties(prev => prev.filter(p => p.id !== property.id));
-      toast.success(`[Mock] Xóa tin đăng "${property.title}" thành công!`);
+    onError: (error, property, context: any) => {
+      if (data?.useRealApi) {
+        if (context) {
+          const queryKey = ['admin-properties', page, perPage, searchQuery, statusFilter, typeFilter];
+          queryClient.setQueryData(queryKey, context.previousData);
+          setMockProperties(context.previousMockProperties);
+        }
+        toast.error('Có lỗi xảy ra khi xóa tin đăng.');
+      } else {
+        toast.success(`[Mock] Xóa tin đăng "${property.title}" thành công!`);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-properties'] });
     }
   });
 

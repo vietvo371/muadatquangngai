@@ -288,25 +288,53 @@ export default function UsersClient() {
     mutationFn: async ({ id, reason }: { id: number; reason: string }) => {
       return await userAdminApi.ban(id);
     },
+    onMutate: async ({ id, reason }) => {
+      await queryClient.cancelQueries({ queryKey: ['admin-users'] });
+      const previousData = queryClient.getQueryData(['admin-users']);
+      const previousMockUsers = mockUsers;
+
+      setMockUsers((prev) =>
+        prev.map((u) =>
+          u.id === id
+            ? { ...u, status: 'banned', ban_reason: reason }
+            : u
+        )
+      );
+
+      queryClient.setQueryData(['admin-users'], (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          users: old.users.map((u: any) =>
+            u.id === id ? { ...u, status: 'banned', ban_reason: reason } : u
+          )
+        };
+      });
+
+      return { previousData, previousMockUsers };
+    },
     onSuccess: (res, variables) => {
       toast.success('Đã khóa tài khoản người dùng thành công.');
       setShowBanDialog(false);
       setSelectedUser(null);
       setBanReason('');
-      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
     },
-    onError: (error, variables) => {
-      setMockUsers((prev) =>
-        prev.map((u) =>
-          u.id === variables.id
-            ? { ...u, status: 'banned', ban_reason: variables.reason }
-            : u
-        )
-      );
-      toast.success('[Mock] Đã khóa tài khoản người dùng thành công.');
+    onError: (error, variables, context: any) => {
+      if (data?.useRealApi) {
+        if (context) {
+          queryClient.setQueryData(['admin-users'], context.previousData);
+          setMockUsers(context.previousMockUsers);
+        }
+        toast.error('Có lỗi xảy ra khi khóa tài khoản người dùng.');
+      } else {
+        toast.success('[Mock] Đã khóa tài khoản người dùng thành công.');
+      }
       setShowBanDialog(false);
       setSelectedUser(null);
       setBanReason('');
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
     }
   });
 
@@ -314,15 +342,43 @@ export default function UsersClient() {
     mutationFn: async (id: number) => {
       return await userAdminApi.unban(id);
     },
-    onSuccess: (res, id) => {
-      toast.success('Đã mở khóa tài khoản thành công!');
-      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-    },
-    onError: (error, id) => {
+    onMutate: async (id: number) => {
+      await queryClient.cancelQueries({ queryKey: ['admin-users'] });
+      const previousData = queryClient.getQueryData(['admin-users']);
+      const previousMockUsers = mockUsers;
+
       setMockUsers((prev) =>
         prev.map((u) => (u.id === id ? { ...u, status: 'active', ban_reason: null } : u))
       );
-      toast.success('[Mock] Đã mở khóa tài khoản thành công!');
+
+      queryClient.setQueryData(['admin-users'], (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          users: old.users.map((u: any) =>
+            u.id === id ? { ...u, status: 'active', ban_reason: null } : u
+          )
+        };
+      });
+
+      return { previousData, previousMockUsers };
+    },
+    onSuccess: (res, id) => {
+      toast.success('Đã mở khóa tài khoản thành công!');
+    },
+    onError: (error, id, context: any) => {
+      if (data?.useRealApi) {
+        if (context) {
+          queryClient.setQueryData(['admin-users'], context.previousData);
+          setMockUsers(context.previousMockUsers);
+        }
+        toast.error('Có lỗi xảy ra khi mở khóa tài khoản.');
+      } else {
+        toast.success('[Mock] Đã mở khóa tài khoản thành công!');
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
     }
   });
 
@@ -330,15 +386,43 @@ export default function UsersClient() {
     mutationFn: async ({ id, role }: { id: number; role: UserRole }) => {
       return await userAdminApi.updateRole(id, role);
     },
+    onMutate: async ({ id, role }) => {
+      await queryClient.cancelQueries({ queryKey: ['admin-users'] });
+      const previousData = queryClient.getQueryData(['admin-users']);
+      const previousMockUsers = mockUsers;
+
+      setMockUsers((prev) =>
+        prev.map((u) => (u.id === id ? { ...u, role: role } : u))
+      );
+
+      queryClient.setQueryData(['admin-users'], (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          users: old.users.map((u: any) =>
+            u.id === id ? { ...u, role: role } : u
+          )
+        };
+      });
+
+      return { previousData, previousMockUsers };
+    },
     onSuccess: (res, variables) => {
       toast.success('Đã cập nhật vai trò người dùng thành công!');
-      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
     },
-    onError: (error, variables) => {
-      setMockUsers((prev) =>
-        prev.map((u) => (u.id === variables.id ? { ...u, role: variables.role } : u))
-      );
-      toast.success('[Mock] Đã cập nhật vai trò người dùng thành công!');
+    onError: (error, variables, context: any) => {
+      if (data?.useRealApi) {
+        if (context) {
+          queryClient.setQueryData(['admin-users'], context.previousData);
+          setMockUsers(context.previousMockUsers);
+        }
+        toast.error('Có lỗi xảy ra khi cập nhật vai trò người dùng.');
+      } else {
+        toast.success('[Mock] Đã cập nhật vai trò người dùng thành công!');
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
     }
   });
 

@@ -329,16 +329,45 @@ export default function TransactionsClient() {
     mutationFn: async (id: number) => {
       return await transactionApi.approve(id);
     },
-    onSuccess: () => {
-      toast.success('Đã phê duyệt giao dịch thành công!');
-      queryClient.invalidateQueries({ queryKey: ['admin-transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-transaction-stats'] });
-    },
-    onError: (error, id) => {
+    onMutate: async (id: number) => {
+      await queryClient.cancelQueries({ queryKey: ['admin-transactions'] });
+      const queryKey = ['admin-transactions', statusFilter, typeFilter];
+      const previousData = queryClient.getQueryData(queryKey);
+      const previousMockTransactions = mockTransactions;
+
       setMockTransactions((prev) =>
         prev.map((tx) => (tx.id === id ? { ...tx, status: 'success' } : tx))
       );
-      toast.success('[Mock] Đã phê duyệt giao dịch thành công!');
+
+      queryClient.setQueryData(queryKey, (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          transactions: old.transactions.map((tx: any) =>
+            tx.id === id ? { ...tx, status: 'success' } : tx
+          )
+        };
+      });
+
+      return { previousData, previousMockTransactions };
+    },
+    onSuccess: () => {
+      toast.success('Đã phê duyệt giao dịch thành công!');
+    },
+    onError: (error, id, context: any) => {
+      if (listData?.useRealApi) {
+        if (context) {
+          queryClient.setQueryData(['admin-transactions', statusFilter, typeFilter], context.previousData);
+          setMockTransactions(context.previousMockTransactions);
+        }
+        toast.error('Có lỗi xảy ra khi phê duyệt giao dịch.');
+      } else {
+        toast.success('[Mock] Đã phê duyệt giao dịch thành công!');
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-transaction-stats'] });
     }
   });
 
@@ -346,26 +375,55 @@ export default function TransactionsClient() {
     mutationFn: async ({ id, reason }: { id: number; reason: string }) => {
       return await transactionApi.reject(id, reason);
     },
+    onMutate: async ({ id, reason }) => {
+      await queryClient.cancelQueries({ queryKey: ['admin-transactions'] });
+      const queryKey = ['admin-transactions', statusFilter, typeFilter];
+      const previousData = queryClient.getQueryData(queryKey);
+      const previousMockTransactions = mockTransactions;
+
+      setMockTransactions((prev) =>
+        prev.map((tx) =>
+          tx.id === id
+            ? { ...tx, status: 'failed', reject_reason: reason }
+            : tx
+        )
+      );
+
+      queryClient.setQueryData(queryKey, (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          transactions: old.transactions.map((tx: any) =>
+            tx.id === id ? { ...tx, status: 'failed', reject_reason: reason } : tx
+          )
+        };
+      });
+
+      return { previousData, previousMockTransactions };
+    },
     onSuccess: () => {
       toast.success('Đã từ chối giao dịch thành công.');
       setShowRejectDialog(false);
       setSelectedTx(null);
       setRejectReason('');
-      queryClient.invalidateQueries({ queryKey: ['admin-transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-transaction-stats'] });
     },
-    onError: (error, variables) => {
-      setMockTransactions((prev) =>
-        prev.map((tx) =>
-          tx.id === variables.id
-            ? { ...tx, status: 'failed', reject_reason: variables.reason }
-            : tx
-        )
-      );
-      toast.success('[Mock] Đã từ chối giao dịch thành công.');
+    onError: (error, variables, context: any) => {
+      if (listData?.useRealApi) {
+        if (context) {
+          queryClient.setQueryData(['admin-transactions', statusFilter, typeFilter], context.previousData);
+          setMockTransactions(context.previousMockTransactions);
+        }
+        toast.error('Có lỗi xảy ra khi từ chối giao dịch.');
+      } else {
+        toast.success('[Mock] Đã từ chối giao dịch thành công.');
+      }
       setShowRejectDialog(false);
       setSelectedTx(null);
       setRejectReason('');
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-transaction-stats'] });
     }
   });
 
@@ -373,16 +431,45 @@ export default function TransactionsClient() {
     mutationFn: async (id: number) => {
       return await transactionApi.refund(id);
     },
-    onSuccess: () => {
-      toast.success('Đã thực hiện hoàn tiền giao dịch thành công.');
-      queryClient.invalidateQueries({ queryKey: ['admin-transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-transaction-stats'] });
-    },
-    onError: (error, id) => {
+    onMutate: async (id: number) => {
+      await queryClient.cancelQueries({ queryKey: ['admin-transactions'] });
+      const queryKey = ['admin-transactions', statusFilter, typeFilter];
+      const previousData = queryClient.getQueryData(queryKey);
+      const previousMockTransactions = mockTransactions;
+
       setMockTransactions((prev) =>
         prev.map((tx) => (tx.id === id ? { ...tx, status: 'refunded' } : tx))
       );
-      toast.success('[Mock] Đã thực hiện hoàn tiền giao dịch thành công.');
+
+      queryClient.setQueryData(queryKey, (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          transactions: old.transactions.map((tx: any) =>
+            tx.id === id ? { ...tx, status: 'refunded' } : tx
+          )
+        };
+      });
+
+      return { previousData, previousMockTransactions };
+    },
+    onSuccess: () => {
+      toast.success('Đã thực hiện hoàn tiền giao dịch thành công.');
+    },
+    onError: (error, id, context: any) => {
+      if (listData?.useRealApi) {
+        if (context) {
+          queryClient.setQueryData(['admin-transactions', statusFilter, typeFilter], context.previousData);
+          setMockTransactions(context.previousMockTransactions);
+        }
+        toast.error('Có lỗi xảy ra khi hoàn tiền giao dịch.');
+      } else {
+        toast.success('[Mock] Đã thực hiện hoàn tiền giao dịch thành công.');
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-transaction-stats'] });
     }
   });
 

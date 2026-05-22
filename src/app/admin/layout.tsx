@@ -346,7 +346,10 @@ function AdminLayoutContent({
 
               {/* Profile Dropdown */}
               <DropdownMenu>
-                <DropdownMenuTrigger className="flex items-center gap-2 focus:outline-none hover:opacity-90 select-none text-left p-1 rounded-lg">
+                <DropdownMenuTrigger
+                  data-testid="profile-dropdown-trigger"
+                  className="flex items-center gap-2 focus:outline-none hover:opacity-90 select-none text-left p-1 rounded-lg"
+                >
                   <div className="h-8 w-8 rounded-full bg-primary-light flex items-center justify-center text-primary font-semibold text-sm border border-primary/10 shadow-inner">
                     {user?.name ? user.name.charAt(0).toUpperCase() : 'A'}
                   </div>
@@ -388,6 +391,7 @@ function AdminLayoutContent({
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
+                    data-testid="logout-menu-item"
                     onClick={handleLogout}
                     className="p-2 text-xs flex items-center gap-2 text-cta hover:bg-red-50 hover:text-cta focus:bg-red-50 focus:text-cta cursor-pointer"
                   >
