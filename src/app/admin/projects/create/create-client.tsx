@@ -523,14 +523,14 @@ export default function CreateProjectClient() {
                     <SelectValue placeholder="Chọn trạng thái" />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl">
-                    <SelectItem value="draft">Bản nháp (Draft)</SelectItem>
-                    <SelectItem value="published">Đã xuất bản (Published)</SelectItem>
-                    <SelectItem value="archived">Đã lưu trữ (Archived)</SelectItem>
-                    <SelectItem value="upcoming">Sắp mở bán (Upcoming)</SelectItem>
-                    <SelectItem value="selling">Đang mở bán (Selling)</SelectItem>
-                    <SelectItem value="completed">Đã bàn giao (Completed)</SelectItem>
-                    <SelectItem value="paused">Tạm dừng (Paused)</SelectItem>
-                  </SelectContent>
+                      {/* Vòng đời: draft → upcoming → selling → (paused) → completed → archived */}
+                      <SelectItem value="draft">Bản nháp</SelectItem>
+                      <SelectItem value="upcoming">Sắp mở bán</SelectItem>
+                      <SelectItem value="selling">Đang mở bán</SelectItem>
+                      <SelectItem value="paused">Tạm dừng</SelectItem>
+                      <SelectItem value="completed">Đã bàn giao</SelectItem>
+                      <SelectItem value="archived">Đã lưu trữ</SelectItem>
+                    </SelectContent>
                 </Select>
               </div>
 

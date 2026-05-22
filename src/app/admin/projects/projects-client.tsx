@@ -63,7 +63,9 @@ import { projectApi, type Project } from '@/lib/admin-api';
 // Dynamic client URL from env
 const CLIENT_URL = process.env.NEXT_PUBLIC_CLIENT_URL || 'http://localhost:3000';
 
-type ProjectStatus = 'draft' | 'published' | 'archived';
+// Vòng đời chuẩn: draft → upcoming → selling → (paused) → completed → archived
+// Đồng bộ với App\Enums\ProjectStatus ở backend.
+type ProjectStatus = 'draft' | 'upcoming' | 'selling' | 'paused' | 'completed' | 'archived';
 
 // Mock projects rich dataset with real high-profile projects in Quang Ngai
 const MOCK_PROJECTS: Project[] = [
@@ -199,27 +201,63 @@ const MOCK_PROJECTS: Project[] = [
   }
 ];
 
+/**
+ * statusConfig — Cấu hình nhãn, màu badge và icon cho từng trạng thái dự án.
+ * Đồng bộ với App\Enums\ProjectStatus::label() và ProjectStatus::color() ở backend.
+ * Khi thêm/bỏ trạng thái: chỉnh ProjectStatus enum ở backend rồi cập nhật object này.
+ */
 const statusConfig: Record<string, { label: string; color: string; icon: React.ElementType }> = {
-  draft: { label: 'Bản nháp', color: 'bg-gray-100 text-gray-700 hover:bg-gray-200/60 border-gray-200', icon: layersIcon },
-  published: { label: 'Đã xuất bản', color: 'bg-green-50 text-green-700 hover:bg-green-100/60 border-green-200/50', icon: CheckCircle },
-  archived: { label: 'Đã lưu trữ', color: 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100/60 border-yellow-200/50', icon: Archive },
-  
-  // Public project stages supported in seeder/database
-  selling: { label: 'Đang mở bán', color: 'bg-green-50 text-green-700 hover:bg-green-100/60 border-green-200/50', icon: CheckCircle },
-  upcoming: { label: 'Sắp mở bán', color: 'bg-amber-50 text-amber-700 hover:bg-amber-100/60 border-amber-200/50', icon: layersIcon },
-  completed: { label: 'Đã bàn giao', color: 'bg-gray-50 text-gray-600 hover:bg-gray-100/60 border-gray-200', icon: CheckCircle },
-  paused: { label: 'Tạm dừng', color: 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100/60 border-yellow-200/50', icon: Archive },
+  // Admin đang soạn thảo, chưa công bố ra ngoài
+  draft: {
+    label: 'Bản nháp',
+    color: 'bg-gray-100 text-gray-700 hover:bg-gray-200/60 border-gray-200',
+    icon: layersIcon,
+  },
+  // Đã công bố, sắp mở bán — nhận đặt chỗ ưu tiên
+  upcoming: {
+    label: 'Sắp mở bán',
+    color: 'bg-amber-50 text-amber-700 hover:bg-amber-100/60 border-amber-200/50',
+    icon: layersIcon,
+  },
+  // Đang mở bán chính thức — nhận đặt cọc & ký HĐMB
+  selling: {
+    label: 'Đang mở bán',
+    color: 'bg-green-50 text-green-700 hover:bg-green-100/60 border-green-200/50',
+    icon: CheckCircle,
+  },
+  // Tạm dừng giao dịch — vẫn hiển thị, không nhận đặt mới
+  paused: {
+    label: 'Tạm dừng',
+    color: 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100/60 border-yellow-200/50',
+    icon: Archive,
+  },
+  // Đã bàn giao xong — vẫn hiển thị để tham khảo
+  completed: {
+    label: 'Đã bàn giao',
+    color: 'bg-blue-50 text-blue-700 hover:bg-blue-100/60 border-blue-200/50',
+    icon: CheckCircle,
+  },
+  // Lưu trữ — ẩn hoàn toàn khỏi client, chỉ admin thấy
+  archived: {
+    label: 'Đã lưu trữ',
+    color: 'bg-red-50 text-red-700 hover:bg-red-100/60 border-red-200/50',
+    icon: Archive,
+  },
 };
 
 function layersIcon(props: React.ComponentProps<typeof Layers>) {
   return <Layers className="h-3.5 w-3.5" {...props} />;
 }
 
+// Pill tabs lọc trạng thái — theo đúng thứ tự vòng đời nghiệp vụ
 const statusTabs = [
-  { value: 'all', label: 'Tất cả dự án' },
-  { value: 'draft', label: 'Bản nháp' },
-  { value: 'published', label: 'Đã xuất bản' },
-  { value: 'archived', label: 'Đã lưu trữ' },
+  { value: 'all',       label: 'Tất cả'       },
+  { value: 'selling',   label: 'Đang mở bán'  },
+  { value: 'upcoming',  label: 'Sắp mở bán'   },
+  { value: 'paused',    label: 'Tạm dừng'     },
+  { value: 'draft',     label: 'Bản nháp'     },
+  { value: 'completed', label: 'Đã bàn giao'  },
+  { value: 'archived',  label: 'Đã lưu trữ'  },
 ];
 
 const PREDEFINED_UTILITIES = [
@@ -345,9 +383,9 @@ export default function ProjectsClient() {
     return filteredProjects.slice(startIndex, endIndex);
   }, [filteredProjects, startIndex, endIndex]);
 
-  // Quick stats calculation
-  const publishedCount = projects.filter((p) => p.status === 'published').length;
-  const draftCount = projects.filter((p) => p.status === 'draft').length;
+  // Quick stats — đếm theo các trạng thái nghiệp vụ quan trọng nhất
+  const sellingCount  = projects.filter((p) => p.status === 'selling').length;
+  const draftCount    = projects.filter((p) => p.status === 'draft').length;
   const archivedCount = projects.filter((p) => p.status === 'archived').length;
 
   // Actions
@@ -356,8 +394,9 @@ export default function ProjectsClient() {
       if (useRealApi) {
         await projectApi.publish(id);
       }
+      // Khi xuất bản, chuyển draft → selling (đang mở bán)
       setProjects((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, status: 'published' } : p))
+        prev.map((p) => (p.id === id ? { ...p, status: 'selling' } : p))
       );
       toast.success('Đã xuất bản dự án thành công!');
     } catch {
@@ -426,8 +465,8 @@ export default function ProjectsClient() {
               <CheckCircle className="h-5.5 w-5.5" />
             </div>
             <div>
-              <p className="text-2xl font-black text-gray-900">{publishedCount}</p>
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-0.5">Đang xuất bản</p>
+              <p className="text-2xl font-black text-gray-900">{sellingCount}</p>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-0.5">Đang mở bán</p>
             </div>
           </CardContent>
         </Card>
@@ -642,16 +681,16 @@ export default function ProjectsClient() {
                                   Chỉnh sửa
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                {project.status === 'draft' && (
+                                {(project.status === 'draft' || project.status === 'upcoming') && (
                                   <DropdownMenuItem
                                     onClick={() => handlePublish(project.id)}
                                     className="text-green-600 font-bold text-xs gap-2 focus:text-green-700 focus:bg-green-50/50 rounded-lg cursor-pointer"
                                   >
                                     <CheckCircle className="h-4 w-4" />
-                                    Xuất bản ngay
+                                    Mở bán ngay
                                   </DropdownMenuItem>
                                 )}
-                                {project.status === 'published' && (
+                                {(project.status === 'selling' || project.status === 'paused') && (
                                   <DropdownMenuItem
                                     onClick={() => handleArchive(project.id)}
                                     className="text-yellow-600 font-bold text-xs gap-2 focus:text-yellow-700 focus:bg-yellow-50/50 rounded-lg cursor-pointer"
