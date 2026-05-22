@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { useConfirm } from '@/components/providers/confirm-provider';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -208,6 +209,7 @@ const statusTabs = [
 ];
 
 export default function AdminTransactionsPage() {
+  const confirm = useConfirm();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFiltering, setIsFiltering] = useState(false);
@@ -329,7 +331,14 @@ export default function AdminTransactionsPage() {
 
   // Actions implementation
   const handleApprove = async (id: number) => {
-    if (!window.confirm('Xác nhận duyệt giao dịch này? Số tiền sẽ được cộng vào tài khoản của người dùng.')) return;
+    const isConfirmed = await confirm({
+      title: 'Phê duyệt giao dịch',
+      description: 'Xác nhận duyệt giao dịch này? Số tiền sẽ được cộng vào tài khoản của người dùng.',
+      confirmText: 'Phê duyệt',
+      cancelText: 'Hủy',
+      variant: 'default'
+    });
+    if (!isConfirmed) return;
     try {
       setIsActionPending(true);
       if (useRealApi) {
@@ -374,7 +383,14 @@ export default function AdminTransactionsPage() {
   };
 
   const handleRefund = async (id: number) => {
-    if (!window.confirm('Bạn có chắc chắn muốn hoàn tiền cho giao dịch này?')) return;
+    const isConfirmed = await confirm({
+      title: 'Hoàn tiền giao dịch',
+      description: 'Bạn có chắc chắn muốn hoàn tiền cho giao dịch này? Hành động này không thể hoàn tác.',
+      confirmText: 'Hoàn tiền',
+      cancelText: 'Hủy',
+      variant: 'destructive'
+    });
+    if (!isConfirmed) return;
     try {
       setIsActionPending(true);
       if (useRealApi) {

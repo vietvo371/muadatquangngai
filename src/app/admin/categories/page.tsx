@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { useConfirm } from '@/components/providers/confirm-provider';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -172,6 +173,7 @@ const statusTabs = [
 ];
 
 export default function AdminCategoriesPage() {
+  const confirm = useConfirm();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFiltering, setIsFiltering] = useState(false);
@@ -302,7 +304,13 @@ export default function AdminCategoriesPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa danh mục này? Thao tác có thể ảnh hưởng tới tin đăng liên quan.')) return;
+    const isConfirmed = await confirm({
+      title: 'Xóa danh mục?',
+      description: 'Bạn có chắc chắn muốn xóa danh mục này? Thao tác có thể ảnh hưởng tới tin đăng liên quan.',
+      confirmText: 'Xóa ngay',
+      variant: 'destructive',
+    });
+    if (!isConfirmed) return;
     try {
       if (useRealApi) {
         await categoryApi.delete(id);

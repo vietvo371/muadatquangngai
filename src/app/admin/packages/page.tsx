@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { useConfirm } from '@/components/providers/confirm-provider';
 import {
   Dialog,
   DialogContent,
@@ -108,6 +109,7 @@ const statusTabs = [
 ];
 
 export default function AdminPackagesPage() {
+  const confirm = useConfirm();
   const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFiltering, setIsFiltering] = useState(false);
@@ -242,7 +244,13 @@ export default function AdminPackagesPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa gói dịch vụ này? Thao tác có thể ảnh hưởng tới các tin đăng đang sử dụng.')) return;
+    const isConfirmed = await confirm({
+      title: 'Xóa gói dịch vụ?',
+      description: 'Bạn có chắc chắn muốn xóa gói dịch vụ này? Thao tác có thể ảnh hưởng tới các tin đăng đang sử dụng.',
+      confirmText: 'Xóa ngay',
+      variant: 'destructive',
+    });
+    if (!isConfirmed) return;
     try {
       if (useRealApi) {
         await packageApi.delete(id);

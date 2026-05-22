@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
+import { useConfirm } from '@/components/providers/confirm-provider';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,7 +27,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -46,7 +46,6 @@ import {
   Clock,
   User,
   Users,
-  Shield,
   ShieldAlert,
   UserCheck,
   UserX,
@@ -200,6 +199,7 @@ const statusTabs = [
 ];
 
 export default function AdminUsersPage() {
+  const confirm = useConfirm();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFiltering, setIsFiltering] = useState(false);
@@ -314,7 +314,7 @@ export default function AdminUsersPage() {
       setShowBanDialog(false);
       setSelectedUser(null);
       setBanReason('');
-    } catch (error) {
+    } catch {
       toast.error('Có lỗi xảy ra khi khóa tài khoản.');
     } finally {
       setIsActionPending(false);
@@ -322,7 +322,13 @@ export default function AdminUsersPage() {
   };
 
   const handleUnban = async (user: AdminUser) => {
-    if (!window.confirm(`Xác nhận mở khóa tài khoản cho "${user.name}"?`)) return;
+    const isConfirmed = await confirm({
+      title: 'Mở khóa tài khoản?',
+      description: `Xác nhận mở khóa tài khoản cho "${user.name}"? Người dùng sẽ được phép đăng nhập lại và đăng tin bình thường.`,
+      confirmText: 'Mở khóa',
+      variant: 'default',
+    });
+    if (!isConfirmed) return;
     try {
       setIsActionPending(true);
       if (useRealApi) {
@@ -332,7 +338,7 @@ export default function AdminUsersPage() {
         prev.map((u) => (u.id === user.id ? { ...u, status: 'active', ban_reason: null } : u))
       );
       toast.success('Đã mở khóa tài khoản thành công!');
-    } catch (error) {
+    } catch {
       toast.error('Có lỗi xảy ra khi mở khóa tài khoản.');
     } finally {
       setIsActionPending(false);
@@ -340,7 +346,13 @@ export default function AdminUsersPage() {
   };
 
   const handleChangeRole = async (user: AdminUser, newRole: UserRole) => {
-    if (!window.confirm(`Bạn có chắc muốn chuyển vai trò của "${user.name}" sang "${roleConfig[newRole].label}"?`)) return;
+    const isConfirmed = await confirm({
+      title: 'Thay đổi vai trò?',
+      description: `Bạn có chắc muốn chuyển vai trò của "${user.name}" sang "${roleConfig[newRole].label}"?`,
+      confirmText: 'Thay đổi',
+      variant: 'warning',
+    });
+    if (!isConfirmed) return;
     try {
       setIsActionPending(true);
       if (useRealApi) {
@@ -350,7 +362,7 @@ export default function AdminUsersPage() {
         prev.map((u) => (u.id === user.id ? { ...u, role: newRole } : u))
       );
       toast.success('Đã cập nhật vai trò người dùng thành công!');
-    } catch (error) {
+    } catch {
       toast.error('Có lỗi xảy ra khi cập nhật phân quyền.');
     } finally {
       setIsActionPending(false);

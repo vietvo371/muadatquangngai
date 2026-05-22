@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { useConfirm } from '@/components/providers/confirm-provider';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -205,6 +206,7 @@ const statusTabs = [
 ];
 
 export default function AdminProjectsPage() {
+  const confirm = useConfirm();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFiltering, setIsFiltering] = useState(false);
@@ -315,7 +317,14 @@ export default function AdminProjectsPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa dự án này? Thao tác không thể hoàn tác.')) return;
+    const isConfirmed = await confirm({
+      title: 'Xóa dự án',
+      description: 'Bạn có chắc chắn muốn xóa dự án này? Thao tác này không thể hoàn tác.',
+      confirmText: 'Xóa dự án',
+      cancelText: 'Hủy',
+      variant: 'destructive'
+    });
+    if (!isConfirmed) return;
     try {
       if (useRealApi) {
         await projectApi.delete(id);

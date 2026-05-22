@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { useConfirm } from '@/components/providers/confirm-provider';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -262,6 +263,7 @@ const statusTabs = [
 ];
 
 export default function AdminVerificationsPage() {
+  const confirm = useConfirm();
   const [verifications, setVerifications] = useState<Verification[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFiltering, setIsFiltering] = useState(false);
@@ -352,7 +354,14 @@ export default function AdminVerificationsPage() {
 
   // Approve action
   const handleApprove = async (id: number) => {
-    if (!window.confirm('Xác nhận duyệt yêu cầu xác thực này?')) return;
+    const isConfirmed = await confirm({
+      title: 'Phê duyệt yêu cầu xác thực',
+      description: 'Bạn có chắc chắn muốn phê duyệt yêu cầu xác thực cho môi giới này không?',
+      confirmText: 'Phê duyệt',
+      cancelText: 'Hủy',
+      variant: 'default'
+    });
+    if (!isConfirmed) return;
     try {
       setIsActionPending(true);
       if (useRealApi) {

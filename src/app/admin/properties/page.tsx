@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { useConfirm } from '@/components/providers/confirm-provider';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -169,6 +170,7 @@ interface LocalProperty {
 }
 
 export default function AdminPropertiesPage() {
+  const confirm = useConfirm();
   const [properties, setProperties] = useState<LocalProperty[]>([]);
   const [loading, setLoading] = useState(true);
   const [useRealApi, setUseRealApi] = useState(true);
@@ -338,7 +340,14 @@ export default function AdminPropertiesPage() {
   };
 
   const handleDelete = async (property: LocalProperty) => {
-    if (confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn tin đăng "${property.title}"?`)) {
+    const isConfirmed = await confirm({
+      title: 'Xóa vĩnh viễn tin đăng',
+      description: `Bạn có chắc chắn muốn xóa vĩnh viễn tin đăng "${property.title}" không? Hành động này không thể hoàn tác.`,
+      confirmText: 'Xóa vĩnh viễn',
+      cancelText: 'Hủy',
+      variant: 'destructive'
+    });
+    if (isConfirmed) {
       try {
         const res = await propertyAdminApi.delete(property.id);
         if (res && res.success) {

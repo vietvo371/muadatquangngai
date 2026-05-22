@@ -24,9 +24,177 @@ import {
   Hash,
   FileText,
   Camera,
+  Upload,
+  X,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { settingAdminApi, type AdminSetting } from '@/lib/admin-api';
+import { settingAdminApi, fileUploadApi, type AdminSetting } from '@/lib/admin-api';
+
+// Component hỗ trợ tải ảnh lên cho các trường logo, favicon, og_image
+function ImageUploadField({
+  id,
+  label,
+  value,
+  description,
+  icon,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  description?: string;
+  icon?: React.ReactNode;
+  onChange: (val: string) => void;
+}) {
+  const [isUploading, setIsUploading] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    const file = files[0];
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Vui lòng chọn tệp tin hình ảnh (.jpg, .png, .gif, .webp)');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Kích thước ảnh tối đa là 5MB');
+      return;
+    }
+
+    setIsUploading(true);
+    const toastId = toast.loading('Đang tải ảnh lên hệ thống...');
+    try {
+      const res = await fileUploadApi.upload(file);
+      if (res && res.url) {
+        onChange(res.url);
+        toast.success('Tải ảnh lên thành công!', { id: toastId });
+      } else {
+        toast.error('Không nhận được đường dẫn ảnh từ hệ thống', { id: toastId });
+      }
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } } };
+      toast.error(error?.response?.data?.message || 'Có lỗi xảy ra khi tải ảnh lên', { id: toastId });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleCopy = () => {
+    if (!value) return;
+    navigator.clipboard.writeText(value);
+    setCopied(true);
+    toast.success('Đã sao chép đường dẫn ảnh');
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const isFavicon = id.includes('favicon');
+  const isLogo = id.includes('logo');
+  
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <Label htmlFor={id} className="text-[13px] font-semibold text-gray-700 flex items-center gap-1.5">
+          {icon && <span className="text-gray-400">{icon}</span>}
+          {label}
+        </Label>
+        <span className="text-[9.5px] font-mono text-gray-300 bg-gray-50 border border-gray-100 px-1.5 py-0.5 rounded select-none">
+          {id}
+        </span>
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-4 p-4 border border-gray-100 rounded-2xl bg-gray-50/30">
+        {/* Vùng xem trước ảnh (Preview) */}
+        <div className={`relative flex items-center justify-center shrink-0 border border-gray-100 rounded-xl bg-white overflow-hidden ${
+          isFavicon ? 'w-16 h-16' : isLogo ? 'w-36 h-16' : 'w-32 h-20'
+        }`}>
+          {value ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={value}
+              alt={label}
+              className={`object-contain max-w-full max-h-full ${isFavicon ? 'p-1' : 'p-2'}`}
+            />
+          ) : (
+            <div className="text-gray-300 flex flex-col items-center gap-1">
+              <ImageIcon className="h-5 w-5" />
+              <span className="text-[10px]">Chưa có ảnh</span>
+            </div>
+          )}
+          {isUploading && (
+            <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            </div>
+          )}
+        </div>
+
+        {/* Các nút hành động và ô nhập link */}
+        <div className="flex-1 space-y-3 flex flex-col justify-center">
+          <div className="flex flex-wrap gap-2">
+            <label className={`cursor-pointer inline-flex items-center justify-center gap-1.5 rounded-xl font-bold text-xs h-9 px-3.5 transition-all ${
+              isUploading 
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                : 'border border-primary text-primary hover:bg-primary-light bg-white shadow-sm'
+            }`}>
+              <Upload className="h-3.5 w-3.5" />
+              Tải ảnh lên
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                disabled={isUploading}
+                className="hidden"
+              />
+            </label>
+            
+            {value && (
+              <>
+                <Button
+                  type="button"
+                  onClick={handleCopy}
+                  variant="outline"
+                  className="rounded-xl border-gray-200 text-gray-600 hover:bg-gray-50 text-xs h-9 px-3 gap-1.5 bg-white"
+                >
+                  {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
+                  Sao chép URL
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => onChange('')}
+                  variant="outline"
+                  className="rounded-xl border-gray-200 text-gray-600 hover:bg-gray-50 text-xs h-9 px-3 gap-1.5 bg-white"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Xóa
+                </Button>
+              </>
+            )}
+          </div>
+
+          <div className="relative">
+            <Input
+              type="text"
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              placeholder="Hoặc nhập đường dẫn ảnh trực tiếp..."
+              className="h-8.5 rounded-lg border-gray-200 bg-white text-xs pr-8 text-gray-500 focus-visible:ring-primary/20 focus-visible:border-primary"
+            />
+            {value && (
+              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 flex h-2 w-2 rounded-full bg-green-500" />
+            )}
+          </div>
+        </div>
+      </div>
+
+      {description && (
+        <p className="text-[11.5px] text-gray-400 leading-relaxed">{description}</p>
+      )}
+    </div>
+  );
+}
 
 const TAB_LIST = [
   { id: 'general', label: 'Cài đặt chung', icon: Globe },
@@ -101,6 +269,21 @@ export default function AdminSettingsPage() {
     const value = settingsData[key] || '';
     const isTextarea = meta.type === 'textarea';
     const isNumber = meta.type === 'number';
+    const isImage = meta.type === 'image' || key === 'site_logo' || key === 'site_favicon' || key === 'og_image';
+
+    if (isImage) {
+      return (
+        <ImageUploadField
+          key={key}
+          id={key}
+          label={meta.label}
+          value={value}
+          description={meta.description}
+          icon={icon}
+          onChange={(val) => handleInputChange(key, val)}
+        />
+      );
+    }
 
     return (
       <div key={key} className="space-y-2">
