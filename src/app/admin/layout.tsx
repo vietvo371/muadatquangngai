@@ -16,7 +16,7 @@ import {
   Settings,
   Menu,
 } from 'lucide-react';
-import { ConfirmProvider, useConfirm } from '@/components/providers/confirm-provider';
+import { useConfirm } from '@/components/providers/confirm-provider';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -413,8 +413,6 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ConfirmProvider>
-      <AdminLayoutContent>{children}</AdminLayoutContent>
-    </ConfirmProvider>
+    <AdminLayoutContent>{children}</AdminLayoutContent>
   );
 }
