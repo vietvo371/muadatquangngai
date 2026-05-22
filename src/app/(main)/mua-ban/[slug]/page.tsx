@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import {
   Heart,
@@ -23,6 +23,7 @@ import { timeAgo } from '@/lib/formatters';
 import { CONFIG } from '@/lib/config';
 import { useProperties } from '@/hooks/useProperties';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mapApiProperty = (apiProp: any) => {
   return {
     id: apiProp.id,
@@ -47,8 +48,10 @@ const mapApiProperty = (apiProp: any) => {
   };
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mapApiPropertyDetail = (apiProp: any) => {
   let mediaUrls = apiProp.media && apiProp.media.length > 0 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ? apiProp.media.map((m: any) => m.url) 
     : [];
   if (mediaUrls.length === 0 && apiProp.thumbnail) {
@@ -198,15 +201,19 @@ const similarProperties = [
   },
 ];
 
-export default function PropertyDetailPage({ params }: { params: { slug: string } }) {
+export default function PropertyDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+  const unwrappedParams = use(params);
+  const slug = unwrappedParams?.slug;
   const [isFavorite, setIsFavorite] = useState(false);
   const { fetchProperty, fetchSimilar, isLoading } = useProperties();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [propertyData, setPropertyData] = useState<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [similarData, setSimilarData] = useState<any[]>([]);
 
   useEffect(() => {
     const loadDetail = async () => {
-      const res = await fetchProperty(params.slug);
+      const res = await fetchProperty(slug);
       if (res.success && res.data) {
         const mapped = mapApiPropertyDetail(res.data);
         setPropertyData(mapped);
@@ -228,7 +235,7 @@ export default function PropertyDetailPage({ params }: { params: { slug: string 
     };
 
     loadDetail();
-  }, [params.slug, fetchProperty, fetchSimilar]);
+  }, [slug, fetchProperty, fetchSimilar]);
 
   if (isLoading || !propertyData) {
     return (
@@ -367,6 +374,7 @@ export default function PropertyDetailPage({ params }: { params: { slug: string 
               <div className="mb-8 pt-8 border-t border-gray-100">
                 <h2 className="text-[18px] font-bold text-gray-900 mb-4 tracking-tight">Đặc điểm bất động sản</h2>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-y-4 gap-x-6">
+                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                   {propertyData.features.map((feature: any) => (
                     <div key={feature.id} className="flex items-center gap-2.5">
                       <CheckCircle className="h-4 w-4 text-primary flex-shrink-0" />

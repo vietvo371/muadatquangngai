@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
@@ -124,7 +124,9 @@ const emptyFormData: PropertyFormData = {
   package_id: 'normal',
 };
 
-export default function EditPropertyPage({ params }: { params: { id: string } }) {
+export default function EditPropertyPage({ params }: { params: Promise<{ id: string }> }) {
+  const unwrappedParams = use(params);
+  const id = unwrappedParams?.id;
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -156,7 +158,7 @@ export default function EditPropertyPage({ params }: { params: { id: string } })
 
   // Fetch property data
   useEffect(() => {
-    const propertyId = params.id;
+    const propertyId = id;
     if (!propertyId) return;
 
     setIsLoading(true);
@@ -178,6 +180,7 @@ export default function EditPropertyPage({ params }: { params: { id: string } })
           latitude: data.location?.latitude ?? undefined,
           longitude: data.location?.longitude ?? undefined,
           street: data.street || '',
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           images: (data.media ?? []).map((m: any) => ({
             url: m.url || m.thumbnail || '',
             name: m.name || 'image',
@@ -193,6 +196,7 @@ export default function EditPropertyPage({ params }: { params: { id: string } })
           direction: REVERSE_DIRECTION_MAP[data.direction] || data.direction || '',
           furniture: data.furniture || 'none',
           legal: data.legal || '',
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           features: (data.features ?? []).map((f: any) => f.id ?? f),
           package_id: data.is_vip === 'diamond' ? 'diamond'
             : data.is_vip === 'vip_plus' ? 'vip_plus'
@@ -206,7 +210,7 @@ export default function EditPropertyPage({ params }: { params: { id: string } })
         router.push('/dashboard/quan-ly-tin');
       })
       .finally(() => setIsLoading(false));
-  }, [params.id, router]);
+  }, [id, router]);
 
   const canProceed = () => {
     switch (currentStep) {
@@ -273,9 +277,10 @@ export default function EditPropertyPage({ params }: { params: { id: string } })
     setIsSubmitting(true);
     try {
       const payload = buildPayload();
-      await api.put(`/properties/${params.id}`, payload);
+      await api.put(`/properties/${id}`, payload);
       toast.success('Cập nhật tin đăng thành công!');
       router.push('/dashboard/quan-ly-tin');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       const errData = error?.response?.data;
       if (errData?.errors) {
@@ -293,8 +298,9 @@ export default function EditPropertyPage({ params }: { params: { id: string } })
     setIsSubmitting(true);
     try {
       const payload = buildPayload();
-      await api.put(`/properties/${params.id}`, payload);
+      await api.put(`/properties/${id}`, payload);
       toast.success('Đã lưu thay đổi thành công!');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       const errData = error?.response?.data;
       if (errData?.errors) {

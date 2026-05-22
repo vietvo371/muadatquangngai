@@ -57,7 +57,7 @@ export default function ProfileClient() {
       if (result.success) {
         toast.success('Đã cập nhật thông tin hồ sơ thành công!');
       } else {
-        toast.error(result.message || 'Không thể cập nhật hồ sơ');
+        toast.error(result.error || 'Không thể cập nhật hồ sơ');
       }
     } catch {
       toast.error('Có lỗi xảy ra khi cập nhật hồ sơ');
@@ -82,7 +82,7 @@ export default function ProfileClient() {
         toast.success('Đã cập nhật mật khẩu thành công!');
         setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
       } else {
-        toast.error(result.message || 'Không thể đổi mật khẩu');
+        toast.error(result.error || 'Không thể đổi mật khẩu');
       }
     } catch {
       toast.error('Có lỗi xảy ra khi đổi mật khẩu');

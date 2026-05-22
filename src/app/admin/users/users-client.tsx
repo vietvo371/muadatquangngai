@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -58,6 +59,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   AlertTriangle,
+  Edit,
 } from 'lucide-react';
 import { formatDate } from '@/lib/formatters';
 import { userAdminApi, type AdminUser } from '@/lib/admin-api';
@@ -220,6 +222,40 @@ export default function UsersClient() {
   const [banReason, setBanReason] = useState('');
   const [showBanDialog, setShowBanDialog] = useState(false);
 
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [selectedUserForEdit, setSelectedUserForEdit] = useState<AdminUser | null>(null);
+  const [showViewDialog, setShowViewDialog] = useState(false);
+  const [selectedUserForView, setSelectedUserForView] = useState<AdminUser | null>(null);
+
+  // Form states
+  const [formName, setFormName] = useState('');
+  const [formEmail, setFormEmail] = useState('');
+  const [formPhone, setFormPhone] = useState('');
+  const [formRole, setFormRole] = useState<UserRole>('user');
+  const [formStatus, setFormStatus] = useState<UserStatus>('active');
+  const [formPassword, setFormPassword] = useState('');
+
+  const resetForm = () => {
+    setFormName('');
+    setFormEmail('');
+    setFormPhone('');
+    setFormRole('user');
+    setFormStatus('active');
+    setFormPassword('');
+  };
+
+  const handleOpenEdit = (user: AdminUser) => {
+    setSelectedUserForEdit(user);
+    setFormName(user.name || '');
+    setFormEmail(user.email || '');
+    setFormPhone(user.phone || '');
+    setFormRole(user.role as UserRole);
+    setFormStatus(user.status as UserStatus);
+    setFormPassword('');
+    setShowEditDialog(true);
+  };
+
   // TanStack Query v5 to fetch all users
   const { data, isLoading } = useQuery({
     queryKey: ['admin-users'],
@@ -285,6 +321,7 @@ export default function UsersClient() {
 
   // Mutations
   const banMutation = useMutation({
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     mutationFn: async ({ id, reason }: { id: number; reason: string }) => {
       return await userAdminApi.ban(id);
     },
@@ -313,7 +350,7 @@ export default function UsersClient() {
 
       return { previousData, previousMockUsers };
     },
-    onSuccess: (res, variables) => {
+    onSuccess: () => {
       toast.success('Đã khóa tài khoản người dùng thành công.');
       setShowBanDialog(false);
       setSelectedUser(null);
@@ -363,7 +400,7 @@ export default function UsersClient() {
 
       return { previousData, previousMockUsers };
     },
-    onSuccess: (res, id) => {
+    onSuccess: () => {
       toast.success('Đã mở khóa tài khoản thành công!');
     },
     onError: (error, id, context: any) => {
@@ -407,7 +444,7 @@ export default function UsersClient() {
 
       return { previousData, previousMockUsers };
     },
-    onSuccess: (res, variables) => {
+    onSuccess: () => {
       toast.success('Đã cập nhật vai trò người dùng thành công!');
     },
     onError: (error, variables, context: any) => {
@@ -425,6 +462,146 @@ export default function UsersClient() {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
     }
   });
+
+  const createUserMutation = useMutation({
+    mutationFn: async (payload: Partial<AdminUser> & { password?: string }) => {
+      return await userAdminApi.create(payload);
+    },
+    onMutate: async (newUser) => {
+      await queryClient.cancelQueries({ queryKey: ['admin-users'] });
+      const previousData = queryClient.getQueryData(['admin-users']);
+      const previousMockUsers = mockUsers;
+
+      const mockId = Math.max(...mockUsers.map((u) => u.id), 0) + 1;
+      const createdUser: AdminUser = {
+        id: mockId,
+        name: newUser.name || '',
+        email: newUser.email || '',
+        phone: newUser.phone || '',
+        avatar: null,
+        role: newUser.role || 'user',
+        status: newUser.status || 'active',
+        created_at: new Date().toISOString(),
+        total_listings: 0,
+      };
+
+      setMockUsers((prev) => [createdUser, ...prev]);
+
+      queryClient.setQueryData(['admin-users'], (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          users: [createdUser, ...old.users]
+        };
+      });
+
+      return { previousData, previousMockUsers };
+    },
+    onSuccess: () => {
+      toast.success('Đã thêm tài khoản mới thành công.');
+      setShowCreateDialog(false);
+      resetForm();
+    },
+    onError: (error, variables, context: any) => {
+      if (data?.useRealApi) {
+        if (context) {
+          queryClient.setQueryData(['admin-users'], context.previousData);
+          setMockUsers(context.previousMockUsers);
+        }
+        toast.error('Có lỗi xảy ra khi tạo tài khoản mới.');
+      } else {
+        toast.success('[Mock] Đã thêm tài khoản mới thành công.');
+      }
+      setShowCreateDialog(false);
+      resetForm();
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+    }
+  });
+
+  const updateUserMutation = useMutation({
+    mutationFn: async ({ id, payload }: { id: number; payload: Partial<AdminUser> }) => {
+      return await userAdminApi.update(id, payload);
+    },
+    onMutate: async ({ id, payload }) => {
+      await queryClient.cancelQueries({ queryKey: ['admin-users'] });
+      const previousData = queryClient.getQueryData(['admin-users']);
+      const previousMockUsers = mockUsers;
+
+      setMockUsers((prev) =>
+        prev.map((u) => (u.id === id ? { ...u, ...payload } : u))
+      );
+
+      queryClient.setQueryData(['admin-users'], (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          users: old.users.map((u: any) => (u.id === id ? { ...u, ...payload } : u))
+        };
+      });
+
+      return { previousData, previousMockUsers };
+    },
+    onSuccess: () => {
+      toast.success('Đã cập nhật thông tin tài khoản thành công!');
+      setShowEditDialog(false);
+      setSelectedUserForEdit(null);
+      resetForm();
+    },
+    onError: (error, variables, context: any) => {
+      if (data?.useRealApi) {
+        if (context) {
+          queryClient.setQueryData(['admin-users'], context.previousData);
+          setMockUsers(context.previousMockUsers);
+        }
+        toast.error('Có lỗi xảy ra khi cập nhật tài khoản.');
+      } else {
+        toast.success('[Mock] Đã cập nhật thông tin tài khoản thành công!');
+      }
+      setShowEditDialog(false);
+      setSelectedUserForEdit(null);
+      resetForm();
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+    }
+  });
+
+  const handleCreateSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formName.trim() || !formEmail.trim() || !formPhone.trim() || !formPassword.trim()) {
+      toast.error('Vui lòng điền đầy đủ các thông tin bắt buộc.');
+      return;
+    }
+    createUserMutation.mutate({
+      name: formName,
+      email: formEmail,
+      phone: formPhone,
+      role: formRole,
+      status: formStatus,
+      password: formPassword,
+    });
+  };
+
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUserForEdit) return;
+    if (!formName.trim() || !formEmail.trim() || !formPhone.trim()) {
+      toast.error('Vui lòng điền đầy đủ các thông tin bắt buộc.');
+      return;
+    }
+    updateUserMutation.mutate({
+      id: selectedUserForEdit.id,
+      payload: {
+        name: formName,
+        email: formEmail,
+        phone: formPhone,
+        role: formRole,
+        status: formStatus,
+      },
+    });
+  };
 
   const handleBanSubmit = () => {
     if (selectedUser && banReason.trim()) {
@@ -456,7 +633,12 @@ export default function UsersClient() {
     }
   };
 
-  const isActionPending = banMutation.isPending || unbanMutation.isPending || updateRoleMutation.isPending;
+  const isActionPending =
+    banMutation.isPending ||
+    unbanMutation.isPending ||
+    updateRoleMutation.isPending ||
+    createUserMutation.isPending ||
+    updateUserMutation.isPending;
 
   return (
     <div className="space-y-6">
@@ -466,7 +648,14 @@ export default function UsersClient() {
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Quản lý người dùng</h1>
           <p className="text-sm text-gray-500 mt-1">Kiểm soát danh sách tài khoản, số điện thoại, phân quyền và trạng thái hoạt động môi giới Quảng Ngãi</p>
         </div>
-        <Button className="bg-primary hover:bg-primary-dark rounded-xl font-bold text-xs h-9.5 gap-1.5 shadow-sm text-white transition-all">
+        <Button 
+          onClick={() => {
+            resetForm();
+            setShowCreateDialog(true);
+          }}
+          data-testid="create-user-btn"
+          className="bg-primary hover:bg-primary-dark rounded-xl font-bold text-xs h-9.5 gap-1.5 shadow-sm text-white transition-all"
+        >
           <PlusCircle className="h-4 w-4" />
           Thêm tài khoản mới
         </Button>
@@ -574,7 +763,7 @@ export default function UsersClient() {
             />
           </div>
 
-          <Select value={roleFilter} onValueChange={(v) => { setRoleFilter(v); setPage(1); }}>
+          <Select value={roleFilter} onValueChange={(v) => { setRoleFilter(v || 'all'); setPage(1); }}>
             <SelectTrigger className="w-44 rounded-xl border-gray-200 text-xs font-semibold text-gray-700 h-9.5 bg-white">
               <SelectValue placeholder="Phân quyền chính" />
             </SelectTrigger>
@@ -716,24 +905,23 @@ export default function UsersClient() {
                             <DropdownMenuContent align="end" className="rounded-xl w-52">
                               <DropdownMenuItem
                                 onClick={() => {
-                                  setSelectedUser(user);
-                                  toast.info(
-                                    <div>
-                                      <p className="font-bold text-gray-900">Chi tiết tài khoản #{user.id}</p>
-                                      <p className="text-xs text-gray-500 mt-1">Họ tên: {user.name}</p>
-                                      <p className="text-xs text-gray-500">Email: {user.email}</p>
-                                      <p className="text-xs text-gray-500">SĐT: {user.phone || 'Chưa cập nhật'}</p>
-                                      <p className="text-xs text-gray-500">Tin đăng: {user.total_listings || 0} tin</p>
-                                      <p className="text-xs text-gray-500">Ngày tạo: {new Date(user.created_at).toLocaleDateString('vi-VN')}</p>
-                                      {user.ban_reason && <p className="text-xs text-red-650 font-bold mt-1">Lý do khóa: {user.ban_reason}</p>}
-                                    </div>,
-                                    { duration: 6000 }
-                                  );
+                                  setSelectedUserForView(user);
+                                  setShowViewDialog(true);
                                 }}
+                                data-testid={`view-user-btn-${user.id}`}
                                 className="font-bold text-xs gap-2 rounded-lg cursor-pointer"
                               >
                                 <Eye className="h-4 w-4" />
                                 Xem nhanh thông tin
+                              </DropdownMenuItem>
+
+                              <DropdownMenuItem
+                                onClick={() => handleOpenEdit(user)}
+                                data-testid={`edit-user-btn-${user.id}`}
+                                className="font-bold text-xs gap-2 rounded-lg cursor-pointer"
+                              >
+                                <Edit className="h-4 w-4 text-gray-500" />
+                                Chỉnh sửa thông tin
                               </DropdownMenuItem>
 
                               {user.role !== 'admin' && (
@@ -807,7 +995,7 @@ export default function UsersClient() {
             {/* Left: Per page size selector & counts */}
             <div className="flex items-center gap-2">
               <span className="text-xs text-gray-400 font-bold">Số lượng hàng:</span>
-              <Select value={String(perPage)} onValueChange={(v) => { setPerPage(Number(v)); setPage(1); }}>
+              <Select value={String(perPage)} onValueChange={(v) => { setPerPage(Number(v || '5')); setPage(1); }}>
                 <SelectTrigger className="h-8 w-24 rounded-xl border-gray-200 text-xs font-bold text-gray-700 bg-white">
                   <SelectValue />
                 </SelectTrigger>
@@ -887,7 +1075,7 @@ export default function UsersClient() {
 
       {/* Ban User Dialog */}
       <Dialog open={showBanDialog} onOpenChange={(open) => !open && setShowBanDialog(false)}>
-        <DialogContent className="max-w-[440px] rounded-2xl overflow-hidden border border-gray-100 p-0 shadow-lg bg-white">
+        <DialogContent className="sm:max-w-[440px] rounded-2xl overflow-hidden border border-gray-100 p-0 shadow-lg bg-white">
           <div className="bg-gray-50 border-b border-gray-100 p-6 pb-4">
             <DialogHeader>
               <DialogTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
@@ -927,6 +1115,406 @@ export default function UsersClient() {
                 disabled={!banReason.trim() || isActionPending}
               >
                 {isActionPending ? 'Đang khóa...' : 'Khóa tài khoản'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create User Dialog */}
+      <Dialog open={showCreateDialog} onOpenChange={(open) => !open && setShowCreateDialog(false)}>
+        <DialogContent className="sm:max-w-[540px] rounded-2xl overflow-hidden border border-gray-100 p-0 shadow-lg bg-white">
+          <div className="bg-gray-50 border-b border-gray-100 p-6 pb-4">
+            <DialogHeader>
+              <DialogTitle className="text-lg font-bold text-gray-900">
+                Thêm tài khoản mới
+              </DialogTitle>
+              <DialogDescription className="text-gray-500 text-xs mt-1">
+                Tạo mới tài khoản quản trị, hỗ trợ nội bộ hoặc tài khoản cho môi giới đối tác chiến lược Quảng Ngãi.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          <form onSubmit={handleCreateSubmit} className="p-6 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Họ tên */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Họ tên *</label>
+                <Input
+                  required
+                  placeholder="Ví dụ: Nguyễn Văn A"
+                  value={formName}
+                  onChange={(e) => setFormName(e.target.value)}
+                  data-testid="user-name-input"
+                  className="rounded-xl border-gray-200 focus:ring-primary/20 focus:border-primary text-xs font-medium h-9.5"
+                />
+              </div>
+
+              {/* Số điện thoại */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Số điện thoại *</label>
+                <Input
+                  required
+                  placeholder="Ví dụ: 0905 123 456"
+                  value={formPhone}
+                  onChange={(e) => setFormPhone(e.target.value)}
+                  data-testid="user-phone-input"
+                  className="rounded-xl border-gray-200 focus:ring-primary/20 focus:border-primary text-xs font-medium h-9.5"
+                />
+              </div>
+
+              {/* Email */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Email liên hệ *</label>
+                <Input
+                  required
+                  type="email"
+                  placeholder="vi_du@gmail.com"
+                  value={formEmail}
+                  onChange={(e) => setFormEmail(e.target.value)}
+                  data-testid="user-email-input"
+                  className="rounded-xl border-gray-200 focus:ring-primary/20 focus:border-primary text-xs font-medium h-9.5"
+                />
+              </div>
+
+              {/* Mật khẩu khởi tạo */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Mật khẩu *</label>
+                <Input
+                  required
+                  type="password"
+                  placeholder="Tối thiểu 6 ký tự"
+                  value={formPassword}
+                  onChange={(e) => setFormPassword(e.target.value)}
+                  data-testid="user-password-input"
+                  className="rounded-xl border-gray-200 focus:ring-primary/20 focus:border-primary text-xs font-medium h-9.5"
+                />
+              </div>
+
+              {/* Vai trò */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Vai trò chính *</label>
+                <Select value={formRole} onValueChange={(v) => setFormRole((v || 'user') as UserRole)}>
+                  <SelectTrigger data-testid="user-role-select" className="rounded-xl border-gray-200 text-xs font-semibold text-gray-700 h-9.5 bg-white w-full">
+                    <SelectValue placeholder="Chọn vai trò" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="user">Người dùng thường</SelectItem>
+                    <SelectItem value="agent">Môi giới / Đại lý</SelectItem>
+                    <SelectItem value="admin">Quản trị viên</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Trạng thái */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Trạng thái ban đầu *</label>
+                <Select value={formStatus} onValueChange={(v) => setFormStatus((v || 'active') as UserStatus)}>
+                  <SelectTrigger data-testid="user-status-select" className="rounded-xl border-gray-200 text-xs font-semibold text-gray-700 h-9.5 bg-white w-full">
+                    <SelectValue placeholder="Chọn trạng thái" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="active">Hoạt động</SelectItem>
+                    <SelectItem value="inactive">Tạm khóa</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="flex gap-3 justify-end pt-4 border-t border-gray-100">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setShowCreateDialog(false);
+                  resetForm();
+                }}
+                className="rounded-xl font-bold text-xs h-9.5 text-gray-500 hover:bg-gray-100"
+                disabled={isActionPending}
+              >
+                Hủy bỏ
+              </Button>
+              <Button
+                type="submit"
+                data-testid="user-submit-btn"
+                className="rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs h-9.5 px-4 shadow-sm"
+                disabled={isActionPending}
+              >
+                {isActionPending ? 'Đang xử lý...' : 'Thêm tài khoản'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit User Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={(open) => !open && setShowEditDialog(false)}>
+        <DialogContent className="sm:max-w-[540px] rounded-2xl overflow-hidden border border-gray-100 p-0 shadow-lg bg-white">
+          <div className="bg-gray-50 border-b border-gray-100 p-6 pb-4">
+            <DialogHeader>
+              <DialogTitle className="text-lg font-bold text-gray-900">
+                Chỉnh sửa tài khoản #{selectedUserForEdit?.id}
+              </DialogTitle>
+              <DialogDescription className="text-gray-500 text-xs mt-1">
+                Cập nhật thông tin định danh và vai trò hoạt động của thành viên trong hệ thống Quảng Ngãi.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          <form onSubmit={handleEditSubmit} className="p-6 space-y-4">
+            {/* Warning Message */}
+            <div className="bg-yellow-50/70 border border-yellow-200 p-3 rounded-xl flex gap-2.5 items-start">
+              <AlertTriangle className="h-4 w-4 text-yellow-600 shrink-0 mt-0.5" />
+              <p className="text-[11px] text-yellow-800 leading-snug">
+                <strong>Lưu ý:</strong> Việc thay đổi các trường định danh nhạy cảm như Email hay Số điện thoại có thể ảnh hưởng đến lịch sử giao dịch và khả năng xác thực hiện tại của thành viên này.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Họ tên */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Họ tên *</label>
+                <Input
+                  required
+                  placeholder="Ví dụ: Nguyễn Văn A"
+                  value={formName}
+                  onChange={(e) => setFormName(e.target.value)}
+                  data-testid="user-name-input"
+                  className="rounded-xl border-gray-200 focus:ring-primary/20 focus:border-primary text-xs font-medium h-9.5"
+                />
+              </div>
+
+              {/* Số điện thoại */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Số điện thoại *</label>
+                <Input
+                  required
+                  placeholder="Ví dụ: 0905 123 456"
+                  value={formPhone}
+                  onChange={(e) => setFormPhone(e.target.value)}
+                  data-testid="user-phone-input"
+                  className="rounded-xl border-gray-200 focus:ring-primary/20 focus:border-primary text-xs font-medium h-9.5"
+                />
+              </div>
+
+              {/* Email */}
+              <div className="space-y-1.5 col-span-2">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Email liên hệ *</label>
+                <Input
+                  required
+                  type="email"
+                  placeholder="vi_du@gmail.com"
+                  value={formEmail}
+                  onChange={(e) => setFormEmail(e.target.value)}
+                  data-testid="user-email-input"
+                  className="rounded-xl border-gray-200 focus:ring-primary/20 focus:border-primary text-xs font-medium h-9.5"
+                />
+              </div>
+
+              {/* Vai trò */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Vai trò chính *</label>
+                <Select value={formRole} onValueChange={(v) => setFormRole((v || 'user') as UserRole)}>
+                  <SelectTrigger data-testid="user-role-select" className="rounded-xl border-gray-200 text-xs font-semibold text-gray-700 h-9.5 bg-white w-full">
+                    <SelectValue placeholder="Chọn vai trò" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="user">Người dùng thường</SelectItem>
+                    <SelectItem value="agent">Môi giới / Đại lý</SelectItem>
+                    <SelectItem value="admin">Quản trị viên</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Trạng thái */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Trạng thái *</label>
+                <Select value={formStatus} onValueChange={(v) => setFormStatus((v || 'active') as UserStatus)}>
+                  <SelectTrigger data-testid="user-status-select" className="rounded-xl border-gray-200 text-xs font-semibold text-gray-700 h-9.5 bg-white w-full">
+                    <SelectValue placeholder="Chọn trạng thái" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="active">Hoạt động</SelectItem>
+                    <SelectItem value="inactive">Tạm khóa</SelectItem>
+                    <SelectItem value="banned">Bị cấm</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="flex gap-3 justify-end pt-4 border-t border-gray-100">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setShowEditDialog(false);
+                  setSelectedUserForEdit(null);
+                  resetForm();
+                }}
+                className="rounded-xl font-bold text-xs h-9.5 text-gray-500 hover:bg-gray-100"
+                disabled={isActionPending}
+              >
+                Hủy bỏ
+              </Button>
+              <Button
+                type="submit"
+                data-testid="user-submit-btn"
+                className="rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs h-9.5 px-4 shadow-sm"
+                disabled={isActionPending}
+              >
+                {isActionPending ? 'Đang lưu...' : 'Lưu thay đổi'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* View User Details Dialog */}
+      <Dialog open={showViewDialog} onOpenChange={(open) => !open && setShowViewDialog(false)}>
+        <DialogContent data-testid="view-user-dialog" className="sm:max-w-[480px] rounded-2xl overflow-hidden border border-gray-100 p-0 shadow-lg bg-white">
+          <div className="bg-gray-50 border-b border-gray-100 p-6 pb-4">
+            <DialogHeader>
+              <DialogTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <User className="h-5 w-5 text-primary" />
+                Chi tiết tài khoản #{selectedUserForView?.id}
+              </DialogTitle>
+              <DialogDescription className="text-gray-500 text-xs mt-1">
+                Xem nhanh thông tin định danh và lịch sử hoạt động của thành viên.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          <div className="p-6 space-y-6">
+            {/* User Profile Card Header */}
+            <div className="flex items-center gap-4 p-4 rounded-xl bg-gray-50/50 border border-gray-100">
+              <Avatar className="h-16 w-16 border-2 border-white shadow-md">
+                <AvatarImage src={selectedUserForView?.avatar || ''} alt={selectedUserForView?.name || ''} />
+                <AvatarFallback className="bg-primary-light text-primary text-lg font-bold">
+                  {selectedUserForView?.name?.substring(0, 2).toUpperCase() || 'US'}
+                </AvatarFallback>
+              </Avatar>
+              <div className="space-y-1">
+                <h4 className="text-sm font-bold text-gray-900 leading-none">{selectedUserForView?.name}</h4>
+                <p className="text-[11px] text-gray-500 font-medium">{selectedUserForView?.email}</p>
+                <div className="flex flex-wrap gap-1.5 pt-1.5">
+                  {/* Role Badge */}
+                  {selectedUserForView?.role === 'admin' && (
+                    <Badge className="bg-red-50 text-red-700 hover:bg-red-50 border-none font-bold text-[10px] px-2 py-0.5 rounded-full">
+                      Quản trị viên
+                    </Badge>
+                  )}
+                  {selectedUserForView?.role === 'agent' && (
+                    <Badge className="bg-primary-light text-primary hover:bg-primary-light border-none font-bold text-[10px] px-2 py-0.5 rounded-full">
+                      Môi giới / Đại lý
+                    </Badge>
+                  )}
+                  {selectedUserForView?.role === 'user' && (
+                    <Badge className="bg-gray-100 text-gray-600 hover:bg-gray-100 border-none font-bold text-[10px] px-2 py-0.5 rounded-full">
+                      Người dùng thường
+                    </Badge>
+                  )}
+
+                  {/* Status Badge */}
+                  {selectedUserForView?.status === 'active' && (
+                    <Badge className="bg-green-50 text-green-700 hover:bg-green-50 border-none font-bold text-[10px] px-2 py-0.5 rounded-full">
+                      Hoạt động
+                    </Badge>
+                  )}
+                  {selectedUserForView?.status === 'inactive' && (
+                    <Badge className="bg-amber-50 text-amber-700 hover:bg-amber-50 border-none font-bold text-[10px] px-2 py-0.5 rounded-full">
+                      Tạm khóa
+                    </Badge>
+                  )}
+                  {selectedUserForView?.status === 'banned' && (
+                    <Badge className="bg-red-50 text-red-650 hover:bg-red-50 border-none font-bold text-[10px] px-2 py-0.5 rounded-full">
+                      Bị cấm
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Ban Reason Info Box */}
+            {selectedUserForView?.status === 'banned' && (
+              <div className="bg-red-50/50 border border-red-100 p-3.5 rounded-xl flex gap-3 items-start">
+                <AlertTriangle className="h-4 w-4 text-red-650 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-red-700 uppercase tracking-wider">Lý do bị cấm hoạt động</span>
+                  <p className="text-xs text-red-850 font-semibold leading-relaxed">
+                    {selectedUserForView.ban_reason || 'Không ghi nhận lý do chi tiết.'}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Information Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Họ tên */}
+              <div className="space-y-1 p-3 rounded-xl border border-gray-100 bg-white shadow-xs">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Họ và tên</span>
+                <p className="text-xs font-bold text-gray-800">{selectedUserForView?.name}</p>
+              </div>
+
+              {/* Số điện thoại */}
+              <div className="space-y-1 p-3 rounded-xl border border-gray-100 bg-white shadow-xs">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                  <Phone className="h-3 w-3 text-gray-400" /> Số điện thoại
+                </span>
+                <p className="text-xs font-bold text-gray-800">{selectedUserForView?.phone || 'Chưa cập nhật'}</p>
+              </div>
+
+              {/* Email */}
+              <div className="space-y-1 p-3 rounded-xl border border-gray-100 bg-white shadow-xs col-span-1 sm:col-span-2">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                  <Mail className="h-3 w-3 text-gray-400" /> Email liên hệ
+                </span>
+                <p className="text-xs font-bold text-gray-800">{selectedUserForView?.email}</p>
+              </div>
+
+              {/* Tổng số tin đăng */}
+              <div className="space-y-1 p-3 rounded-xl border border-gray-100 bg-white shadow-xs">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                  <Users className="h-3 w-3 text-gray-400" /> Tổng số tin đăng
+                </span>
+                <p className="text-xs font-bold text-primary">{selectedUserForView?.total_listings || 0} tin</p>
+              </div>
+
+              {/* Ngày đăng ký */}
+              <div className="space-y-1 p-3 rounded-xl border border-gray-100 bg-white shadow-xs">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                  <Clock className="h-3 w-3 text-gray-400" /> Ngày đăng ký
+                </span>
+                <p className="text-xs font-bold text-gray-800">
+                  {selectedUserForView?.created_at ? formatDate(selectedUserForView.created_at) : 'Chưa xác định'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 justify-end pt-4 border-t border-gray-100">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setShowViewDialog(false);
+                  setSelectedUserForView(null);
+                }}
+                className="rounded-xl font-bold text-xs h-9.5 text-gray-500 hover:bg-gray-100"
+              >
+                Đóng lại
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  if (selectedUserForView) {
+                    setShowViewDialog(false);
+                    handleOpenEdit(selectedUserForView);
+                  }
+                }}
+                data-testid="view-user-edit-btn"
+                className="rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs h-9.5 px-4 shadow-sm flex items-center gap-1.5"
+              >
+                <Edit className="h-3.5 w-3.5" />
+                Chỉnh sửa tài khoản
               </Button>
             </div>
           </div>

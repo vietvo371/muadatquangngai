@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, use } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useQuery } from '@tanstack/react-query';
@@ -24,13 +24,15 @@ import { toast } from 'sonner';
 import { TableOfContents } from '@/components/news/TableOfContents';
 import { NewsCard } from '@/components/news/NewsCard';
 
-export default function BlogDetailPage({ params }: { params: { slug: string } }) {
+export default function BlogDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+  const unwrappedParams = use(params);
+  const slug = unwrappedParams?.slug;
   const contentRef = useRef<HTMLDivElement>(null!);
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['post', params.slug],
-    queryFn: () => postApi.get(params.slug),
-    enabled: !!params.slug,
+    queryKey: ['post', slug],
+    queryFn: () => postApi.get(slug),
+    enabled: !!slug,
   });
 
   const post: Post | null = data?.data || null;

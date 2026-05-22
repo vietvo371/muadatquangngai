@@ -72,24 +72,24 @@ export function ImageUploader({
     setError(null);
     setUploadingCount(prev => prev + newFiles.length);
 
-    // Upload files to S3 via backend
-    const uploadedFiles: UploadedFile[] = await Promise.all(
-      newFiles.map(async (file, idx) => {
-        try {
-          const res = await fileUploadApi.upload(file);
-          return {
-            url: (res as any).url ?? (res as any).data?.url,
-            name: file.name,
-            size: file.size,
-            isPrimary: files.length === 0 && idx === 0,
-            file,
-          };
-        } catch (e) {
-          toast.error('Upload thất bại: ' + (e as any).message);
-          return null;
-        }
-      })
-    ).then((arr) => arr.filter((item): item is UploadedFile => item !== null));
+    const uploadPromises = newFiles.map(async (file, idx): Promise<UploadedFile | null> => {
+      try {
+        const res = await fileUploadApi.upload(file);
+        return {
+          url: (res as any).url ?? (res as any).data?.url,
+          name: file.name,
+          size: file.size,
+          isPrimary: files.length === 0 && idx === 0,
+          file,
+        };
+      } catch (e) {
+        toast.error('Upload thất bại: ' + (e as any).message);
+        return null;
+      }
+    });
+
+    const results = await Promise.all(uploadPromises);
+    const uploadedFiles: UploadedFile[] = results.filter((item): item is UploadedFile => item !== null);
 
     setUploadingCount(prev => prev - newFiles.length);
     onChange([...files, ...uploadedFiles]);
@@ -324,17 +324,18 @@ export function VideoUploader({
     setError(null);
     setUploadingCount(prev => prev + newFiles.length);
 
-    const uploadedVideos: UploadedFile[] = await Promise.all(
-      newFiles.map(async (file) => {
-        try {
-          const res = await fileUploadApi.upload(file);
-          return { url: res.url, name: file.name, size: file.size };
-        } catch (e) {
-          toast.error('Upload video thất bại: ' + (e as any).message);
-          return null;
-        }
-      })
-    ).then((arr) => arr.filter((v): v is UploadedFile => v !== null));
+    const uploadPromises = newFiles.map(async (file): Promise<UploadedFile | null> => {
+      try {
+        const res = await fileUploadApi.upload(file);
+        return { url: res.url, name: file.name, size: file.size };
+      } catch (e) {
+        toast.error('Upload video thất bại: ' + (e as any).message);
+        return null;
+      }
+    });
+
+    const results = await Promise.all(uploadPromises);
+    const uploadedVideos: UploadedFile[] = results.filter((v): v is UploadedFile => v !== null);
 
     setUploadingCount(prev => prev - newFiles.length);
     onChange([...videos, ...uploadedVideos]);

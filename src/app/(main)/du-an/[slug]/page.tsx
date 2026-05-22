@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
@@ -149,6 +149,9 @@ const statusConfig = {
   selling:  { label: 'Đang mở bán', bg: 'bg-green-100', text: 'text-green-700' },
   completed:{ label: 'Đã bàn giao', bg: 'bg-gray-100',  text: 'text-gray-600'  },
   paused:   { label: 'Tạm dừng',    bg: 'bg-red-100',   text: 'text-red-700'   },
+  draft:     { label: 'Bản nháp',    bg: 'bg-gray-100',  text: 'text-gray-600'  },
+  published: { label: 'Đã xuất bản',  bg: 'bg-green-100', text: 'text-green-700' },
+  archived:  { label: 'Đã lưu trữ',  bg: 'bg-yellow-100', text: 'text-yellow-700' },
 };
 
 const tabs = [
@@ -263,10 +266,22 @@ const mapApiProjectDetail = (apiProject: any) => {
     constructionProgress: apiProject.construction_progress || 75,
     gallery,
     overview: apiProject.description || `Dự án ${apiProject.name} là khu dự án đẳng cấp hàng đầu tọa lạc tại ${districtName}, tỉnh Quảng Ngãi. Dự án có quy mô đồng bộ, thiết kế hiện đại, thông minh, ngập tràn mảng xanh và tiện ích cao cấp.`,
-    utilities: apiProject.utilities && apiProject.utilities.length > 0 ? apiProject.utilities : [
-      'Hồ bơi', 'Gym & Spa', 'Bảo vệ 24/7', 'Camera an ninh',
-      'Thang máy', 'Bãi đỗ xe', 'Công viên',
-    ],
+    utilities: (() => {
+      const utils = apiProject.utilities;
+      if (Array.isArray(utils)) return utils;
+      if (typeof utils === 'string') {
+        try {
+          const parsed = JSON.parse(utils);
+          if (Array.isArray(parsed)) return parsed;
+        } catch {
+          return utils.split(',').map((s: string) => s.trim()).filter(Boolean);
+        }
+      }
+      return [
+        'Hồ bơi', 'Gym & Spa', 'Bảo vệ 24/7', 'Camera an ninh',
+        'Thang máy', 'Bãi đỗ xe', 'Công viên',
+      ];
+    })(),
     floorPlans,
     faq,
     mapUrl: apiProject.map_url || 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3849.012!2d108.7859137!3d15.1319266!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3169ad3732456f77%3A0xce93b603f79b6e4e!2sDe+Palace+River+-+Nam+S%C3%B4ng+Tr%C3%A0!5e0!3m2!1svi!2svn!4v1700000000000!5m2!1svi!2svn',
@@ -282,6 +297,7 @@ const mapApiProjectDetail = (apiProject: any) => {
       title: 'Chuyên viên tư vấn dự án',
       phone: apiProject.owner?.phone || '0905123456',
     },
+    relatedListings: apiProject.related_listings || apiProject.relatedListings || [],
   };
 };
 
@@ -377,7 +393,9 @@ function NearbyTab({ project }: { project: NearbyProject }) {
   );
 }
 
-export default function ProjectDetailPage({ params }: { params: { slug: string } }) {
+export default function ProjectDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+  const unwrappedParams = use(params);
+  const slug = unwrappedParams?.slug;
   const { fetchProjectDetail, fetchProjectUnits, isLoading } = useProjects();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [projectData, setProjectData] = useState<any>(null);
@@ -395,7 +413,7 @@ export default function ProjectDetailPage({ params }: { params: { slug: string }
 
   useEffect(() => {
     const loadData = async () => {
-      const res = await fetchProjectDetail(params.slug);
+      const res = await fetchProjectDetail(slug);
       if (res.success && res.data) {
         const mapped = mapApiProjectDetail(res.data);
         setProjectData(mapped);
@@ -413,10 +431,10 @@ export default function ProjectDetailPage({ params }: { params: { slug: string }
         setUnitsData(mockProject.relatedListings);
       }
     };
-    if (params?.slug) {
+    if (slug) {
       loadData();
     }
-  }, [params?.slug, fetchProjectDetail, fetchProjectUnits]);
+  }, [slug, fetchProjectDetail, fetchProjectUnits]);
 
   // Loading skeleton state
   if (isLoading || !projectData) {

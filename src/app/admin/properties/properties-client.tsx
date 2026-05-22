@@ -203,7 +203,7 @@ export default function PropertiesClient() {
 
         const res = await propertyAdminApi.list(params);
         if (res && res.data) {
-          const mapped = res.data.map((p: AdminProperty) => ({
+          const mapped: LocalProperty[] = res.data.map((p: AdminProperty) => ({
             id: p.id,
             title: p.title,
             slug: p.slug,
@@ -317,8 +317,8 @@ export default function PropertiesClient() {
     setPage(1);
   };
 
-  const handleTypeChange = (val: string) => {
-    setTypeFilter(val);
+  const handleTypeChange = (val: string | null) => {
+    setTypeFilter(val || 'all');
     setPage(1);
   };
 
@@ -730,16 +730,12 @@ export default function PropertiesClient() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48 rounded-xl p-1.5">
-                              <DropdownMenuItem asChild>
-                                <a
-                                  href={`${CLIENT_URL}/${property.type === 'sale' ? 'mua-ban' : 'cho-thue'}/${property.slug}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex items-center w-full cursor-pointer font-medium text-gray-700 hover:text-gray-900"
-                                >
-                                  <Eye className="h-4 w-4 mr-2 text-gray-400" />
-                                  Xem tin gốc
-                                </a>
+                              <DropdownMenuItem
+                                onClick={() => window.open(`${CLIENT_URL}/${property.type === 'sale' ? 'mua-ban' : 'cho-thue'}/${property.slug}`, '_blank', 'noopener,noreferrer')}
+                                className="flex items-center w-full cursor-pointer font-medium text-gray-700 hover:text-gray-900"
+                              >
+                                <Eye className="h-4 w-4 mr-2 text-gray-400" />
+                                Xem tin gốc
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               {property.status === 'pending' && (
@@ -781,7 +777,7 @@ export default function PropertiesClient() {
             {/* Left: Per page size selector & counts */}
             <div className="flex items-center gap-2">
               <span className="text-xs text-gray-400 font-bold">Số lượng hàng:</span>
-              <Select value={String(perPage)} onValueChange={(v) => { setPerPage(Number(v)); setPage(1); }}>
+              <Select value={String(perPage)} onValueChange={(v) => { setPerPage(Number(v || '5')); setPage(1); }}>
                 <SelectTrigger className="h-8 w-24 rounded-xl border-gray-200 text-xs font-bold text-gray-700 bg-white">
                   <SelectValue />
                 </SelectTrigger>
@@ -861,7 +857,7 @@ export default function PropertiesClient() {
 
       {/* Reject Dialog */}
       <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
-        <DialogContent className="max-w-[420px] rounded-2xl border border-gray-100 overflow-hidden p-0 shadow-lg">
+        <DialogContent className="sm:max-w-[420px] rounded-2xl border border-gray-100 overflow-hidden p-0 shadow-lg">
           <div className="bg-gray-50 border-b border-gray-100 p-6 pb-4">
             <DialogHeader>
               <DialogTitle className="text-lg font-bold text-gray-900">Từ chối duyệt tin đăng</DialogTitle>

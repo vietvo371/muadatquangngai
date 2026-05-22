@@ -153,7 +153,7 @@ function AdminLayoutContent({
 
   // Generate dynamic breadcrumbs based on active pathname
   const getBreadcrumbs = () => {
-    const paths = pathname.split('/').filter(Boolean);
+    const paths = (pathname || '').split('/').filter(Boolean);
     return paths.map((path, index) => {
       const href = '/' + paths.slice(0, index + 1).join('/');
       let label = path;

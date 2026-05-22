@@ -126,6 +126,9 @@ const statusConfig = {
   selling:  { label: 'Đang mở bán', bg: 'bg-green-100', text: 'text-green-700', dot: 'bg-green-500' },
   completed:{ label: 'Đã bàn giao', bg: 'bg-gray-100',  text: 'text-gray-600',  dot: 'bg-gray-400'  },
   paused:   { label: 'Tạm dừng',    bg: 'bg-yellow-100',text: 'text-yellow-700',dot: 'bg-yellow-400' },
+  draft:     { label: 'Bản nháp',    bg: 'bg-gray-100',  text: 'text-gray-600',  dot: 'bg-gray-400'  },
+  published: { label: 'Đã xuất bản',  bg: 'bg-green-100', text: 'text-green-700', dot: 'bg-green-500' },
+  archived:  { label: 'Đã lưu trữ',  bg: 'bg-yellow-100', text: 'text-yellow-700', dot: 'bg-yellow-400' },
 };
 
 const typeConfig: Record<string, string> = {
@@ -296,7 +299,7 @@ export default function DuAnPage() {
             <div className="absolute bottom-0 left-0 right-0 px-6 md:px-10 pb-8 md:pb-10 z-10">
               <div className="max-w-[1152px] mx-auto">
                 {(() => {
-                  const st = statusConfig[p.status as keyof typeof statusConfig];
+                  const st = statusConfig[p.status as keyof typeof statusConfig] || statusConfig['selling'];
                   return (
                     <span className={`inline-flex items-center gap-1.5 ${st.bg} ${st.text} text-xs font-semibold px-3 py-1 rounded-full mb-3`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />
@@ -448,7 +451,7 @@ export default function DuAnPage() {
                 <ProjectListCard
                   key={project.id}
                   project={project}
-                  status={statusConfig[project.status as keyof typeof statusConfig]}
+                  status={statusConfig[project.status as keyof typeof statusConfig] || statusConfig['selling']}
                   typeLabel={typeConfig[project.type]}
                 />
               ))}
@@ -512,7 +515,7 @@ export default function DuAnPage() {
               </div>
               <div className="divide-y divide-gray-50">
                 {featured.map((project) => {
-                  const st = statusConfig[project.status as keyof typeof statusConfig];
+                  const st = statusConfig[project.status as keyof typeof statusConfig] || statusConfig['selling'];
                   return (
                     <Link
                       key={project.id}

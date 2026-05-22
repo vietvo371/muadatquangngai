@@ -361,7 +361,7 @@ export default function ReportsClient() {
             />
           </div>
 
-          <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v); setPage(1); }}>
+          <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v || 'all'); setPage(1); }}>
             <SelectTrigger className="w-40 rounded-xl border-gray-200 text-xs font-semibold text-gray-700 h-9.5">
               <SelectValue placeholder="Loại báo cáo" />
             </SelectTrigger>
@@ -512,7 +512,7 @@ export default function ReportsClient() {
             {/* Left: Per page size selector & counts */}
             <div className="flex items-center gap-2">
               <span className="text-xs text-gray-400 font-bold">Số lượng hàng:</span>
-              <Select value={String(perPage)} onValueChange={(v) => { setPerPage(Number(v)); setPage(1); }}>
+              <Select value={String(perPage)} onValueChange={(v) => { setPerPage(Number(v || '5')); setPage(1); }}>
                 <SelectTrigger className="h-8 w-24 rounded-xl border-gray-200 text-xs font-bold text-gray-700 bg-white">
                   <SelectValue />
                 </SelectTrigger>
@@ -592,7 +592,7 @@ export default function ReportsClient() {
 
       {/* Resolve Dialog */}
       <Dialog open={showResolveDialog} onOpenChange={setShowResolveDialog}>
-        <DialogContent className="max-w-[460px] rounded-2xl overflow-hidden border border-gray-100 p-0 shadow-lg bg-white">
+        <DialogContent className="sm:max-w-[460px] rounded-2xl overflow-hidden border border-gray-100 p-0 shadow-lg bg-white">
           <div className="bg-gray-50 border-b border-gray-100 p-6 pb-4">
             <DialogHeader>
               <DialogTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">

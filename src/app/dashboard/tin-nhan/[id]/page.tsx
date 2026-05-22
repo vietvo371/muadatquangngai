@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, use } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -16,16 +17,15 @@ import {
   ArrowLeft,
   MoreVertical,
   Phone,
-  Home,
   Star,
   Send,
-  Image,
+  Image as ImageIcon,
   Smile,
   Check,
   CheckCheck,
   Info
 } from 'lucide-react';
-import { formatDistanceToNow, formatPrice } from '@/lib/formatters';
+import { formatPrice } from '@/lib/formatters';
 
 // Mock data
 const conversation = {
@@ -105,8 +105,11 @@ const messages = [
 export default function ConversationPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const unwrappedParams = use(params);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const id = unwrappedParams?.id;
   const [newMessage, setNewMessage] = useState('');
   const [msgs, setMsgs] = useState(messages);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -227,9 +230,11 @@ export default function ConversationPage({
         <Link href={`/mua-ban/${conversation.property.slug}`} className="block shrink-0">
           <div className="p-3 bg-gray-50/80 border-b border-gray-100 flex items-center justify-between group hover:bg-gray-100 transition-colors">
             <div className="flex gap-3 items-center">
-              <img
+              <Image
                 src={conversation.property.thumbnail}
                 alt={conversation.property.title}
+                width={56}
+                height={56}
                 className="w-14 h-14 rounded-lg object-cover shadow-sm border border-gray-200"
               />
               <div className="min-w-0 flex-1">
@@ -300,7 +305,7 @@ export default function ConversationPage({
         <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-full p-1.5 pr-2 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all">
           <div className="flex shrink-0">
             <Button size="icon" variant="ghost" className="h-9 w-9 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-200 shrink-0">
-              <Image className="h-5 w-5" />
+              <ImageIcon className="h-5 w-5" />
             </Button>
             <Button size="icon" variant="ghost" className="h-9 w-9 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-200 shrink-0 hidden sm:flex">
               <Smile className="h-5 w-5" />

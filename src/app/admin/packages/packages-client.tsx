@@ -331,6 +331,7 @@ export default function PackagesClient() {
         </div>
         <Button
           onClick={openCreateDialog}
+          data-testid="create-package-btn"
           className="bg-primary hover:bg-primary-dark rounded-xl font-bold text-xs h-9.5 gap-1.5 shadow-sm text-white transition-all"
         >
           <PlusCircle className="h-4 w-4" />
@@ -563,6 +564,7 @@ export default function PackagesClient() {
                         variant="outline"
                         size="sm"
                         onClick={() => openEditDialog(pkg)}
+                        data-testid={`edit-package-btn-${pkg.id}`}
                         className="flex-1 rounded-xl font-bold text-xs h-8.5 gap-1.5 transition-all text-gray-600 hover:text-gray-900 border-gray-200 bg-white"
                       >
                         <Edit2 className="h-3.5 w-3.5" />
@@ -592,7 +594,7 @@ export default function PackagesClient() {
         {/* Left: Per page size selector & counts */}
         <div className="flex items-center gap-2">
           <span className="text-xs text-gray-400 font-bold">Số lượng hiển thị:</span>
-          <Select value={String(perPage)} onValueChange={(v) => { setPerPage(Number(v)); setPage(1); }}>
+          <Select value={String(perPage)} onValueChange={(v) => { setPerPage(Number(v || '3')); setPage(1); }}>
             <SelectTrigger className="h-8 w-24 rounded-xl border-gray-200 text-xs font-bold text-gray-700 bg-white">
               <SelectValue />
             </SelectTrigger>
@@ -670,7 +672,7 @@ export default function PackagesClient() {
 
       {/* Create/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={(open) => !open && setIsDialogOpen(false)}>
-        <DialogContent className="max-w-[480px] rounded-2xl overflow-hidden border border-gray-100 p-0 shadow-lg bg-white">
+        <DialogContent className="sm:max-w-[480px] rounded-2xl overflow-hidden border border-gray-100 p-0 shadow-lg bg-white">
           <div className="bg-gray-50 border-b border-gray-100 p-6 pb-4">
             <DialogHeader>
               <DialogTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
@@ -691,6 +693,7 @@ export default function PackagesClient() {
                 value={formData.name}
                 onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                 placeholder="Ví dụ: VIP Vàng Quảng Ngãi"
+                data-testid="package-name-input"
                 className="rounded-xl border-gray-200 text-xs font-semibold h-9.5 focus:ring-primary/20 focus:border-primary"
               />
             </div>
@@ -701,9 +704,9 @@ export default function PackagesClient() {
                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Loại tin đăng</label>
                 <Select
                   value={formData.type}
-                  onValueChange={(v) => setFormData((prev) => ({ ...prev, type: v as 'vip' | 'vip_plus' | 'diamond' }))}
+                  onValueChange={(v) => setFormData((prev) => ({ ...prev, type: (v || 'vip') as 'vip' | 'vip_plus' | 'diamond' }))}
                 >
-                  <SelectTrigger className="rounded-xl border-gray-200 text-xs font-semibold h-9.5 bg-white">
+                  <SelectTrigger data-testid="package-type-select" className="rounded-xl border-gray-200 text-xs font-semibold h-9.5 bg-white">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl">
@@ -720,6 +723,7 @@ export default function PackagesClient() {
                   type="number"
                   value={formData.duration_days}
                   onChange={(e) => setFormData((prev) => ({ ...prev, duration_days: parseInt(e.target.value) || 30 }))}
+                  data-testid="package-duration-input"
                   className="rounded-xl border-gray-200 text-xs font-semibold h-9.5 focus:ring-primary/20 focus:border-primary"
                 />
               </div>
@@ -733,6 +737,7 @@ export default function PackagesClient() {
                   type="number"
                   value={formData.price}
                   onChange={(e) => setFormData((prev) => ({ ...prev, price: parseInt(e.target.value) || 0 }))}
+                  data-testid="package-price-input"
                   className="rounded-xl border-gray-200 text-xs font-semibold h-9.5 focus:ring-primary/20 focus:border-primary"
                 />
               </div>
@@ -744,6 +749,7 @@ export default function PackagesClient() {
                     type="color"
                     value={formData.highlight_color}
                     onChange={(e) => setFormData((prev) => ({ ...prev, highlight_color: e.target.value }))}
+                    data-testid="package-color-picker"
                     className="h-9.5 w-14 p-1 rounded-xl border-gray-200 shrink-0 cursor-pointer"
                   />
                   <Input
@@ -751,6 +757,7 @@ export default function PackagesClient() {
                     value={formData.highlight_color}
                     onChange={(e) => setFormData((prev) => ({ ...prev, highlight_color: e.target.value }))}
                     placeholder="#1075b1"
+                    data-testid="package-color-input"
                     className="rounded-xl border-gray-200 text-xs font-semibold h-9.5 focus:ring-primary/20 focus:border-primary flex-1"
                   />
                 </div>
@@ -764,6 +771,7 @@ export default function PackagesClient() {
                 type="number"
                 value={formData.sort_order}
                 onChange={(e) => setFormData((prev) => ({ ...prev, sort_order: parseInt(e.target.value) || 0 }))}
+                data-testid="package-sort-input"
                 className="rounded-xl border-gray-200 text-xs font-semibold h-9.5 focus:ring-primary/20 focus:border-primary"
               />
             </div>
@@ -807,6 +815,7 @@ export default function PackagesClient() {
                 id="is_active"
                 checked={formData.is_active}
                 onChange={(e) => setFormData((prev) => ({ ...prev, is_active: e.target.checked }))}
+                data-testid="package-active-checkbox"
                 className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
               />
               <label htmlFor="is_active" className="text-xs font-bold text-gray-700 cursor-pointer select-none">
@@ -819,6 +828,7 @@ export default function PackagesClient() {
             <Button
               variant="ghost"
               onClick={() => setIsDialogOpen(false)}
+              data-testid="package-cancel-btn"
               className="rounded-xl font-bold text-xs h-9.5 text-gray-500 hover:bg-gray-100"
               disabled={isActionPending}
             >
@@ -826,6 +836,7 @@ export default function PackagesClient() {
             </Button>
             <Button
               onClick={handleSubmit}
+              data-testid="package-submit-btn"
               className="bg-primary hover:bg-primary-dark rounded-xl font-bold text-xs h-9.5 shadow-sm text-white transition-all"
               disabled={isActionPending}
             >

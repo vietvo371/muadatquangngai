@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, use } from 'react';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,9 +22,7 @@ import {
   ChevronLeft,
   Share2,
   Building,
-  CheckCircle,
   TrendingUp,
-  Award
 } from 'lucide-react';
 import { formatDate } from '@/lib/formatters';
 
@@ -127,8 +125,11 @@ const reviews = [
 export default function AgentProfilePage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const unwrappedParams = use(params);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const id = unwrappedParams?.id;
   const [activeTab, setActiveTab] = useState('listings');
 
   return (

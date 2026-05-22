@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { useConfirm } from '@/components/providers/confirm-provider';
 import {
@@ -30,6 +32,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   MoreVertical,
   Trash2,
   CheckCircle,
@@ -45,6 +54,7 @@ import {
   MapPin,
   ExternalLink,
   PlusCircle,
+  Edit2,
 } from 'lucide-react';
 import { formatPrice } from '@/lib/formatters';
 import { projectApi, type Project } from '@/lib/admin-api';
@@ -55,7 +65,7 @@ const CLIENT_URL = process.env.NEXT_PUBLIC_CLIENT_URL || 'http://localhost:3000'
 type ProjectStatus = 'draft' | 'published' | 'archived';
 
 // Mock projects rich dataset with real high-profile projects in Quang Ngai
-const MOCK_PROJECTS = [
+const MOCK_PROJECTS: Project[] = [
   {
     id: 1,
     name: 'Khu đô thị VSIP Quảng Ngãi',
@@ -188,10 +198,16 @@ const MOCK_PROJECTS = [
   }
 ];
 
-const statusConfig: Record<ProjectStatus, { label: string; color: string; icon: React.ElementType }> = {
+const statusConfig: Record<string, { label: string; color: string; icon: React.ElementType }> = {
   draft: { label: 'Bản nháp', color: 'bg-gray-100 text-gray-700 hover:bg-gray-200/60 border-gray-200', icon: layersIcon },
   published: { label: 'Đã xuất bản', color: 'bg-green-50 text-green-700 hover:bg-green-100/60 border-green-200/50', icon: CheckCircle },
   archived: { label: 'Đã lưu trữ', color: 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100/60 border-yellow-200/50', icon: Archive },
+  
+  // Public project stages supported in seeder/database
+  selling: { label: 'Đang mở bán', color: 'bg-green-50 text-green-700 hover:bg-green-100/60 border-green-200/50', icon: CheckCircle },
+  upcoming: { label: 'Sắp mở bán', color: 'bg-amber-50 text-amber-700 hover:bg-amber-100/60 border-amber-200/50', icon: layersIcon },
+  completed: { label: 'Đã bàn giao', color: 'bg-gray-50 text-gray-600 hover:bg-gray-100/60 border-gray-200', icon: CheckCircle },
+  paused: { label: 'Tạm dừng', color: 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100/60 border-yellow-200/50', icon: Archive },
 };
 
 function layersIcon(props: React.ComponentProps<typeof Layers>) {
@@ -205,7 +221,21 @@ const statusTabs = [
   { value: 'archived', label: 'Đã lưu trữ' },
 ];
 
+const PREDEFINED_UTILITIES = [
+  'Hồ bơi',
+  'Gym & Spa',
+  'Bảo vệ 24/7',
+  'Camera an ninh',
+  'Thang máy',
+  'Bãi đỗ xe',
+  'Công viên',
+  'Siêu thị nội khu',
+  'Khu vui chơi trẻ em',
+  'Trường mầm non',
+];
+
 export default function ProjectsClient() {
+  const router = useRouter();
   const confirm = useConfirm();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -220,6 +250,14 @@ export default function ProjectsClient() {
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(5);
 
+  const openEditDialog = (project: Project) => {
+    router.push(`/admin/projects/${project.id}/edit`);
+  };
+
+  const openCreateDialog = () => {
+    router.push('/admin/projects/create');
+  };
+
   const loadProjects = useCallback(async () => {
     try {
       setLoading(true);
@@ -230,7 +268,31 @@ export default function ProjectsClient() {
       
       const response = await projectApi.list(params);
       if (response && response.data) {
-        setProjects(response.data);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const mapped = response.data.map((apiProj: any) => ({
+          id: apiProj.id,
+          name: apiProj.name,
+          slug: apiProj.slug,
+          min_price: apiProj.price?.from ?? apiProj.price_from ?? apiProj.min_price ?? 0,
+          max_price: apiProj.price?.to ?? apiProj.price_to ?? apiProj.max_price ?? 0,
+          price_display: apiProj.price_display ?? null,
+          status: apiProj.status || 'draft',
+          location: apiProj.location?.address ?? apiProj.address ?? apiProj.location ?? 'Quảng Ngãi',
+          category: apiProj.category ?? (apiProj.type === 'townhouse' ? 'Nhà phố' : apiProj.type === 'villa' ? 'Biệt thự' : apiProj.type === 'apartment' ? 'Chung cư' : 'Đất nền & Nhà phố'),
+          investor: apiProj.developer ?? apiProj.investor ?? 'Đang cập nhật',
+          created_at: apiProj.created_at,
+          type: apiProj.type || 'townhouse',
+          description: apiProj.description || '',
+          total_area: apiProj.scale?.total_area ?? apiProj.total_area ?? 0,
+          total_units: apiProj.scale?.total_units ?? apiProj.total_units ?? 0,
+          total_blocks: apiProj.scale?.total_blocks ?? apiProj.total_blocks ?? 0,
+          total_floors: apiProj.scale?.total_floors ?? apiProj.total_floors ?? 0,
+          legal: apiProj.legal ?? '',
+          handover_date: apiProj.handover_date ?? '',
+          construction_progress: apiProj.construction_progress ?? 0,
+          utilities: apiProj.utilities ?? [],
+        }));
+        setProjects(mapped);
         setUseRealApi(true);
       } else {
         setProjects(MOCK_PROJECTS);
@@ -345,7 +407,11 @@ export default function ProjectsClient() {
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Quản lý dự án</h1>
           <p className="text-sm text-gray-500 mt-1">Quản lý các đại dự án, khu dân cư kiểu mẫu và dự án hạ tầng tại Quảng Ngãi</p>
         </div>
-        <Button className="bg-primary hover:bg-primary-dark rounded-xl font-bold text-xs h-9.5 gap-1.5 shadow-sm text-white transition-all">
+        <Button
+          onClick={openCreateDialog}
+          data-testid="create-project-btn"
+          className="bg-primary hover:bg-primary-dark rounded-xl font-bold text-xs h-9.5 gap-1.5 shadow-sm text-white transition-all"
+        >
           <PlusCircle className="h-4 w-4" />
           Thêm dự án mới
         </Button>
@@ -564,6 +630,15 @@ export default function ProjectsClient() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="rounded-xl w-40">
+                                <DropdownMenuItem
+                                  onClick={() => openEditDialog(project)}
+                                  data-testid={`edit-project-btn-${project.id}`}
+                                  className="font-bold text-xs gap-2 rounded-lg cursor-pointer"
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                  Chỉnh sửa
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
                                 {project.status === 'draft' && (
                                   <DropdownMenuItem
                                     onClick={() => handlePublish(project.id)}
@@ -607,7 +682,7 @@ export default function ProjectsClient() {
             {/* Left: Per page size selector & counts */}
             <div className="flex items-center gap-2">
               <span className="text-xs text-gray-400 font-bold">Số lượng hàng:</span>
-              <Select value={String(perPage)} onValueChange={(v) => { setPerPage(Number(v)); setPage(1); }}>
+              <Select value={String(perPage)} onValueChange={(v) => { setPerPage(Number(v || '5')); setPage(1); }}>
                 <SelectTrigger className="h-8 w-24 rounded-xl border-gray-200 text-xs font-bold text-gray-700 bg-white">
                   <SelectValue />
                 </SelectTrigger>

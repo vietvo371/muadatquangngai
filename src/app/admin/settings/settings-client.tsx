@@ -278,7 +278,7 @@ export default function SettingsClient() {
           id={key}
           label={meta.label}
           value={value}
-          description={meta.description}
+          description={meta.description ?? undefined}
           icon={icon}
           onChange={(val) => handleInputChange(key, val)}
         />

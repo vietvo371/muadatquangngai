@@ -31,13 +31,17 @@ export interface Project {
   name: string;
   slug: string;
   developer_id?: number;
-  province_id: number;
+  developer?: string;
+  province_id?: number;
   district_id?: number;
   type?: string;
-  status: 'draft' | 'published' | 'archived';
+  status: 'draft' | 'published' | 'archived' | 'upcoming' | 'selling' | 'completed' | 'paused';
   description?: string;
   highlights?: string[];
   total_units?: number;
+  total_blocks?: number;
+  total_floors?: number;
+  total_area?: number;
   min_price?: number;
   max_price?: number;
   price_display?: string;
@@ -45,7 +49,17 @@ export interface Project {
   longitude?: number;
   address?: string;
   cover_image?: string;
+  legal?: string;
+  handover_date?: string;
+  construction_progress?: number;
+  utilities?: string[];
   published_at?: string;
+  created_at?: string;
+  updated_at?: string;
+  // Backward compatibility frontend mappings:
+  location?: string;
+  category?: string;
+  investor?: string;
 }
 
 export interface Transaction {
@@ -58,6 +72,7 @@ export interface Transaction {
   description?: string;
   transaction_id?: string;
   payment_method?: string;
+  reject_reason?: string;
   user?: { id: number; name: string; email: string };
   created_at: string;
   updated_at: string;
@@ -167,7 +182,12 @@ export const projectApi = {
   },
 
   get: async (id: number) => {
-    const { data } = await api.get<{ project: Project; stats: Record<string, unknown> }>(`/api/admin/projects/${id}`);
+    const { data } = await api.get<{
+      success: boolean;
+      data: { project: Project; stats: Record<string, unknown> };
+      project?: Project;
+      stats?: Record<string, unknown>;
+    }>(`/api/admin/projects/${id}`);
     return data;
   },
 
@@ -257,6 +277,7 @@ export interface Verification {
   verified_at?: string;
   rejected_at?: string;
   rejection_reason?: string;
+  reject_reason?: string;
   admin?: { id: number; name: string };
   created_at: string;
 }
@@ -396,6 +417,7 @@ export interface AdminUser {
   status: string;
   email_verified_at?: string | null;
   total_listings?: number;
+  ban_reason?: string | null;
   created_at: string;
 }
 
@@ -471,6 +493,16 @@ export const userAdminApi = {
 
   updateRole: async (id: number, role: string) => {
     const { data } = await api.put<{ success: boolean; message?: string }>(`/api/admin/users/${id}/role`, { role });
+    return data;
+  },
+
+  create: async (payload: Partial<AdminUser> & { password?: string }) => {
+    const { data } = await api.post<{ success: boolean; data: AdminUser }>('/api/admin/users', payload);
+    return data;
+  },
+
+  update: async (id: number, payload: Partial<AdminUser>) => {
+    const { data } = await api.put<{ success: boolean; data: AdminUser }>(`/api/admin/users/${id}`, payload);
     return data;
   },
 };

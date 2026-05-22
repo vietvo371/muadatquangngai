@@ -54,6 +54,7 @@ import {
   FolderOpen,
 } from 'lucide-react';
 import { categoryApi, type Category } from '@/lib/admin-api';
+import { slugify } from '@/lib/formatters';
 
 type CategoryStatus = 'active' | 'inactive';
 
@@ -271,6 +272,13 @@ export default function CategoriesClient() {
       toast.error('Vui lòng điền đầy đủ Tên và đường dẫn Slug danh mục.');
       return;
     }
+    const isSlugDuplicate = categories.some(
+      (c) => c.slug.toLowerCase().trim() === formData.slug.toLowerCase().trim() && c.id !== editingCategory?.id
+    );
+    if (isSlugDuplicate) {
+      toast.error('Đường dẫn Slug này đã tồn tại trong hệ thống. Vui lòng nhập đường dẫn khác.');
+      return;
+    }
     try {
       setIsActionPending(true);
       if (editingCategory) {
@@ -285,7 +293,7 @@ export default function CategoriesClient() {
         let newId = categories.length + 1;
         if (useRealApi) {
           const res = await categoryApi.create(formData);
-          if (res && res.data) newId = res.data.id;
+          if (res && res.id) newId = res.id;
         }
         const newCat = {
           id: newId,
@@ -373,6 +381,7 @@ export default function CategoriesClient() {
         </div>
         <Button
           onClick={openCreateDialog}
+          data-testid="create-category-btn"
           className="bg-primary hover:bg-primary-dark rounded-xl font-bold text-xs h-9.5 gap-1.5 shadow-sm text-white transition-all"
         >
           <PlusCircle className="h-4 w-4" />
@@ -604,6 +613,7 @@ export default function CategoriesClient() {
                               <DropdownMenuContent align="end" className="rounded-xl w-40">
                                 <DropdownMenuItem
                                   onClick={() => openEditDialog(category)}
+                                  data-testid={`edit-category-btn-${category.id}`}
                                   className="font-bold text-xs gap-2 rounded-lg cursor-pointer"
                                 >
                                   <Edit2 className="h-4 w-4" />
@@ -634,7 +644,7 @@ export default function CategoriesClient() {
             {/* Left: Per page size selector & counts */}
             <div className="flex items-center gap-2">
               <span className="text-xs text-gray-400 font-bold">Số lượng hàng:</span>
-              <Select value={String(perPage)} onValueChange={(v) => { setPerPage(Number(v)); setPage(1); }}>
+              <Select value={String(perPage)} onValueChange={(v) => { setPerPage(Number(v || '5')); setPage(1); }}>
                 <SelectTrigger className="h-8 w-24 rounded-xl border-gray-200 text-xs font-bold text-gray-700 bg-white">
                   <SelectValue />
                 </SelectTrigger>
@@ -714,7 +724,7 @@ export default function CategoriesClient() {
 
       {/* Create / Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={(open) => !open && setIsDialogOpen(false)}>
-        <DialogContent className="max-w-[460px] rounded-2xl overflow-hidden border border-gray-100 p-0 shadow-lg bg-white">
+        <DialogContent className="sm:max-w-[460px] rounded-2xl overflow-hidden border border-gray-100 p-0 shadow-lg bg-white">
           <div className="bg-gray-50 border-b border-gray-100 p-6 pb-4">
             <DialogHeader>
               <DialogTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
@@ -732,8 +742,19 @@ export default function CategoriesClient() {
               <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Tên danh mục</label>
               <Input
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) => {
+                  const newName = e.target.value;
+                  const currentSlug = formData.slug;
+                  const oldAutoSlug = slugify(formData.name);
+                  const shouldAutoSlug = !editingCategory || !currentSlug || currentSlug === oldAutoSlug;
+                  setFormData({
+                    ...formData,
+                    name: newName,
+                    slug: shouldAutoSlug ? slugify(newName) : currentSlug
+                  });
+                }}
                 placeholder="Ví dụ: Căn hộ cao cấp"
+                data-testid="category-name-input"
                 className="rounded-xl border-gray-200 text-xs font-semibold h-9.5 focus:ring-primary/20 focus:border-primary"
               />
             </div>
@@ -744,6 +765,7 @@ export default function CategoriesClient() {
                 value={formData.slug}
                 onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
                 placeholder="Ví dụ: can-ho-cao-cap"
+                data-testid="category-slug-input"
                 className="rounded-xl border-gray-200 text-xs font-semibold h-9.5 focus:ring-primary/20 focus:border-primary"
               />
             </div>
@@ -755,6 +777,7 @@ export default function CategoriesClient() {
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder="Nhập vài dòng mô tả giúp người dùng phân biệt rõ danh mục này..."
                 rows={3}
+                data-testid="category-desc-textarea"
                 className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none placeholder:text-gray-400"
               />
             </div>
@@ -766,6 +789,7 @@ export default function CategoriesClient() {
                   value={formData.icon}
                   onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
                   placeholder="Ví dụ: building, home"
+                  data-testid="category-icon-input"
                   className="rounded-xl border-gray-200 text-xs font-semibold h-9.5 focus:ring-primary/20 focus:border-primary"
                 />
               </div>
@@ -776,6 +800,7 @@ export default function CategoriesClient() {
                   type="number"
                   value={formData.sort_order}
                   onChange={(e) => setFormData({ ...formData, sort_order: parseInt(e.target.value) || 0 })}
+                  data-testid="category-sort-input"
                   className="rounded-xl border-gray-200 text-xs font-semibold h-9.5 focus:ring-primary/20 focus:border-primary"
                 />
               </div>
@@ -787,6 +812,7 @@ export default function CategoriesClient() {
                 id="is_active"
                 checked={formData.is_active}
                 onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                data-testid="category-active-checkbox"
                 className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
               />
               <label htmlFor="is_active" className="text-xs font-bold text-gray-700 cursor-pointer">
@@ -798,6 +824,7 @@ export default function CategoriesClient() {
               <Button
                 variant="ghost"
                 onClick={() => setIsDialogOpen(false)}
+                data-testid="category-cancel-btn"
                 className="rounded-xl font-bold text-xs h-9.5 text-gray-500 hover:bg-gray-100"
                 disabled={isActionPending}
               >
@@ -805,6 +832,7 @@ export default function CategoriesClient() {
               </Button>
               <Button
                 onClick={handleSubmit}
+                data-testid="category-submit-btn"
                 className="rounded-xl bg-gray-900 hover:bg-gray-800 text-white font-bold text-xs h-9.5"
                 disabled={isActionPending}
               >
