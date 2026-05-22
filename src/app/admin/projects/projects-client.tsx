@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -631,8 +632,10 @@ export default function ProjectsClient() {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="rounded-xl w-40">
                                 <DropdownMenuItem
-                                  onClick={() => openEditDialog(project)}
                                   data-testid={`edit-project-btn-${project.id}`}
+                                  onClick={() => {
+                                    router.push(`/admin/projects/${project.id}/edit`);
+                                  }}
                                   className="font-bold text-xs gap-2 rounded-lg cursor-pointer"
                                 >
                                   <Edit2 className="h-4 w-4" />

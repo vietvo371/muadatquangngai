@@ -50,25 +50,20 @@ export const PriceInput = forwardRef<HTMLInputElement, PriceInputProps>(({
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
     
-    // Allow empty, numbers, and minus sign for negative values
-    if (allowNegative) {
-      if (!/^-?\d*$/.test(inputValue)) return;
-    } else {
-      // Only allow digits
-      if (!/^\d*$/.test(inputValue)) return;
-    }
-
-    const numericValue = allowNegative 
-      ? parseInt(inputValue, 10) || 0 
-      : parseInt(inputValue || '0', 10);
+    // Clean all non-digit characters except negative sign if allowed
+    const cleanRegex = allowNegative ? /[^\d-]/g : /[^\d]/g;
+    const cleaned = inputValue.replace(cleanRegex, '');
+    
+    // Parse numeric value
+    const numericValue = cleaned ? parseInt(cleaned, 10) : 0;
 
     // Clamp value
     const clampedValue = Math.max(min, Math.min(max, numericValue));
 
-    setRawValue(clampedValue.toString());
+    setRawValue(cleaned ? clampedValue.toString() : '');
     
     // Format display value
-    const formatted = clampedValue > 0 
+    const formatted = cleaned && clampedValue > 0 
       ? clampedValue.toLocaleString('vi-VN') 
       : '';
     setDisplayValue(formatted);

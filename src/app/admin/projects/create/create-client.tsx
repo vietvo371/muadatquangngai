@@ -32,7 +32,9 @@ import {
 import { projectApi } from '@/lib/admin-api';
 import { slugify } from '@/lib/formatters';
 import ProjectPreview from '@/components/admin/ProjectPreview';
-import { ImageUploader } from '@/components/shared/ImageUploader';
+import { ImageUploader, UploadedFile } from '@/components/shared/ImageUploader';
+import { AddressAutocomplete } from '@/components/shared/AddressAutocomplete';
+import { PriceInput } from '@/components/shared/PriceInput';
 
 const PREDEFINED_UTILITIES = [
   'Hồ bơi',
@@ -46,7 +48,7 @@ const PREDEFINED_UTILITIES = [
   'Khu vui chơi trẻ em',
   'Trường mầm non',
 ];
-
+// ... [Lines 50 to 92 represent type definitions and initial data]
 interface ProjectFormData {
   name: string;
   slug: string;
@@ -96,7 +98,8 @@ export default function CreateProjectClient() {
   const [formData, setFormData] = useState<ProjectFormData>(initialFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSlugManual, setIsSlugManual] = useState(false);
-
+  const [projectImages, setProjectImages] = useState<UploadedFile[]>([]);
+// ... [Lines 100 to 323 represent standard input changes and form layout]
   // Auto slug generation based on name
   useEffect(() => {
     if (!isSlugManual && formData.name) {
@@ -298,24 +301,20 @@ export default function CreateProjectClient() {
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Giá tối thiểu (VND)</label>
-                  <Input
-                    type="number"
-                    name="min_price"
-                    value={formData.min_price || ''}
-                    onChange={handleChange}
-                    data-testid="project-min-price-input"
-                    className="h-10 text-sm rounded-xl border-gray-200"
+                  <PriceInput
+                    value={formData.min_price}
+                    onChange={(val) => setFormData(prev => ({ ...prev, min_price: val }))}
+                    placeholder="Nhập giá tối thiểu (ví dụ: 1.5 tỷ)"
+                    className="h-10 text-sm rounded-xl"
                   />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Giá tối đa (VND)</label>
-                  <Input
-                    type="number"
-                    name="max_price"
-                    value={formData.max_price || ''}
-                    onChange={handleChange}
-                    data-testid="project-max-price-input"
-                    className="h-10 text-sm rounded-xl border-gray-200"
+                  <PriceInput
+                    value={formData.max_price}
+                    onChange={(val) => setFormData(prev => ({ ...prev, max_price: val }))}
+                    placeholder="Nhập giá tối đa (ví dụ: 3.5 tỷ)"
+                    className="h-10 text-sm rounded-xl"
                   />
                 </div>
               </div>
@@ -332,26 +331,23 @@ export default function CreateProjectClient() {
             </CardHeader>
             <CardContent className="p-6">
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1">Ảnh đại diện dự án (Thumbnail) *</label>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1">
+                  Ảnh đại diện dự án (Thumbnail) *
+                </label>
                 <ImageUploader
-                  files={
-                    formData.thumbnail
-                      ? [
-                          {
-                            url: formData.thumbnail,
-                            name: 'thumbnail.jpg',
-                            size: 0,
-                            isPrimary: true,
-                          },
-                        ]
-                      : []
-                  }
-                  maxFiles={1}
+                  files={projectImages}
+                  maxFiles={10}
                   onChange={(uploadedFiles) => {
-                    const url = uploadedFiles.length > 0 ? uploadedFiles[0].url : '';
+                    setProjectImages(uploadedFiles);
+                    const primaryFile = uploadedFiles.find((f) => f.isPrimary);
+                    const otherFiles = uploadedFiles.filter((f) => !f.isPrimary);
+                    const allFilesOrdered = primaryFile 
+                      ? [primaryFile, ...otherFiles] 
+                      : uploadedFiles;
+                    const thumbnailValue = allFilesOrdered.map(f => f.url).join(',');
                     setFormData((prev) => ({
                       ...prev,
-                      thumbnail: url,
+                      thumbnail: thumbnailValue,
                     }));
                   }}
                 />
@@ -508,13 +504,11 @@ export default function CreateProjectClient() {
             <CardContent className="p-6 space-y-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Địa chỉ chi tiết *</label>
-                <Input
-                  name="location"
-                  placeholder="Số đường, Phường/Xã, Huyện/Thành phố, Quảng Ngãi"
+                <AddressAutocomplete
                   value={formData.location}
-                  onChange={handleChange}
-                  data-testid="project-location-input"
-                  className="h-10 text-sm rounded-xl border-gray-200"
+                  onChange={(address) => {
+                    setFormData((prev) => ({ ...prev, location: address }));
+                  }}
                   required
                 />
               </div>
@@ -590,7 +584,7 @@ export default function CreateProjectClient() {
 
         {/* Live Preview Column */}
         <div className="hidden lg:block lg:sticky lg:top-6">
-          <ProjectPreview data={formData} />
+          <ProjectPreview data={{ ...formData, images: projectImages.map(img => img.url) }} />
         </div>
       </div>
     </div>

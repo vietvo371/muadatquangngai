@@ -211,9 +211,10 @@ export function ImageUploader({
           {files.map((file, index) => (
             <div
               key={file.url}
+              onClick={() => setPrimary(index)}
               className={cn(
-                'relative group rounded-lg overflow-hidden border-2 transition-colors',
-                file.isPrimary ? 'border-blue-500' : 'border-gray-200'
+                'relative group rounded-lg overflow-hidden border-2 transition-colors cursor-pointer',
+                file.isPrimary ? 'border-blue-500' : 'border-gray-200 hover:border-blue-300'
               )}
             >
               {/* Image */}
@@ -238,7 +239,10 @@ export function ImageUploader({
                 {!file.isPrimary && (
                   <button
                     type="button"
-                    onClick={() => setPrimary(index)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPrimary(index);
+                    }}
                     className="p-2 bg-white rounded-full text-gray-700 hover:bg-gray-100"
                     title="Đặt làm ảnh bìa"
                   >
@@ -249,7 +253,10 @@ export function ImageUploader({
                 {/* Remove */}
                 <button
                   type="button"
-                  onClick={() => removeFile(index)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeFile(index);
+                  }}
                   className="p-2 bg-white rounded-full text-red-500 hover:bg-red-50"
                   title="Xóa ảnh"
                 >

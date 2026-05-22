@@ -49,6 +49,7 @@ export interface Project {
   longitude?: number;
   address?: string;
   cover_image?: string;
+  images?: string[];
   legal?: string;
   handover_date?: string;
   construction_progress?: number;

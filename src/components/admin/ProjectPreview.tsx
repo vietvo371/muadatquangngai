@@ -30,6 +30,7 @@ interface PreviewProjectData {
   utilities: string[];
   status: string;
   thumbnail?: string;
+  images?: string[];
 }
 
 interface ProjectPreviewProps {
@@ -52,6 +53,82 @@ const statusConfig = {
   draft:     { label: 'Bản nháp',    bg: 'bg-gray-100 border-gray-200',  text: 'text-gray-600'  },
   published: { label: 'Đã xuất bản',  bg: 'bg-green-100 border-green-200', text: 'text-green-700' },
   archived:  { label: 'Đã lưu trữ',  bg: 'bg-yellow-100 border-yellow-200', text: 'text-yellow-700' },
+};
+
+interface FloorPlanConfig {
+  title: string;
+  unitLabel: string;
+  plans: {
+    type: string;
+    area: string;
+    count: number;
+    priceFrom: number;
+  }[];
+}
+
+const getFloorPlansConfig = (
+  type: string,
+  unitsCount: number,
+  minPrice: number,
+  maxPrice: number
+): FloorPlanConfig => {
+  const pMin = minPrice || 3000000000;
+  const pMax = maxPrice || 8000000000;
+  const count = unitsCount && unitsCount > 0 ? unitsCount : 100;
+
+  switch (type) {
+    case 'land':
+      return {
+        title: 'Loại lô đất điển hình',
+        unitLabel: 'lô',
+        plans: [
+          { type: 'Lô liền kề', area: '100m²', count: Math.floor(count * 0.55), priceFrom: pMin },
+          { type: 'Lô góc thương mại', area: '150m²', count: Math.floor(count * 0.30), priceFrom: Math.floor(pMin * 1.25) },
+          { type: 'Lô biệt thự vườn', area: '250m²', count: Math.floor(count * 0.15), priceFrom: pMax },
+        ],
+      };
+    case 'villa':
+      return {
+        title: 'Loại biệt thự điển hình',
+        unitLabel: 'căn',
+        plans: [
+          { type: 'Biệt thự song lập', area: '200m²', count: Math.floor(count * 0.50), priceFrom: pMin },
+          { type: 'Biệt thự đơn lập', area: '320m²', count: Math.floor(count * 0.35), priceFrom: Math.floor(pMin * 1.40) },
+          { type: 'Biệt thự mặt tiền', area: '450m²', count: Math.floor(count * 0.15), priceFrom: pMax },
+        ],
+      };
+    case 'townhouse':
+      return {
+        title: 'Loại nhà phố điển hình',
+        unitLabel: 'căn',
+        plans: [
+          { type: 'Nhà phố liền kề', area: '90m²', count: Math.floor(count * 0.60), priceFrom: pMin },
+          { type: 'Shophouse thương mại', area: '120m²', count: Math.floor(count * 0.30), priceFrom: Math.floor(pMin * 1.30) },
+          { type: 'Căn góc Shophouse', area: '160m²', count: Math.floor(count * 0.10), priceFrom: pMax },
+        ],
+      };
+    case 'commercial':
+      return {
+        title: 'Loại mặt bằng điển hình',
+        unitLabel: 'căn',
+        plans: [
+          { type: 'Kiot thương mại', area: '50m²', count: Math.floor(count * 0.50), priceFrom: pMin },
+          { type: 'Shophouse dịch vụ', area: '110m²', count: Math.floor(count * 0.35), priceFrom: Math.floor(pMin * 1.30) },
+          { type: 'Văn phòng thông tầng', area: '220m²', count: Math.floor(count * 0.15), priceFrom: pMax },
+        ],
+      };
+    case 'apartment':
+    default:
+      return {
+        title: 'Loại căn hộ điển hình',
+        unitLabel: 'căn',
+        plans: [
+          { type: 'Căn 2 phòng ngủ', area: '72m²', count: Math.floor(count * 0.45), priceFrom: pMin },
+          { type: 'Căn 3 phòng ngủ', area: '95m²', count: Math.floor(count * 0.40), priceFrom: Math.floor(pMin * 1.35) },
+          { type: 'Penthouse', area: '180m²', count: Math.floor(count * 0.15), priceFrom: pMax },
+        ],
+      };
+  }
 };
 
 const tabs = [
@@ -81,24 +158,67 @@ export default function ProjectPreview({ data }: ProjectPreviewProps) {
   const projectTypeName = typeMap[data.type] || 'Căn hộ chung cư';
   const status = statusConfig[data.status as keyof typeof statusConfig] || statusConfig['selling'];
   
-  // Gallery formulation matching client detail page behavior
-  const gallery = [
-    data.thumbnail || '/images/image_data/nha-pho-de-palace-river.jpg',
-    '/images/image_data/Starlight---suc-hut-den-tu-vi-tri-dac-dia-nhat-trung-tam-Quang-Ngai-suc-hut-3-1733900371-424-width1000height563.jpg',
-    '/images/image_data/Haus-Coastal.jpg',
-    '/images/image_data/banner_hero.jpg',
-    '/images/image_data/thi_tran_9b705.jpg',
-  ];
+  // Gallery type mapping based on project type
+  const typeGalleryMap: Record<string, string[]> = {
+    townhouse: [
+      '/images/image_data/nha-pho-de-palace-river.jpg',
+      '/images/image_data/Haus-Coastal.jpg',
+      '/images/image_data/banner_hero.jpg',
+      '/images/image_data/thi_tran_9b705.jpg',
+    ],
+    villa: [
+      '/images/image_data/Haus-Coastal.jpg',
+      '/images/image_data/nha-pho-de-palace-river.jpg',
+      '/images/image_data/banner_hero.jpg',
+      '/images/image_data/thi_tran_9b705.jpg',
+    ],
+    apartment: [
+      '/images/image_data/Haus-Coastal.jpg',
+      '/images/image_data/banner_hero.jpg',
+      '/images/image_data/Starlight---suc-hut-den-tu-vi-tri-dac-dia-nhat-trung-tam-Quang-Ngai-suc-hut-3-1733900371-424-width1000height563.jpg',
+      '/images/image_data/thi_tran_9b705.jpg',
+    ],
+    commercial: [
+      '/images/image_data/Starlight---suc-hut-den-tu-vi-tri-dac-dia-nhat-trung-tam-Quang-Ngai-suc-hut-3-1733900371-424-width1000height563.jpg',
+      '/images/image_data/Haus-Coastal.jpg',
+      '/images/image_data/nha-pho-de-palace-river.jpg',
+      '/images/image_data/banner_hero.jpg',
+    ],
+    land: [
+      '/images/image_data/thi_tran_9b705.jpg',
+      '/images/image_data/banner_hero.jpg',
+      '/images/image_data/Starlight---suc-hut-den-tu-vi-tri-dac-dia-nhat-trung-tam-Quang-Ngai-suc-hut-3-1733900371-424-width1000height563.jpg',
+      '/images/image_data/nha-pho-de-palace-river.jpg',
+    ],
+  };
 
-  const totalArea = data.total_area ? `${data.total_area} ha` : '2.5 ha';
-  const totalUnits = data.total_units || 256;
-  const totalBlocks = data.total_blocks || 2;
-  const totalFloors = data.total_floors || 18;
-  const handoverDate = data.handover_date || '2026-12-31';
-  const legalStatus = data.legal || 'Sổ hồng / Sổ đỏ';
-  const developer = data.investor || 'Công ty CP Địa Ốc Quảng Ngãi';
+  const defaultGallery = typeGalleryMap[data.type] || typeGalleryMap.townhouse;
+  const gallery = data.images && data.images.length > 0
+    ? data.images
+    : (data.thumbnail 
+      ? [data.thumbnail, ...defaultGallery.slice(0, 4)]
+      : defaultGallery);
+
+  // Real Database fields showing directly instead of mock fallbacks
+  const unitWord = data.type === 'land' ? 'lô' : 'căn';
+  const totalAreaValue = data.total_area && data.total_area > 0 ? `${data.total_area} ha` : 'Đang cập nhật';
+  const totalBlocksValue = data.total_blocks && data.total_blocks > 0 ? `${data.total_blocks} block` : 'Đang cập nhật';
+  const totalUnitsValue = data.total_units && data.total_units > 0 ? `${data.total_units} ${unitWord}` : 'Đang cập nhật';
+  
+  const totalAreaText = data.total_area && data.total_area > 0 ? `${data.total_area} ha` : 'Đang cập nhật';
+  const totalBlocksText = data.total_blocks && data.total_blocks > 0 ? `${data.total_blocks} block` : 'Đang cập nhật';
+  const totalFloorsText = data.total_floors && data.total_floors > 0 ? `${data.total_floors} tầng` : 'Đang cập nhật';
+  const totalUnitsText = data.total_units && data.total_units > 0 ? `${data.total_units} ${unitWord}` : 'Đang cập nhật';
+  
+  const handoverDate = data.handover_date || '';
+  const legalStatus = data.legal || 'Đang cập nhật';
+  const developer = data.investor || 'Chưa cập nhật';
   const progress = data.construction_progress || 0;
-  const address = data.location || 'Đầu cầu Thạch Bích, TP Quảng Ngãi, Quảng Ngãi';
+  const address = data.location || 'Đang cập nhật';
+  
+  // Safe units count for estimating mock floor plan values
+  const unitsCount = data.total_units && data.total_units > 0 ? data.total_units : 100;
+  const floorPlansConfig = getFloorPlansConfig(data.type, unitsCount, data.min_price || 0, data.max_price || 0);
 
   // Extract district from location
   const districtName = data.location?.split(',').slice(-2, -1)[0]?.trim() || 'TP Quảng Ngãi';
@@ -261,10 +381,10 @@ export default function ProjectPreview({ data }: ProjectPreviewProps) {
               {/* Quick stats grid under Gallery */}
               <div className="grid grid-cols-4 divide-x divide-gray-100 border-t border-gray-100 bg-white">
                 {[
-                  { icon: LayoutGrid, label: 'Diện tích', value: totalArea },
-                  { icon: Building, label: 'Block', value: `${totalBlocks} block` },
-                  { icon: Home, label: 'Căn hộ', value: `${totalUnits} căn` },
-                  { icon: Calendar, label: 'Bàn giao', value: isNaN(new Date(handoverDate).getTime()) ? '2026' : new Date(handoverDate).getFullYear().toString() },
+                  { icon: LayoutGrid, label: 'Diện tích', value: totalAreaValue },
+                  { icon: Building, label: 'Block', value: totalBlocksValue },
+                  { icon: Home, label: data.type === 'land' ? 'Lô đất' : 'Căn hộ', value: totalUnitsValue },
+                  { icon: Calendar, label: 'Bàn giao', value: !handoverDate || isNaN(new Date(handoverDate).getTime()) ? 'Chưa rõ' : new Date(handoverDate).getFullYear().toString() },
                 ].map(({ icon: Icon, label, value }) => (
                   <div key={label} className="flex flex-col items-center py-2.5 px-1.5 text-center select-none">
                     <Icon className="h-4 w-4 text-primary mb-1 shrink-0" />
@@ -310,12 +430,12 @@ export default function ProjectPreview({ data }: ProjectPreviewProps) {
                         {[
                           ['Chủ đầu tư', developer],
                           ['Loại hình', projectTypeName],
-                          ['Tổng diện tích', totalArea],
-                          ['Số block', `${totalBlocks} block`],
-                          ['Số tầng', `${totalFloors} tầng`],
-                          ['Số căn hộ', `${totalUnits} căn`],
+                          ['Tổng diện tích', totalAreaText],
+                          ['Số block', totalBlocksText],
+                          ['Số tầng', totalFloorsText],
+                          [data.type === 'land' ? 'Số lô đất' : 'Số căn hộ', totalUnitsText],
                           ['Pháp lý', legalStatus],
-                          ['Bàn giao', isNaN(new Date(handoverDate).getTime()) ? 'Liên hệ' : new Date(handoverDate).toLocaleDateString('vi-VN')],
+                          ['Bàn giao', !handoverDate || isNaN(new Date(handoverDate).getTime()) ? 'Chưa rõ' : new Date(handoverDate).toLocaleDateString('vi-VN')],
                         ].map(([k, v]) => (
                           <div key={k} className="flex items-start py-1 border-b border-gray-50">
                             <span className="text-gray-400 shrink-0 w-24 font-medium">{k}</span>
@@ -373,20 +493,16 @@ export default function ProjectPreview({ data }: ProjectPreviewProps) {
                     {/* Floor Plans Type List */}
                     <div>
                       <h3 className="text-xs font-bold text-gray-900 mb-2 border-l-2 border-primary pl-2 uppercase tracking-wide text-[11px]">
-                        Loại căn hộ điển hình
+                        {floorPlansConfig.title}
                       </h3>
                       <div className="divide-y divide-gray-50 rounded-xl border border-gray-100 overflow-hidden bg-white">
-                        {[
-                          { type: '2 phòng ngủ', area: '72m²', count: Math.floor(totalUnits * 0.45), priceFrom: data.min_price || 3000000000 },
-                          { type: '3 phòng ngủ', area: '95m²', count: Math.floor(totalUnits * 0.4), priceFrom: Math.floor((data.min_price || 3000000000) * 1.35) },
-                          { type: 'Penthouse', area: '180m²', count: Math.floor(totalUnits * 0.15), priceFrom: data.max_price || 8000000000 },
-                        ].map((fp) => (
+                        {floorPlansConfig.plans.map((fp) => (
                           <div key={fp.type} className="flex items-center justify-between px-3.5 py-2.5 hover:bg-gray-50/50 transition-colors">
                             <div className="flex items-center gap-2">
                               <Ruler className="h-3.5 w-3.5 text-gray-400 shrink-0" />
                               <div>
                                 <p className="text-xs font-bold text-gray-800">{fp.type}</p>
-                                <p className="text-[10px] text-gray-400 font-semibold">{fp.area} · {fp.count} căn</p>
+                                <p className="text-[10px] text-gray-400 font-semibold">{fp.area} · {fp.count} {floorPlansConfig.unitLabel}</p>
                               </div>
                             </div>
                             <p className="text-xs font-black text-primary">{formatPrice(fp.priceFrom)}</p>
@@ -411,7 +527,7 @@ export default function ProjectPreview({ data }: ProjectPreviewProps) {
                         />
                       </div>
                       <p className="text-[10px] text-gray-400 font-semibold mt-1.5">
-                        Dự kiến bàn giao: {isNaN(new Date(handoverDate).getTime()) ? 'Chưa rõ' : new Date(handoverDate).toLocaleDateString('vi-VN')}
+                        Dự kiến bàn giao: {!handoverDate || isNaN(new Date(handoverDate).getTime()) ? 'Chưa rõ' : new Date(handoverDate).toLocaleDateString('vi-VN')}
                       </p>
                     </div>
                   </div>
@@ -619,8 +735,8 @@ export default function ProjectPreview({ data }: ProjectPreviewProps) {
                 {[
                   ['Chủ đầu tư', developer],
                   ['Loại hình', projectTypeName],
-                  ['Tổng diện tích', totalArea],
-                  ['Số căn hộ', `${totalUnits} căn`],
+                  ['Tổng diện tích', totalAreaText],
+                  [data.type === 'land' ? 'Số lô đất' : 'Số căn hộ', totalUnitsText],
                   ['Pháp lý', legalStatus],
                 ].map(([k, v]) => (
                   <div key={k} className="flex justify-between gap-2.5 py-0.5 border-b border-gray-50/50 pb-1.5 last:border-b-0 last:pb-0">
