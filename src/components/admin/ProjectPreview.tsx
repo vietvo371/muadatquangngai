@@ -14,7 +14,7 @@ interface PreviewProjectData {
   name: string;
   slug: string;
   investor: string;
-  category: string;
+  // category \u0111\u00e3 b\u1ecf \u2014 lo\u1ea1i h\u00ecnh d\u1ef1 \u00e1n d\u00f9ng `type` qua typeMap b\u00ean d\u01b0\u1edbi
   type: string;
   min_price: number;
   max_price: number;

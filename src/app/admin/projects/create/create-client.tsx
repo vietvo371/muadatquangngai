@@ -53,7 +53,7 @@ interface ProjectFormData {
   name: string;
   slug: string;
   investor: string;
-  category: string;
+  // category đã được bỏ — loại hình dự án dùng `type` là đủ theo đúng nghiệp vụ bất động sản
   type: string;
   min_price: number;
   max_price: number;
@@ -75,7 +75,6 @@ const initialFormData: ProjectFormData = {
   name: '',
   slug: '',
   investor: '',
-  category: 'Đất nền',
   type: 'townhouse',
   min_price: 0,
   max_price: 0,
@@ -161,7 +160,7 @@ export default function CreateProjectClient() {
         min_price: formData.min_price || undefined,
         max_price: formData.max_price || undefined,
         investor: formData.investor.trim() || undefined,
-        category: formData.category.trim() || undefined,
+        // category không gửi — backend không có cột này, phân loại dự án dùng `type`
         type: formData.type,
         location: formData.location.trim(),
         description: formData.description.trim() || undefined,
@@ -264,17 +263,6 @@ export default function CreateProjectClient() {
                     value={formData.investor}
                     onChange={handleChange}
                     data-testid="project-investor-input"
-                    className="h-10 text-sm rounded-xl border-gray-200"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Danh mục</label>
-                  <Input
-                    name="category"
-                    placeholder="Danh mục dự án (ví dụ: Đất nền)"
-                    value={formData.category}
-                    onChange={handleChange}
-                    data-testid="project-category-input"
                     className="h-10 text-sm rounded-xl border-gray-200"
                   />
                 </div>

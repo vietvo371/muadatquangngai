@@ -68,6 +68,7 @@ const CLIENT_URL = process.env.NEXT_PUBLIC_CLIENT_URL || 'http://localhost:3000'
 type ProjectStatus = 'draft' | 'upcoming' | 'selling' | 'paused' | 'completed' | 'archived';
 
 // Mock projects rich dataset with real high-profile projects in Quang Ngai
+// category đã được bỏ — dùng `type` để phân loại dự án
 const MOCK_PROJECTS: Project[] = [
   {
     id: 1,
@@ -76,9 +77,9 @@ const MOCK_PROJECTS: Project[] = [
     min_price: 1500000000,
     max_price: 3500000000,
     price_display: '1.5 tỷ - 3.5 tỷ',
-    status: 'published',
+    status: 'selling',
     location: 'Sơn Tịnh, Quảng Ngãi',
-    category: 'Đất nền & Nhà phố',
+    type: 'land',
     investor: 'Tập đoàn VSIP',
     created_at: '2026-05-18T10:00:00Z',
   },
@@ -89,9 +90,9 @@ const MOCK_PROJECTS: Project[] = [
     min_price: 2800000000,
     max_price: 6000000000,
     price_display: '2.8 tỷ - 6.0 tỷ',
-    status: 'published',
+    status: 'selling',
     location: 'Phường Trần Hưng Đạo, TP Quảng Ngãi',
-    category: 'Nhà phố thương mại',
+    type: 'commercial',
     investor: 'Công ty Cổ phần Phát triển Bất động sản Phát Đạt',
     created_at: '2026-05-17T14:30:00Z',
   },
@@ -102,9 +103,9 @@ const MOCK_PROJECTS: Project[] = [
     min_price: 1200000000,
     max_price: 2505000000,
     price_display: '1.2 tỷ - 2.5 tỷ',
-    status: 'published',
+    status: 'selling',
     location: 'Tư Nghĩa, Quảng Ngãi',
-    category: 'Đất nền biệt thự',
+    type: 'villa',
     investor: 'Công ty TNHH Phú Điền',
     created_at: '2026-05-16T09:15:00Z',
   },
@@ -117,7 +118,7 @@ const MOCK_PROJECTS: Project[] = [
     price_display: '900 triệu - 1.8 tỷ',
     status: 'draft',
     location: 'Bình Sơn, Quảng Ngãi',
-    category: 'Khu sinh thái nghỉ dưỡng',
+    type: 'land',
     investor: 'Ban quản lý Khu kinh tế Dung Quất',
     created_at: '2026-05-15T16:00:00Z',
   },
@@ -128,9 +129,9 @@ const MOCK_PROJECTS: Project[] = [
     min_price: 1100000000,
     max_price: 2200000000,
     price_display: '1.1 tỷ - 2.2 tỷ',
-    status: 'published',
+    status: 'selling',
     location: 'Nghĩa Hành, Quảng Ngãi',
-    category: 'Khu dân cư đô thị',
+    type: 'townhouse',
     investor: 'Công ty Cổ phần Đầu tư An Điền Phát',
     created_at: '2026-05-12T08:00:00Z',
   },
@@ -143,7 +144,7 @@ const MOCK_PROJECTS: Project[] = [
     price_display: '850 triệu - 1.7 tỷ',
     status: 'archived',
     location: 'Đức Tân, Mộ Đức, Quảng Ngãi',
-    category: 'Đất nền liền kề',
+    type: 'land',
     investor: 'Công ty Cổ phần Đất Xanh Miền Trung',
     created_at: '2026-05-10T10:20:00Z',
   },
@@ -154,9 +155,9 @@ const MOCK_PROJECTS: Project[] = [
     min_price: 3500000000,
     max_price: 8500000000,
     price_display: '3.5 tỷ - 8.5 tỷ',
-    status: 'published',
+    status: 'selling',
     location: 'Phường Trương Quang Trọng, TP Quảng Ngãi',
-    category: 'Biệt thự cao cấp',
+    type: 'villa',
     investor: 'Tổng công ty MBland',
     created_at: '2026-05-08T11:45:00Z',
   },
@@ -167,9 +168,9 @@ const MOCK_PROJECTS: Project[] = [
     min_price: 2500000000,
     max_price: 5500000000,
     price_display: '2.5 tỷ - 5.5 tỷ',
-    status: 'published',
+    status: 'selling',
     location: 'Phường Nghĩa Lộ, TP Quảng Ngãi',
-    category: 'Khu đô thị kiểu mẫu',
+    type: 'apartment',
     investor: 'Công ty Cổ phần Hạ tầng và Bất động sản Việt Nam',
     created_at: '2026-05-05T09:30:00Z',
   },
@@ -182,7 +183,7 @@ const MOCK_PROJECTS: Project[] = [
     price_display: '1.3 tỷ - 2.4 tỷ',
     status: 'draft',
     location: 'Tịnh Long, TP Quảng Ngãi',
-    category: 'Đất nền nhà phố',
+    type: 'townhouse',
     investor: 'Công ty TNHH Phát triển Đô thị Angkya',
     created_at: '2026-05-02T15:10:00Z',
   },
@@ -193,13 +194,30 @@ const MOCK_PROJECTS: Project[] = [
     min_price: 1800000000,
     max_price: 3200000000,
     price_display: '1.8 tỷ - 3.2 tỷ',
-    status: 'published',
+    status: 'selling',
     location: 'Phường Nghĩa Chánh, TP Quảng Ngãi',
-    category: 'Nhà liên kề phong cách Nhật',
+    type: 'townhouse',
     investor: 'Công ty Cổ phần Đầu tư Đô thị Uhome',
     created_at: '2026-04-28T14:20:00Z',
   }
 ];
+
+/**
+ * getTypeLabel — Chuyển `type` thành nhãn hiển thị tiếng Việt.
+ * Đồng bộ với các SelectItem trong form Thêm mới / Chỉnh sửa.
+ * Thay cho trường `category` tự nhập trước đây.
+ */
+const TYPE_LABELS: Record<string, string> = {
+  land:       'Đất nền',
+  villa:      'Biệt thự',
+  townhouse:  'Nhà phố / Shophouse',
+  apartment:  'Chung cư / Căn hộ',
+  commercial: 'Thương mại',
+};
+
+function getTypeLabel(type?: string): string {
+  return TYPE_LABELS[type ?? ''] ?? 'Bất động sản';
+}
 
 /**
  * statusConfig — Cấu hình nhãn, màu badge và icon cho từng trạng thái dự án.
@@ -317,7 +335,7 @@ export default function ProjectsClient() {
           price_display: apiProj.price_display ?? null,
           status: apiProj.status || 'draft',
           location: apiProj.location?.address ?? apiProj.address ?? apiProj.location ?? 'Quảng Ngãi',
-          category: apiProj.category ?? (apiProj.type === 'townhouse' ? 'Nhà phố' : apiProj.type === 'villa' ? 'Biệt thự' : apiProj.type === 'apartment' ? 'Chung cư' : 'Đất nền & Nhà phố'),
+          // category không có trên API — derive từ type thông qua getTypeLabel()
           investor: apiProj.developer ?? apiProj.investor ?? 'Đang cập nhật',
           created_at: apiProj.created_at,
           type: apiProj.type || 'townhouse',
@@ -616,7 +634,8 @@ export default function ProjectsClient() {
                         {/* Category & investor */}
                         <TableCell>
                           <div>
-                            <p className="font-semibold text-gray-800 text-[12px]">{project.category || 'Bất động sản'}</p>
+                            {/* Hiển thị loại hình dự án — derive từ `type` thay cho category tự nhập */}
+                            <p className="font-semibold text-gray-800 text-[12px]">{getTypeLabel(project.type)}</p>
                             {project.investor && (
                               <p className="text-[10px] text-gray-400 font-bold mt-0.5 flex items-center gap-1">
                                 <Building className="h-3 w-3 text-gray-400 shrink-0" />
