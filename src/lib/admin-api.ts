@@ -34,6 +34,8 @@ export interface Project {
   developer?: string;
   province_id?: number;
   district_id?: number;
+  ward_id?: number;
+  agent_id?: number;
   type?: string;
   status: 'draft' | 'published' | 'archived' | 'upcoming' | 'selling' | 'completed' | 'paused';
   description?: string;
@@ -53,6 +55,7 @@ export interface Project {
   legal?: string;
   handover_date?: string;
   construction_progress?: number;
+  construction_note?: string;
   utilities?: string[];
   published_at?: string;
   created_at?: string;

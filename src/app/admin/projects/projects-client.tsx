@@ -67,140 +67,7 @@ const CLIENT_URL = process.env.NEXT_PUBLIC_CLIENT_URL || 'http://localhost:3000'
 // Đồng bộ với App\Enums\ProjectStatus ở backend.
 type ProjectStatus = 'draft' | 'upcoming' | 'selling' | 'paused' | 'completed' | 'archived';
 
-// Mock projects rich dataset with real high-profile projects in Quang Ngai
-// category đã được bỏ — dùng `type` để phân loại dự án
-const MOCK_PROJECTS: Project[] = [
-  {
-    id: 1,
-    name: 'Khu đô thị VSIP Quảng Ngãi',
-    slug: 'khu-do-thi-vsip-quang-ngai',
-    min_price: 1500000000,
-    max_price: 3500000000,
-    price_display: '1.5 tỷ - 3.5 tỷ',
-    status: 'selling',
-    location: 'Sơn Tịnh, Quảng Ngãi',
-    type: 'land',
-    investor: 'Tập đoàn VSIP',
-    created_at: '2026-05-18T10:00:00Z',
-  },
-  {
-    id: 2,
-    name: 'Dự án Phan Đình Phùng Quảng Ngãi',
-    slug: 'du-an-phan-dinh-phung-quang-ngai',
-    min_price: 2800000000,
-    max_price: 6000000000,
-    price_display: '2.8 tỷ - 6.0 tỷ',
-    status: 'selling',
-    location: 'Phường Trần Hưng Đạo, TP Quảng Ngãi',
-    type: 'commercial',
-    investor: 'Công ty Cổ phần Phát triển Bất động sản Phát Đạt',
-    created_at: '2026-05-17T14:30:00Z',
-  },
-  {
-    id: 3,
-    name: 'Dự án Phú Điền Residences Quảng Ngãi',
-    slug: 'du-an-phu-dien-residences-quang-ngai',
-    min_price: 1200000000,
-    max_price: 2505000000,
-    price_display: '1.2 tỷ - 2.5 tỷ',
-    status: 'selling',
-    location: 'Tư Nghĩa, Quảng Ngãi',
-    type: 'villa',
-    investor: 'Công ty TNHH Phú Điền',
-    created_at: '2026-05-16T09:15:00Z',
-  },
-  {
-    id: 4,
-    name: 'Khu đô thị Vạn Tường Quảng Ngãi',
-    slug: 'khu-do-thi-van-tuong-quang-ngai',
-    min_price: 900000000,
-    max_price: 1800000000,
-    price_display: '900 triệu - 1.8 tỷ',
-    status: 'draft',
-    location: 'Bình Sơn, Quảng Ngãi',
-    type: 'land',
-    investor: 'Ban quản lý Khu kinh tế Dung Quất',
-    created_at: '2026-05-15T16:00:00Z',
-  },
-  {
-    id: 5,
-    name: 'Khu dân cư An Điền Phát Quảng Ngãi',
-    slug: 'khu-dan-cu-an-dien-phat-quang-ngai',
-    min_price: 1100000000,
-    max_price: 2200000000,
-    price_display: '1.1 tỷ - 2.2 tỷ',
-    status: 'selling',
-    location: 'Nghĩa Hành, Quảng Ngãi',
-    type: 'townhouse',
-    investor: 'Công ty Cổ phần Đầu tư An Điền Phát',
-    created_at: '2026-05-12T08:00:00Z',
-  },
-  {
-    id: 6,
-    name: 'Dự án Sunfloria City Mộ Đức',
-    slug: 'du-an-sunfloria-city-mo-duc',
-    min_price: 850000000,
-    max_price: 1700000000,
-    price_display: '850 triệu - 1.7 tỷ',
-    status: 'archived',
-    location: 'Đức Tân, Mộ Đức, Quảng Ngãi',
-    type: 'land',
-    investor: 'Công ty Cổ phần Đất Xanh Miền Trung',
-    created_at: '2026-05-10T10:20:00Z',
-  },
-  {
-    id: 7,
-    name: 'Khu đô thị sinh thái ven sông Trà Khúc',
-    slug: 'khu-do-thi-sinh-thai-ven-song-tra-khuc',
-    min_price: 3500000000,
-    max_price: 8500000000,
-    price_display: '3.5 tỷ - 8.5 tỷ',
-    status: 'selling',
-    location: 'Phường Trương Quang Trọng, TP Quảng Ngãi',
-    type: 'villa',
-    investor: 'Tổng công ty MBland',
-    created_at: '2026-05-08T11:45:00Z',
-  },
-  {
-    id: 8,
-    name: 'Dự án Ngọc Bảo Viên Quảng Ngãi',
-    slug: 'du-an-ngoc-bao-vien-quang-ngai',
-    min_price: 2500000000,
-    max_price: 5500000000,
-    price_display: '2.5 tỷ - 5.5 tỷ',
-    status: 'selling',
-    location: 'Phường Nghĩa Lộ, TP Quảng Ngãi',
-    type: 'apartment',
-    investor: 'Công ty Cổ phần Hạ tầng và Bất động sản Việt Nam',
-    created_at: '2026-05-05T09:30:00Z',
-  },
-  {
-    id: 9,
-    name: 'Khu dân cư Tăng Long Angkya Quảng Ngãi',
-    slug: 'khu-dan-cu-tang-long-angkya',
-    min_price: 1300000000,
-    max_price: 2400000000,
-    price_display: '1.3 tỷ - 2.4 tỷ',
-    status: 'draft',
-    location: 'Tịnh Long, TP Quảng Ngãi',
-    type: 'townhouse',
-    investor: 'Công ty TNHH Phát triển Đô thị Angkya',
-    created_at: '2026-05-02T15:10:00Z',
-  },
-  {
-    id: 10,
-    name: 'Khu đô thị Uhome Quảng Ngãi',
-    slug: 'khu-do-thi-uhome-quang-ngai',
-    min_price: 1800000000,
-    max_price: 3200000000,
-    price_display: '1.8 tỷ - 3.2 tỷ',
-    status: 'selling',
-    location: 'Phường Nghĩa Chánh, TP Quảng Ngãi',
-    type: 'townhouse',
-    investor: 'Công ty Cổ phần Đầu tư Đô thị Uhome',
-    created_at: '2026-04-28T14:20:00Z',
-  }
-];
+
 
 /**
  * getTypeLabel — Chuyển `type` thành nhãn hiển thị tiếng Việt.
@@ -297,7 +164,7 @@ export default function ProjectsClient() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFiltering, setIsFiltering] = useState(false);
-  const [useRealApi, setUseRealApi] = useState(true);
+  // useRealApi đã bỏ — luôn dùng real API, không có mock fallback
 
   // Filters state
   const [statusFilter, setStatusFilter] = useState('all');
@@ -350,15 +217,14 @@ export default function ProjectsClient() {
           utilities: apiProj.utilities ?? [],
         }));
         setProjects(mapped);
-        setUseRealApi(true);
       } else {
-        setProjects(MOCK_PROJECTS);
-        setUseRealApi(false);
+        // API thành công nhưng không có dữ liệu — để empty state hiển thị
+        setProjects([]);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching projects:', error);
-      setProjects(MOCK_PROJECTS);
-      setUseRealApi(false);
+      toast.error('Không tải được danh sách dự án. Vui lòng tải lại trang.');
+      setProjects([]);
     } finally {
       setLoading(false);
     }
@@ -409,9 +275,7 @@ export default function ProjectsClient() {
   // Actions
   const handlePublish = async (id: number) => {
     try {
-      if (useRealApi) {
-        await projectApi.publish(id);
-      }
+      await projectApi.publish(id);
       // Khi xuất bản, chuyển draft → selling (đang mở bán)
       setProjects((prev) =>
         prev.map((p) => (p.id === id ? { ...p, status: 'selling' } : p))
@@ -424,9 +288,7 @@ export default function ProjectsClient() {
 
   const handleArchive = async (id: number) => {
     try {
-      if (useRealApi) {
-        await projectApi.archive(id);
-      }
+      await projectApi.archive(id);
       setProjects((prev) =>
         prev.map((p) => (p.id === id ? { ...p, status: 'archived' } : p))
       );
@@ -446,9 +308,7 @@ export default function ProjectsClient() {
     });
     if (!isConfirmed) return;
     try {
-      if (useRealApi) {
-        await projectApi.delete(id);
-      }
+      await projectApi.delete(id);
       setProjects((prev) => prev.filter((p) => p.id !== id));
       toast.success('Đã xóa dự án thành công.');
     } catch (error: unknown) {

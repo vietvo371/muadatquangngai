@@ -6,15 +6,20 @@ import {
   MapPin, Building, Home, Calendar, CheckCircle,
   Share2, Heart, ChevronRight, ChevronLeft, X,
   Ruler, LayoutGrid, GraduationCap, ShoppingCart, Trees, Cross, Clock,
-  DollarSign
+  DollarSign,
+  // Icons dùng cho từng tiện ích — đồng bộ với PROJECT_UTILITIES trong project-utilities.ts
+  Waves, Dumbbell, Smile, Activity, Users,
+  Shield, Camera, ArrowUpDown, Car, Flame, Wifi,
+  Coffee, Store
 } from 'lucide-react';
 import { formatPrice } from '@/lib/formatters';
+import { PROJECT_UTILITIES, groupUtilities } from '@/lib/project-utilities';
 
 interface PreviewProjectData {
   name: string;
   slug: string;
   investor: string;
-  // category \u0111\u00e3 b\u1ecf \u2014 lo\u1ea1i h\u00ecnh d\u1ef1 \u00e1n d\u00f9ng `type` qua typeMap b\u00ean d\u01b0\u1edbi
+  // category đã bỏ — loại hình dự án dùng `type` qua typeMap bên dưới
   type: string;
   min_price: number;
   max_price: number;
@@ -25,6 +30,7 @@ interface PreviewProjectData {
   legal: string;
   handover_date: string;
   construction_progress: number;
+  construction_note?: string;
   location: string;
   description: string;
   utilities: string[];
@@ -43,6 +49,20 @@ const typeMap: Record<string, string> = {
   apartment: 'Căn hộ chung cư',
   commercial: 'Thương mại / Shophouse',
   land: 'Đất nền',
+};
+
+/**
+ * UTILITY_ICON_MAP — ánh xạ iconName (string) từ PROJECT_UTILITIES
+ * sang Lucide React component tương ứng.
+ * Khi thêm tiện ích mới trong project-utilities.ts, thêm icon vào đây.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const UTILITY_ICON_MAP: Record<string, React.ElementType> = {
+  Waves, Dumbbell, Trees, Smile, Activity, Users,
+  Shield, Camera, ArrowUpDown, Car, Flame, Wifi,
+  GraduationCap, Cross, Home,
+  ShoppingCart, Coffee, Store,
+  CheckCircle, // fallback
 };
 
 const statusConfig = {
@@ -193,10 +213,13 @@ export default function ProjectPreview({ data }: ProjectPreviewProps) {
   };
 
   const defaultGallery = typeGalleryMap[data.type] || typeGalleryMap.townhouse;
-  const gallery = data.images && data.images.length > 0
-    ? data.images
-    : (data.thumbnail 
-      ? [data.thumbnail, ...defaultGallery.slice(0, 4)]
+  // L\u1ecdc b\u1ecf string r\u1ed7ng tr\u01b0\u1edbc khi b\u1eed gallery \u2014 tr\u00e1nh l\u1ed7i "empty src" trong next/image
+  const validImages = (data.images ?? []).filter((img) => typeof img === 'string' && img.trim() !== '');
+  const validThumbnail = data.thumbnail && data.thumbnail.trim() !== '' ? data.thumbnail : null;
+  const gallery = validImages.length > 0
+    ? validImages
+    : (validThumbnail
+      ? [validThumbnail, ...defaultGallery.slice(0, 3)]
       : defaultGallery);
 
   // Real Database fields showing directly instead of mock fallbacks
@@ -446,16 +469,34 @@ export default function ProjectPreview({ data }: ProjectPreviewProps) {
                     </div>
 
                     {/* Price Range Box matching Client */}
-                    <div className="bg-gray-50 border border-gray-100 rounded-xl p-3.5 shadow-2xs">
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">Khoảng giá dự kiến</p>
-                      <p className="text-base font-black text-primary flex items-center gap-1">
-                        <DollarSign className="h-4 w-4 text-primary shrink-0" />
-                        <span>
-                          {data.min_price || data.max_price
-                            ? `${formatPrice(data.min_price)} – ${formatPrice(data.max_price)}`
-                            : 'Chưa cập nhật'}
-                        </span>
-                      </p>
+                    <div className="bg-gray-50 border border-gray-100 rounded-xl p-3.5 shadow-2xs flex justify-between items-center flex-wrap gap-2">
+                      <div>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">Khoảng giá dự kiến</p>
+                        <p className="text-base font-black text-primary flex items-center gap-1">
+                          <DollarSign className="h-4 w-4 text-primary shrink-0" />
+                          <span>
+                            {data.min_price || data.max_price
+                              ? `${formatPrice(data.min_price)} – ${formatPrice(data.max_price)}`
+                              : 'Chưa cập nhật'}
+                          </span>
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">Đơn giá tự tính</p>
+                        <p className="text-xs font-bold text-cta">
+                          {(() => {
+                            if (!data.min_price || !data.total_area) return 'Đang cập nhật';
+                            const areaM2 = data.total_area * 10000;
+                            if (areaM2 <= 0) return 'Đang cập nhật';
+                            const pricePerM2 = data.min_price / areaM2;
+                            const millionPerM2 = pricePerM2 / 1000000;
+                            if (millionPerM2 < 0.1) {
+                              return `từ ${(millionPerM2 * 1000).toLocaleString('vi-VN')} nghìn/m²`;
+                            }
+                            return `từ ${millionPerM2.toLocaleString('vi-VN', { maximumFractionDigits: 1 })} triệu/m²`;
+                          })()}
+                        </p>
+                      </div>
                     </div>
 
                     {/* Description Paragraph */}
@@ -468,21 +509,32 @@ export default function ProjectPreview({ data }: ProjectPreviewProps) {
                       </div>
                     </div>
 
-                    {/* Utilities Badge Box */}
+                    {/* Utilities Badge Box — hiển thị theo nhóm, mỗi tiện ích có icon riêng */}
                     <div>
                       <h3 className="text-xs font-bold text-gray-900 mb-2 border-l-2 border-primary pl-2 uppercase tracking-wide text-[11px]">
                         Tiện ích dự án
                       </h3>
                       {data.utilities && data.utilities.length > 0 ? (
-                        <div className="flex flex-wrap gap-1.5">
-                          {data.utilities.map((util) => (
-                            <span
-                              key={util}
-                              className="flex items-center gap-1 text-[10px] font-bold bg-primary-light text-primary border border-primary/5 px-2.5 py-1.5 rounded-lg transition-all"
-                            >
-                              <CheckCircle className="h-3 w-3 shrink-0" />
-                              <span>{util}</span>
-                            </span>
+                        <div className="space-y-3">
+                          {Object.entries(groupUtilities(data.utilities)).map(([group, items]) => (
+                            <div key={group}>
+                              <p className="text-[9px] font-extrabold text-gray-400 uppercase tracking-widest mb-1.5">{group}</p>
+                              <div className="flex flex-wrap gap-1.5">
+                                {items.map((util) => {
+                                  const meta = PROJECT_UTILITIES.find(u => u.label === util);
+                                  const IconComp = meta ? UTILITY_ICON_MAP[meta.iconName] : CheckCircle;
+                                  return (
+                                    <span
+                                      key={util}
+                                      className="flex items-center gap-1 text-[10px] font-bold bg-primary-light text-primary border border-primary/5 px-2.5 py-1.5 rounded-lg transition-all"
+                                    >
+                                      {IconComp && <IconComp className="h-3 w-3 shrink-0" />}
+                                      <span>{util}</span>
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            </div>
                           ))}
                         </div>
                       ) : (
@@ -526,6 +578,12 @@ export default function ProjectPreview({ data }: ProjectPreviewProps) {
                           style={{ width: `${progress}%` }}
                         />
                       </div>
+                      {data.construction_note && (
+                        <p className="text-xs font-bold text-primary mt-2 flex items-center gap-1 bg-primary/5 px-2.5 py-1.5 rounded-lg border border-primary/5 leading-relaxed">
+                          <CheckCircle className="h-3.5 w-3.5 text-primary shrink-0" />
+                          <span>Cột mốc thi công: {data.construction_note}</span>
+                        </p>
+                      )}
                       <p className="text-[10px] text-gray-400 font-semibold mt-1.5">
                         Dự kiến bàn giao: {!handoverDate || isNaN(new Date(handoverDate).getTime()) ? 'Chưa rõ' : new Date(handoverDate).toLocaleDateString('vi-VN')}
                       </p>
@@ -643,56 +701,17 @@ export default function ProjectPreview({ data }: ProjectPreviewProps) {
 
             {/* Related Buy/Sell Listings bottom block matching Client */}
             <div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 border-dashed">
                 <div className="flex items-center gap-2 select-none">
                   <div className="w-1 h-3.5 bg-primary rounded-full" />
                   <h3 className="text-xs font-bold text-gray-900">Tin mua bán nổi bật tại {projectName}</h3>
                 </div>
-                <span className="text-[10px] text-primary font-bold hover:underline flex items-center gap-0.5 cursor-pointer">
-                  Xem tất cả <ChevronRight className="h-3 w-3" />
-                </span>
               </div>
-              <div className="divide-y divide-gray-50 bg-white">
-                {[
-                  {
-                    id: 'r1',
-                    title: `Bán căn hộ 3PN ${projectName} tầng 12 view đẹp cực thoáng`,
-                    price: data.min_price ? formatPrice(Math.floor((data.min_price + data.max_price || data.min_price * 2) / 2)) : '6.5 tỷ',
-                    area: '95m²',
-                    postedAt: 'Đăng hôm nay',
-                    image: gallery[0],
-                  },
-                  {
-                    id: 'r2',
-                    title: `Cho thuê căn hộ 2PN ${projectName} full nội thất cao cấp dọn vào ngay`,
-                    price: '8 triệu/tháng',
-                    area: '72m²',
-                    postedAt: 'Hôm qua',
-                    image: gallery[2],
-                  },
-                ].map((item) => (
-                  <div key={item.id} className="flex gap-3 p-3.5 hover:bg-gray-50/50 transition-colors group cursor-pointer">
-                    <div className="relative w-20 h-14 shrink-0 rounded-lg overflow-hidden border border-gray-100 bg-gray-50">
-                      <Image
-                        src={item.image}
-                        alt={item.title}
-                        fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-300"
-                        sizes="80px"
-                        unoptimized
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-gray-800 line-clamp-2 group-hover:text-primary transition-colors leading-snug mb-1">
-                        {item.title}
-                      </p>
-                      <p className="text-xs font-bold text-primary">
-                        {item.price} <span className="text-gray-400 font-normal">·</span> <span className="text-gray-500 font-normal">{item.area}</span>
-                      </p>
-                      <p className="text-[9px] text-gray-400 mt-0.5 font-medium">{item.postedAt}</p>
-                    </div>
-                  </div>
-                ))}
+              <div className="p-6 text-center bg-white">
+                <Home className="h-8 w-8 mx-auto text-gray-300 mb-2" />
+                <p className="text-[11px] font-bold text-gray-400 leading-relaxed">
+                  Tin mua bán sẽ tự động hiển thị tại đây khi có bất động sản liên kết với dự án này.
+                </p>
               </div>
             </div>
 
