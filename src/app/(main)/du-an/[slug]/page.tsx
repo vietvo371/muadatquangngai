@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, use } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
@@ -525,6 +526,8 @@ function NearbyTab({ project }: { project: NearbyProject }) {
 export default function ProjectDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const unwrappedParams = use(params);
   const slug = unwrappedParams?.slug;
+  const searchParams = useSearchParams();
+  const isPreview = searchParams.get('preview') === '1';
   const { fetchProjectDetail, fetchProjectUnits, isLoading } = useProjects();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [projectData, setProjectData] = useState<any>(null);
@@ -582,7 +585,25 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectData]);
 
+  // Chế độ preview (nhúng iframe từ trang quản trị): không gọi API,
+  // nhận dữ liệu nháp qua postMessage để hiển thị đúng template thật.
   useEffect(() => {
+    if (!isPreview) return;
+    const onMessage = (e: MessageEvent) => {
+      if (e.origin !== window.location.origin) return;
+      if (e.data?.type !== 'project-preview' || !e.data.payload) return;
+      const mapped = mapApiProjectDetail(e.data.payload);
+      setProjectData(mapped);
+      setUnitsData(mapped.relatedListings || []);
+    };
+    window.addEventListener('message', onMessage);
+    // Báo cho cửa sổ cha biết iframe đã sẵn sàng nhận dữ liệu
+    window.parent?.postMessage({ type: 'preview-ready' }, window.location.origin);
+    return () => window.removeEventListener('message', onMessage);
+  }, [isPreview]);
+
+  useEffect(() => {
+    if (isPreview) return;
     const loadData = async () => {
       const res = await fetchProjectDetail(slug);
       if (res.success && res.data) {
@@ -605,7 +626,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
     if (slug) {
       loadData();
     }
-  }, [slug, fetchProjectDetail, fetchProjectUnits]);
+  }, [slug, isPreview, fetchProjectDetail, fetchProjectUnits]);
 
   // Loading skeleton state
   if (isLoading || !projectData) {

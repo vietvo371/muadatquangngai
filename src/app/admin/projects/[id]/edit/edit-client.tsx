@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 import { projectApi, userAdminApi } from '@/lib/admin-api';
 import { slugify } from '@/lib/formatters';
-import ProjectPreview from '@/components/admin/ProjectPreview';
+import ProjectLivePreview from '@/components/admin/ProjectLivePreview';
 import { ImageUploader, UploadedFile } from '@/components/shared/ImageUploader';
 import { AddressAutocomplete } from '@/components/shared/AddressAutocomplete';
 import { PriceInput } from '@/components/shared/PriceInput';
@@ -920,7 +920,7 @@ export default function EditProjectClient({ id }: { id: string }) {
 
         {/* Live Preview Column */}
         <div className="hidden lg:block lg:sticky lg:top-6">
-          <ProjectPreview
+          <ProjectLivePreview
             data={{
               ...formData,
               images: projectImages.map(img => img.url),
