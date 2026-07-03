@@ -145,7 +145,7 @@ export default function DashboardClient() {
           const apiStats: DashboardStat[] = [
             { 
               label: 'Doanh thu gói VIP', 
-              value: statsRes.data.total_revenue > 0 ? statsRes.data.total_revenue.toLocaleString('vi-VN') + ' đ' : '0 đ', 
+              value: Number(statsRes.data.total_revenue) > 0 ? Number(statsRes.data.total_revenue).toLocaleString('vi-VN') + ' đ' : '0 đ',
               change: 'Tổng tích lũy hệ thống', 
               icon: Coins,
               color: 'text-emerald-600 bg-emerald-50 border-emerald-100'

@@ -20,6 +20,14 @@ const nextConfig: NextConfig = {
         hostname: "picsum.photos",
       },
       {
+        protocol: "https",
+        hostname: "*.batdongsan.com.vn",
+      },
+      {
+        protocol: "https",
+        hostname: "file4.batdongsan.com.vn",
+      },
+      {
         protocol: "http",
         hostname: "localhost",
         port: "8000",

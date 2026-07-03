@@ -56,6 +56,7 @@ import {
   ExternalLink,
   PlusCircle,
   Edit2,
+  ArrowUpDown,
 } from 'lucide-react';
 import { formatPrice } from '@/lib/formatters';
 import { projectApi, type Project } from '@/lib/admin-api';
@@ -168,6 +169,9 @@ export default function ProjectsClient() {
 
   // Filters state
   const [statusFilter, setStatusFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [districtFilter, setDistrictFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('newest');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Pagination state
@@ -241,31 +245,60 @@ export default function ProjectsClient() {
       setIsFiltering(false);
     }, 250);
     return () => clearTimeout(timer);
-  }, [statusFilter, searchQuery, page, perPage]);
+  }, [statusFilter, typeFilter, districtFilter, sortBy, searchQuery, page, perPage]);
 
-  // Filter projects by status client-side
+  // Filter projects client-side
   const filteredProjects = useMemo(() => {
     return projects.filter((project) => {
       const matchStatus = statusFilter === 'all' || project.status === statusFilter;
+      const matchType = typeFilter === 'all' || project.type === typeFilter;
+      
+      let matchDistrict = true;
+      if (districtFilter !== 'all') {
+        const locLower = project.location?.toLowerCase() || '';
+        matchDistrict = locLower.includes(districtFilter.toLowerCase());
+      }
+
       const matchSearch = !searchQuery.trim() || 
         project.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         project.slug?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         project.location?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         project.investor?.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchStatus && matchSearch;
+      return matchStatus && matchType && matchDistrict && matchSearch;
     });
-  }, [projects, statusFilter, searchQuery]);
+  }, [projects, statusFilter, typeFilter, districtFilter, searchQuery]);
+
+  // Sort projects client-side
+  const sortedProjects = useMemo(() => {
+    const list = [...filteredProjects];
+    return list.sort((a, b) => {
+      switch (sortBy) {
+        case 'newest':
+          return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+        case 'oldest':
+          return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+        case 'price-desc':
+          return (b.min_price || 0) - (a.min_price || 0);
+        case 'price-asc':
+          return (a.min_price || 0) - (b.min_price || 0);
+        case 'progress-desc':
+          return (b.construction_progress || 0) - (a.construction_progress || 0);
+        default:
+          return 0;
+      }
+    });
+  }, [filteredProjects, sortBy]);
 
   // Pagination calculation
-  const totalCount = filteredProjects.length;
+  const totalCount = sortedProjects.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / perPage));
   const pageIndex = Math.min(page, totalPages);
   const startIndex = (pageIndex - 1) * perPage;
   const endIndex = Math.min(startIndex + perPage, totalCount);
 
   const paginatedProjects = useMemo(() => {
-    return filteredProjects.slice(startIndex, endIndex);
-  }, [filteredProjects, startIndex, endIndex]);
+    return sortedProjects.slice(startIndex, endIndex);
+  }, [sortedProjects, startIndex, endIndex]);
 
   // Quick stats — đếm theo các trạng thái nghiệp vụ quan trọng nhất
   const sellingCount  = projects.filter((p) => p.status === 'selling').length;
@@ -408,18 +441,68 @@ export default function ProjectsClient() {
           })}
         </div>
 
-        {/* Right: Search Input */}
-        <div className="flex items-center gap-3 flex-1 md:max-w-md">
-          <div className="relative flex-1">
+        {/* Right: Selects & Search Input */}
+        <div className="flex flex-wrap items-center gap-2 flex-1 justify-end">
+          {/* Select Loại hình */}
+          <Select value={typeFilter} onValueChange={(val) => { setTypeFilter(val || 'all'); setPage(1); }}>
+            <SelectTrigger className="w-full sm:w-[130px] h-9.5 text-xs font-bold text-gray-700 rounded-xl border-gray-200 bg-white">
+              <SelectValue placeholder="Loại hình" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl">
+              <SelectItem value="all">Tất cả loại hình</SelectItem>
+              <SelectItem value="land">Đất nền</SelectItem>
+              <SelectItem value="villa">Biệt thự</SelectItem>
+              <SelectItem value="townhouse">Nhà phố / Shophouse</SelectItem>
+              <SelectItem value="apartment">Chung cư / Căn hộ</SelectItem>
+              <SelectItem value="commercial">Thương mại</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Select Quận/Huyện */}
+          <Select value={districtFilter} onValueChange={(val) => { setDistrictFilter(val || 'all'); setPage(1); }}>
+            <SelectTrigger className="w-full sm:w-[145px] h-9.5 text-xs font-bold text-gray-700 rounded-xl border-gray-200 bg-white">
+              <SelectValue placeholder="Quận/Huyện" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl">
+              <SelectItem value="all">Tất cả Quận/Huyện</SelectItem>
+              <SelectItem value="TP Quảng Ngãi">TP. Quảng Ngãi</SelectItem>
+              <SelectItem value="Sơn Tịnh">Huyện Sơn Tịnh</SelectItem>
+              <SelectItem value="Bình Sơn">Huyện Bình Sơn</SelectItem>
+              <SelectItem value="Tư Nghĩa">Huyện Tư Nghĩa</SelectItem>
+              <SelectItem value="Mộ Đức">Huyện Mộ Đức</SelectItem>
+              <SelectItem value="Nghĩa Hành">Huyện Nghĩa Hành</SelectItem>
+              <SelectItem value="Đức Phổ">Thị xã Đức Phổ</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Select Sắp xếp */}
+          <Select value={sortBy} onValueChange={(val) => { setSortBy(val || 'newest'); setPage(1); }}>
+            <SelectTrigger className="w-full sm:w-[155px] h-9.5 text-xs font-bold text-gray-700 rounded-xl border-gray-200 bg-white">
+              <div className="flex items-center gap-1.5">
+                <ArrowUpDown className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                <SelectValue placeholder="Sắp xếp" />
+              </div>
+            </SelectTrigger>
+            <SelectContent className="rounded-xl">
+              <SelectItem value="newest">Mới nhất trước</SelectItem>
+              <SelectItem value="oldest">Cũ nhất trước</SelectItem>
+              <SelectItem value="price-desc">Giá: Cao đến thấp</SelectItem>
+              <SelectItem value="price-asc">Giá: Thấp đến cao</SelectItem>
+              <SelectItem value="progress-desc">Tiến độ thi công</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Search Input */}
+          <div className="relative w-full sm:w-[220px]">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
-              placeholder="Tìm theo tên dự án, chủ đầu tư..."
+              placeholder="Tìm tên dự án, CĐT..."
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
                 setPage(1);
               }}
-              className="pl-10 rounded-xl border-gray-200 focus:ring-primary/20 focus:border-primary font-medium text-xs h-9.5"
+              className="pl-10 rounded-xl border-gray-200 focus:ring-primary/20 focus:border-primary font-semibold text-xs h-9.5 bg-white"
             />
           </div>
         </div>

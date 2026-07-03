@@ -612,7 +612,7 @@ export default function PropertiesClient() {
               <TableHeader className="bg-gray-50/50">
                 <TableRow className="border-b border-gray-100">
                   <TableHead className="w-16 font-extrabold text-[10.5px] uppercase tracking-wider text-gray-400 py-3.5 pl-6">ID</TableHead>
-                  <TableHead className="w-[320px] font-extrabold text-[10.5px] uppercase tracking-wider text-gray-400 py-3.5">Tin đăng (Incident Ref)</TableHead>
+                  <TableHead className="w-[320px] font-extrabold text-[10.5px] uppercase tracking-wider text-gray-400 py-3.5">Tin đăng</TableHead>
                   <TableHead className="font-extrabold text-[10.5px] uppercase tracking-wider text-gray-400 py-3.5">Người đăng</TableHead>
                   <TableHead className="font-extrabold text-[10.5px] uppercase tracking-wider text-gray-400 py-3.5">Trạng thái</TableHead>
                   <TableHead className="font-extrabold text-[10.5px] uppercase tracking-wider text-gray-400 py-3.5">Xác minh</TableHead>

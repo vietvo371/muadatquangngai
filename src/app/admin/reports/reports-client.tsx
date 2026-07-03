@@ -384,7 +384,7 @@ export default function ReportsClient() {
               <TableHeader className="bg-gray-50/50">
                 <TableRow className="border-b border-gray-100">
                   <TableHead className="w-16 font-extrabold text-[10.5px] uppercase tracking-wider text-gray-400 py-3.5 pl-6">ID</TableHead>
-                  <TableHead className="w-[350px] font-extrabold text-[10.5px] uppercase tracking-wider text-gray-400 py-3.5">Thông tin phản ánh (Incident Ref)</TableHead>
+                  <TableHead className="w-[350px] font-extrabold text-[10.5px] uppercase tracking-wider text-gray-400 py-3.5">Thông tin phản ánh</TableHead>
                   <TableHead className="font-extrabold text-[10.5px] uppercase tracking-wider text-gray-400 py-3.5">Phân loại (Type)</TableHead>
                   <TableHead className="font-extrabold text-[10.5px] uppercase tracking-wider text-gray-400 py-3.5">Đối tượng bị báo cáo</TableHead>
                   <TableHead className="font-extrabold text-[10.5px] uppercase tracking-wider text-gray-400 py-3.5">Trạng thái</TableHead>

@@ -148,7 +148,7 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
 
   // Fetch categories
   useEffect(() => {
-    api.get('/categories')
+    api.get('/api/categories')
       .then(res => {
         const data = res.data?.data ?? res.data ?? [];
         setApiCategories(data);
@@ -162,7 +162,7 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
     if (!propertyId) return;
 
     setIsLoading(true);
-    api.get(`/my/properties/${propertyId}`)
+    api.get(`/api/my/properties/${propertyId}`)
       .then(res => {
         const data = res.data?.data ?? res.data;
         if (!data) throw new Error('Không có dữ liệu');
@@ -277,7 +277,7 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
     setIsSubmitting(true);
     try {
       const payload = buildPayload();
-      await api.put(`/properties/${id}`, payload);
+      await api.put(`/api/my/properties/${id}`, payload);
       toast.success('Cập nhật tin đăng thành công!');
       router.push('/dashboard/quan-ly-tin');
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -298,7 +298,7 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
     setIsSubmitting(true);
     try {
       const payload = buildPayload();
-      await api.put(`/properties/${id}`, payload);
+      await api.put(`/api/my/properties/${id}`, payload);
       toast.success('Đã lưu thay đổi thành công!');
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {

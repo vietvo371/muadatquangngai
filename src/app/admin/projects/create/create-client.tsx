@@ -776,7 +776,14 @@ export default function CreateProjectClient() {
 
         {/* Live Preview Column */}
         <div className="hidden lg:block lg:sticky lg:top-6">
-          <ProjectPreview data={{ ...formData, images: projectImages.map(img => img.url) }} />
+          <ProjectPreview
+            data={{
+              ...formData,
+              images: projectImages.map(img => img.url),
+              agentName: agents.find(a => String(a.id) === String(formData.agent_id))?.name,
+              agentTitle: formData.agent_id ? 'Môi giới phụ trách' : undefined,
+            }}
+          />
         </div>
       </div>
     </div>

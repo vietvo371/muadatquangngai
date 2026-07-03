@@ -65,6 +65,7 @@ export function PropertyCard({ property, className, variant = 'default' }: Prope
               <img
                 src={property.thumbnail}
                 alt={property.title}
+                referrerPolicy="no-referrer"
                 className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
               />
             ) : (
@@ -208,6 +209,7 @@ export function PropertyCard({ property, className, variant = 'default' }: Prope
           <img
             src={property.thumbnail}
             alt={property.title}
+            referrerPolicy="no-referrer"
             className="w-full h-full object-cover transition-all duration-500 ease-out group-hover:scale-110"
           />
         ) : (

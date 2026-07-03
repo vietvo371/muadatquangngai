@@ -12,8 +12,8 @@ export async function GET() {
 
   try {
     const [propertiesRes, projectsRes] = await Promise.all([
-      api.get('/properties', { params: { limit: 1000 } }),
-      api.get('/projects', { params: { limit: 1000 } }),
+      api.get('/api/properties', { params: { limit: 1000 } }),
+      api.get('/api/projects', { params: { limit: 1000 } }),
     ]);
 
     properties = propertiesRes.data?.data || [];

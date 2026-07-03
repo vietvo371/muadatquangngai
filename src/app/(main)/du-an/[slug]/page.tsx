@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, useRef, use } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
@@ -12,81 +12,108 @@ import { formatPrice, timeAgo } from '@/lib/formatters';
 import { ContactDialog } from '@/components/shared/ContactDialog';
 import { useProjects } from '@/hooks/useProjects';
 
+const getDistrictQueryValue = (district?: string): string => {
+  if (!district) return 'all';
+  const clean = district
+    .toLowerCase()
+    .replace(/huyện/g, '')
+    .replace(/thành phố/g, '')
+    .replace(/thị xã/g, '')
+    .replace(/tp\./g, '')
+    .replace(/tx\./g, '')
+    .trim();
+  
+  const slug = clean
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-');
+    
+  if (slug === 'quang-ngai' || slug === 'tp-quang-ngai') return 'tp-quang-ngai';
+  return slug;
+};
+
 const mockProject = {
   id: '1',
   slug: 'de-palace-river-nam-song-tra-khuc',
   name: 'De Palace River - Nam Sông Trà Khúc',
-  developer: 'Công ty CP Địa Ốc Quảng Ngãi',
+  developer: 'Công ty Cổ phần Đầu tư Xây dựng Thương mại Trần Gia Hân',
   status: 'selling',
-  type: 'apartment',
-  address: 'Đầu cầu Thạch Bích, TP Quảng Ngãi, Quảng Ngãi',
+  type: 'townhouse',
+  address: 'Khu Nam Sông Trà Khúc, Phường Lê Hồng Phong, TP. Quảng Ngãi',
   province: 'Quảng Ngãi',
   district: 'TP Quảng Ngãi',
-  ward: 'Phường Trương Quang Trọng',
-  totalArea: '2.5 ha',
-  totalUnits: 256,
-  totalBlocks: 2,
-  totalFloors: 18,
-  handoverDate: '2025-12-31',
-  priceFrom: 4500000000,
+  ward: 'Phường Lê Hồng Phong',
+  totalArea: '2.6 ha',
+  totalUnits: 55,
+  totalBlocks: 3,
+  totalFloors: 4,
+  handoverDate: '2028-06-30',
+  priceFrom: 3800000000,
   priceTo: 8500000000,
-  legal: 'Sổ hồng / Sổ đỏ',
-  constructionProgress: 75,
+  legal: 'Sổ hồng sở hữu lâu dài',
+  constructionProgress: 45,
   gallery: [
-    '/images/image_data/nha-pho-de-palace-river.jpg',
-    '/images/image_data/Starlight---suc-hut-den-tu-vi-tri-dac-dia-nhat-trung-tam-Quang-Ngai-suc-hut-3-1733900371-424-width1000height563.jpg',
-    '/images/image_data/Haus-Coastal.jpg',
-    '/images/image_data/banner_hero.jpg',
-    '/images/image_data/thi_tran_9b705.jpg',
+    '/images/namsongtrakhuc/phoi-canh-tong-the.png',
+    '/images/namsongtrakhuc/noi-khu-san-vuon.png',
+    '/images/namsongtrakhuc/phoi-canh-duong-ven-song.png',
+    '/images/namsongtrakhuc/phoi-canh-nha-pho-thuong-mai.png',
+    '/images/namsongtrakhuc/mat-bang-dinh-vi.jpg',
   ],
-  overview: `De Palace River là khu căn hộ cao cấp tọa lạc ngay đầu cầu Thạch Bích, ven sông Trà Khúc thơ mộng — vị trí đắc địa bậc nhất TP Quảng Ngãi.
+  overview: `De Palace River là khu nhà phố thương mại cao cấp tọa lạc tại Khu Nam Sông Trà Khúc, Phường Lê Hồng Phong, TP. Quảng Ngãi — vị trí đắc địa bậc nhất với tầm nhìn ôm trọn sông Trà Khúc thơ mộng.
 
-Dự án được phát triển bởi Công ty CP Địa Ốc Quảng Ngãi, đơn vị có bề dày kinh nghiệm phát triển bất động sản tại tỉnh Quảng Ngãi. Với tổng quy mô 2.5 ha, De Palace River gồm 2 block cao 18 tầng, cung cấp 256 căn hộ thiết kế hiện đại, view sông thoáng đãng.
+Dự án được phát triển bởi Công ty Cổ phần Đầu tư Xây dựng Thương mại Trần Gia Hân. Với tổng quy mô 2,6 ha, De Palace River gồm 3 block, cung cấp 55 căn nhà phố thương mại thiết kế hoàn thiện mặt ngoài chuẩn phong cách Châu Âu sang trọng, tinh tế. Dự kiến bàn giao vào tháng 06/2028.
 
 **Vị trí:**
-- Ngay đầu cầu Thạch Bích, cách trung tâm TP 3 phút
-- Cạnh sông Trà Khúc, tầm nhìn panorama
-- Kết nối dễ dàng đến các tuyến đường chính
+- Khu Nam Sông Trà Khúc, Phường Lê Hồng Phong, TP. Quảng Ngãi
+- Mặt tiền ven sông Trà Khúc, tầm nhìn panorama
+- Kết nối dễ dàng đến trung tâm thành phố và các tuyến đường chính
 
 **Tiện ích nội khu:**
-- Hồ bơi vô cực view sông
-- Phòng gym & spa cao cấp
-- Khu vui chơi trẻ em
-- Sảnh đón 5 sao, bảo vệ 24/7
-- Bãi đỗ xe thông minh`,
+- Bến du thuyền ven sông
+- Quảng trường nhạc nước
+- Clubhouse 5 sao
+- Công viên bờ sông, đường dạo bộ ven sông
+- Bảo vệ 3 lớp 24/7`,
   utilities: [
-    'Hồ bơi', 'Gym & Spa', 'Bảo vệ 24/7', 'Camera an ninh',
-    'Thang máy', 'Bãi đỗ xe', 'Công viên', 'Siêu thị nội khu',
+    'Bến du thuyền ven sông', 'Quảng trường nhạc nước', 'Clubhouse 5 sao',
+    'Công viên bờ sông', 'Đường dạo bộ ven sông', 'Bảo vệ 3 lớp 24/7',
+    'Bãi đỗ xe thông minh', 'Camera an ninh',
   ],
   floorPlans: [
-    { type: 'Căn 2 phòng ngủ', area: '72m²', count: 120, priceFrom: 4500000000 },
-    { type: 'Căn 3 phòng ngủ', area: '95m²', count: 100, priceFrom: 6200000000 },
-    { type: 'Penthouse', area: '180m²', count: 36, priceFrom: 8500000000 },
+    { type: 'Nhà phố thương mại', area: '120m²', count: 30, priceFrom: 3800000000 },
+    { type: 'Nhà phố góc', area: '150m²', count: 15, priceFrom: 5500000000 },
+    { type: 'Nhà phố mặt tiền sông', area: '180m²', count: 10, priceFrom: 8500000000 },
   ],
-  floorPlansTitle: 'Loại căn hộ điển hình',
+  floorPlansTitle: 'Loại nhà phố điển hình',
   floorPlansUnitLabel: 'căn',
   unitWord: 'căn',
   faq: [
     {
       q: 'Giá mua bán dự án De Palace River hiện nay?',
-      a: 'Giá từ 4,5 tỷ đến 8,5 tỷ tùy căn hộ. Liên hệ để nhận bảng giá chi tiết mới nhất.',
+      a: 'Giá từ 3,8 tỷ tùy vị trí và diện tích nhà phố. Liên hệ để nhận bảng giá chi tiết mới nhất.',
     },
     {
       q: 'Địa chỉ dự án De Palace River ở đâu?',
-      a: 'Dự án tọa lạc tại đầu cầu Thạch Bích, TP Quảng Ngãi, tỉnh Quảng Ngãi.',
+      a: 'Dự án tọa lạc tại Khu Nam Sông Trà Khúc, Phường Lê Hồng Phong, TP. Quảng Ngãi.',
     },
     {
       q: 'Chủ đầu tư dự án De Palace River là ai?',
-      a: 'Chủ đầu tư là Công ty CP Địa Ốc Quảng Ngãi.',
+      a: 'Chủ đầu tư là Công ty Cổ phần Đầu tư Xây dựng Thương mại Trần Gia Hân.',
+    },
+    {
+      q: 'Dự án De Palace River khi nào bàn giao?',
+      a: 'Dự kiến bàn giao vào tháng 06/2028.',
     },
   ],
   mapUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3849.012!2d108.7859137!3d15.1319266!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3169ad3732456f77%3A0xce93b603f79b6e4e!2sDe+Palace+River+-+Nam+S%C3%B4ng+Tr%C3%A0!5e0!3m2!1svi!2svn!4v1700000000000!5m2!1svi!2svn',
   nearbyPlaces: {
     school: [
-      { name: 'Trường Tiểu học Trương Quang Trọng', address: 'P. Trương Quang Trọng, TP Quảng Ngãi', dist: '0,8 km', time: '2 phút' },
+      { name: 'Trường Tiểu học Lê Hồng Phong', address: 'P. Lê Hồng Phong, TP Quảng Ngãi', dist: '0,8 km', time: '2 phút' },
       { name: 'THCS Lê Hồng Phong', address: 'P. Nghĩa Lộ, TP Quảng Ngãi', dist: '1,2 km', time: '3 phút' },
       { name: 'THPT Lê Trung Đình', address: 'P. Nguyễn Nghiêm, TP Quảng Ngãi', dist: '1,5 km', time: '3 phút' },
-      { name: 'Trường Mầm non Hướng Dương', address: 'P. Trương Quang Trọng, TP Quảng Ngãi', dist: '0,5 km', time: '1 phút' },
+      { name: 'Trường Mầm non Hướng Dương', address: 'P. Lê Hồng Phong, TP Quảng Ngãi', dist: '0,5 km', time: '1 phút' },
     ],
     supermarket: [
       { name: 'Co.opmart Quảng Ngãi', address: 'Đường Nguyễn Du, TP Quảng Ngãi', dist: '2,0 km', time: '4 phút' },
@@ -102,47 +129,47 @@ Dự án được phát triển bởi Công ty CP Địa Ốc Quảng Ngãi, đ�
     ],
   },
   keywords: [
-    'Bán căn hộ De Palace River',
-    'Căn hộ view sông Trà Khúc',
-    'Bán căn hộ TP Quảng Ngãi',
-    'Cho thuê căn hộ Quảng Ngãi',
-    'Căn hộ cao cấp Quảng Ngãi',
+    'Bán nhà phố De Palace River',
+    'Nhà phố thương mại view sông Trà Khúc',
+    'Nhà phố Nam Sông Trà Khúc',
+    'Bán nhà phố thương mại Quảng Ngãi',
+    'Trần Gia Hân Quảng Ngãi',
   ],
   relatedListings: [
     {
       id: 'r1',
-      title: 'Bán căn hộ 3PN De Palace River tầng 12 view sông',
+      title: 'Bán nhà phố thương mại De Palace River mặt tiền ven sông',
       price: '6,5 tỷ',
-      area: '95m²',
+      area: '120m²',
       address: 'TP Quảng Ngãi, Quảng Ngãi',
       postedAt: 'Đăng hôm nay',
-      image: '/images/image_data/nha-pho-de-palace-river.jpg',
-      href: '/mua-ban/ban-can-ho-de-palace-river',
+      image: '/images/namsongtrakhuc/phoi-canh-nha-pho-thuong-mai.png',
+      href: '/mua-ban/ban-shophouse-de-palace-river',
     },
     {
       id: 'r2',
-      title: 'Cho thuê căn hộ 2PN De Palace River đầy đủ nội thất',
-      price: '8 triệu/tháng',
-      area: '72m²',
+      title: 'Bán nhà phố góc De Palace River view sông',
+      price: '7,2 tỷ',
+      area: '150m²',
       address: 'TP Quảng Ngãi, Quảng Ngãi',
       postedAt: 'Hôm qua',
-      image: '/images/image_data/Haus-Coastal.jpg',
-      href: '/cho-thue/thue-can-ho-de-palace-river',
+      image: '/images/namsongtrakhuc/noi-khu-san-vuon.png',
+      href: '/mua-ban/ban-shophouse-goc-de-palace-river',
     },
     {
       id: 'r3',
-      title: 'Bán căn hộ Penthouse De Palace River view toàn thành phố',
+      title: 'Bán nhà phố mặt tiền sông De Palace River',
       price: '8,5 tỷ',
       area: '180m²',
       address: 'TP Quảng Ngãi, Quảng Ngãi',
       postedAt: '2 ngày trước',
-      image: '/images/image_data/Starlight---suc-hut-den-tu-vi-tri-dac-dia-nhat-trung-tam-Quang-Ngai-suc-hut-3-1733900371-424-width1000height563.jpg',
-      href: '/mua-ban/ban-penthouse-de-palace-river',
+      image: '/images/namsongtrakhuc/phoi-canh-duong-ven-song.png',
+      href: '/mua-ban/ban-shophouse-mat-tien-song-de-palace-river',
     },
   ],
   contact: {
-    name: 'Nguyễn Văn Việt',
-    title: 'Chuyên viên tư vấn dự án',
+    name: 'Trung Nguyen',
+    title: 'Chuyên viên tư vấn - Hợp Nghĩa Land',
     phone: '0905123456',
   },
 };
@@ -346,22 +373,23 @@ const mapApiProjectDetail = (apiProject: any) => {
     uuid: apiProject.uuid,
     slug: apiProject.slug,
     name: apiProject.name,
-    developer: apiProject.developer || 'Chủ đầu tư uy tín',
+    developer: apiProject.developer || apiProject.investor || 'Chưa cập nhật',
     status: apiProject.status || 'selling',
     type: apiProject.type || 'apartment',
     address: apiProject.location?.address || apiProject.address || 'Quảng Ngãi',
     province: provinceName,
     district: districtName,
     ward: wardName,
-    totalArea: apiProject.scale?.total_area ? `${apiProject.scale.total_area} ha` : '2.5 ha',
-    totalUnits: apiProject.scale?.total_units || 256,
-    totalBlocks: apiProject.scale?.total_blocks || 2,
-    totalFloors: apiProject.scale?.total_floors || 18,
+    totalArea: apiProject.scale?.total_area ? `${apiProject.scale.total_area} ha` : (apiProject.total_area ? `${apiProject.total_area} ha` : 'Đang cập nhật'),
+    totalUnits: apiProject.scale?.total_units || apiProject.total_units || 0,
+    totalBlocks: apiProject.scale?.total_blocks || apiProject.total_blocks || 0,
+    totalFloors: apiProject.scale?.total_floors || apiProject.total_floors || 0,
     handoverDate: apiProject.handover_date || '2026-12-31',
     priceFrom: priceFrom,
     priceTo: priceTo,
-    legal: apiProject.legal || 'Sổ hồng / Sổ đỏ',
-    constructionProgress: apiProject.construction_progress || 75,
+    legal: apiProject.legal || 'Đang cập nhật',
+    constructionProgress: apiProject.construction_progress || 0,
+    constructionNote: apiProject.construction_note || '',
     gallery,
     overview: apiProject.description || `Dự án ${apiProject.name} là khu dự án đẳng cấp hàng đầu tọa lạc tại ${districtName}, tỉnh Quảng Ngãi. Dự án có quy mô đồng bộ, thiết kế hiện đại, thông minh, ngập tràn mảng xanh và tiện ích cao cấp.`,
     utilities: (() => {
@@ -394,9 +422,9 @@ const mapApiProjectDetail = (apiProject: any) => {
       `Mua dự án ${districtName}`,
     ],
     contact: {
-      name: apiProject.owner?.name || 'Nguyễn Văn Việt',
-      title: 'Chuyên viên tư vấn dự án',
-      phone: apiProject.owner?.phone || '0905123456',
+      name: apiProject.agent?.name || apiProject.owner?.name || 'Nguyễn Văn Việt',
+      title: apiProject.agent ? 'Môi giới phụ trách' : 'Chuyên viên tư vấn dự án',
+      phone: apiProject.agent?.phone || apiProject.owner?.phone || '0905123456',
     },
     relatedListings: apiProject.related_listings || apiProject.relatedListings || [],
   };
@@ -505,12 +533,54 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
   
   const [mainImg, setMainImg] = useState(0);
   const [activeTab, setActiveTab] = useState(0);
+  // Landing-page style: các section nằm trên cùng 1 trang, click tab sẽ cuộn tới section tương ứng
+  const sectionRefs = [useRef<HTMLDivElement>(null), useRef<HTMLDivElement>(null), useRef<HTMLDivElement>(null)];
+  const scrollToSection = (i: number) => {
+    setActiveTab(i);
+    const el = sectionRefs[i]?.current;
+    if (el) {
+      const y = el.getBoundingClientRect().top + window.scrollY - 90; // trừ chiều cao header sticky
+      window.scrollTo({ top: y, behavior: 'smooth' });
+    }
+  };
   const [liked, setLiked] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [contactOpen, setContactOpen] = useState(false);
 
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+
+  // Mortgage loan calculator state
+  const [propertyValue, setPropertyValue] = useState<number>(3000000000);
+  const [loanRatio, setLoanRatio] = useState<number>(70);
+  const [loanTerm, setLoanTerm] = useState<number>(15);
+  const [interestRate, setInterestRate] = useState<number>(8.5);
+  const [paymentMethod, setPaymentMethod] = useState<'declining' | 'equal'>('declining');
+
+  useEffect(() => {
+    if (projectData && projectData.priceFrom) {
+      setPropertyValue(projectData.priceFrom);
+    }
+  }, [projectData]);
+
+  // Scrollspy: highlight tab tương ứng với section đang trong khung nhìn
+  useEffect(() => {
+    if (!projectData) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const idx = sectionRefs.findIndex((r) => r.current === entry.target);
+            if (idx >= 0) setActiveTab(idx);
+          }
+        });
+      },
+      { rootMargin: '-45% 0px -50% 0px', threshold: 0 }
+    );
+    sectionRefs.forEach((r) => r.current && observer.observe(r.current));
+    return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectData]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -600,7 +670,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
           <ChevronRight className="h-3 w-3" />
           <Link href="/du-an" className="hover:text-primary transition-colors">Quảng Ngãi</Link>
           <ChevronRight className="h-3 w-3" />
-          <Link href="/du-an" className="hover:text-primary transition-colors">{projectData.district}</Link>
+          <Link href={`/du-an?district=${getDistrictQueryValue(projectData.district)}`} className="hover:text-primary transition-colors">{projectData.district}</Link>
           <ChevronRight className="h-3 w-3" />
           <span className="text-gray-800 font-medium line-clamp-1">{projectData.name}</span>
         </div>
@@ -655,6 +725,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
                     src={projectData.gallery[mainImg]}
                     alt={projectData.name}
                     fill
+                    referrerPolicy="no-referrer"
                     className="object-cover group-hover:scale-105 transition-transform duration-500"
                     sizes="(max-width: 768px) 100vw, 60vw"
                     priority
@@ -681,6 +752,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
                         src={img}
                         alt=""
                         fill
+                        referrerPolicy="no-referrer"
                         className="object-cover group-hover:scale-105 transition-transform duration-500"
                         sizes="160px"
                       />
@@ -706,7 +778,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
                     }} 
                     className={`relative w-16 h-12 shrink-0 rounded-md overflow-hidden ${mainImg === i ? 'ring-2 ring-primary' : ''}`}
                   >
-                    <Image src={img} alt="" fill className="object-cover" sizes="64px" />
+                    <Image src={img} alt="" fill referrerPolicy="no-referrer" className="object-cover" sizes="64px" />
                   </button>
                 ))}
               </div>
@@ -728,13 +800,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
               </div>
             </div>
 
-            {/* Tab nav */}
+            {/* Tab nav — kiểu landing page: click sẽ cuộn tới section tương ứng */}
             <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-              <div className="flex border-b border-gray-100 overflow-x-auto">
+              <div className="flex border-b border-gray-100 overflow-x-auto sticky top-[68px] z-20 bg-white">
                 {tabs.map((tab, i) => (
                   <button
                     key={tab.label}
-                    onClick={() => setActiveTab(i)}
+                    onClick={() => scrollToSection(i)}
                     className={`flex flex-col items-start px-5 py-3 whitespace-nowrap border-b-2 transition-colors ${
                       activeTab === i
                         ? 'border-primary text-primary'
@@ -749,8 +821,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
 
               <div className="p-5">
 
-                {/* Tab 0 — Tổng quan */}
-                {activeTab === 0 && (
+                {/* Section 0 — Tổng quan */}
+                <div ref={sectionRefs[0]} className="scroll-mt-24">
                   <div className="space-y-6">
                     {/* Thông tin dự án */}
                     <div>
@@ -774,13 +846,47 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
                       </div>
 
                       {/* Giá */}
-                      <div className="bg-gray-50 rounded-xl p-4 mb-5">
-                        <p className="text-xs text-gray-400 mb-1">Giá bán</p>
-                        <p className="text-xl font-bold text-primary">
-                          {formatPrice(projectData.priceFrom)}
-                          <span className="text-base font-normal text-gray-400 mx-2">–</span>
-                          {formatPrice(projectData.priceTo)}
-                        </p>
+                      <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 mb-5 flex justify-between items-center flex-wrap gap-2">
+                        <div>
+                          <p className="text-xs text-gray-400 mb-1">Khoảng giá dự kiến</p>
+                          <p className="text-xl font-bold text-primary">
+                            {projectData.priceFrom || projectData.priceTo
+                              ? `${formatPrice(projectData.priceFrom)} – ${formatPrice(projectData.priceTo)}`
+                              : 'Chưa cập nhật'}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-gray-400 mb-1">Đơn giá tự tính</p>
+                          <p className="text-sm font-bold text-cta">
+                            {(() => {
+                              const areaNum = parseFloat(projectData.totalArea);
+                              if (!projectData.priceFrom || isNaN(areaNum) || areaNum <= 0) return 'Đang cập nhật';
+                              
+                              const unitsCount = Number(projectData.totalUnits);
+                              let avgUnitArea = 100; // default standard lot size in m2
+                              
+                              if (unitsCount > 0) {
+                                // Quy đổi diện tích dự án từ Hectare sang m2 (1 ha = 10,000 m2)
+                                const totalAreaM2 = areaNum * 10000;
+                                // Hệ số đất thương phẩm xây dựng thực tế chiếm khoảng 40% quy mô tổng thể dự án
+                                const saleableAreaM2 = totalAreaM2 * 0.4;
+                                avgUnitArea = saleableAreaM2 / unitsCount;
+                                if (avgUnitArea <= 0) {
+                                  avgUnitArea = projectData.type === 'apartment' ? 70 : 120;
+                                }
+                              } else {
+                                avgUnitArea = projectData.type === 'apartment' ? 70 : 120;
+                              }
+                              
+                              const pricePerM2 = projectData.priceFrom / avgUnitArea;
+                              const millionPerM2 = pricePerM2 / 1000000;
+                              if (millionPerM2 < 0.1) {
+                                return `từ ${(millionPerM2 * 1000).toLocaleString('vi-VN')} nghìn/m²`;
+                              }
+                              return `từ ${millionPerM2.toLocaleString('vi-VN', { maximumFractionDigits: 1 })} triệu/m²`;
+                            })()}
+                          </p>
+                        </div>
                       </div>
 
                       {/* Mô tả */}
@@ -822,31 +928,208 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
                       </div>
                     </div>
 
-                    {/* Tiến độ */}
-                    <div>
-                      <h3 className="text-sm font-bold text-gray-900 mb-3">Tiến độ xây dựng</h3>
-                      <div className="flex justify-between text-xs mb-2">
-                        <span className="text-gray-500">Hoàn thành</span>
-                        <span className="font-semibold text-gray-700">{projectData.constructionProgress}%</span>
+                    <hr className="border-gray-100 my-5" />
+
+                    {/* Công cụ tính lãi suất vay mua nhà */}
+                    <div className="bg-white rounded-xl border border-gray-100 p-4.5 space-y-4">
+                      <h3 className="text-sm font-bold text-gray-900 border-l-2 border-primary pl-2 uppercase tracking-wide text-[11px] flex items-center justify-between">
+                        <span>Công cụ tính lãi suất vay ngân hàng</span>
+                        <span className="text-[10px] text-primary font-semibold lowercase bg-primary/5 px-2 py-0.5 rounded border border-primary/10 select-none">
+                          Liên kết 8+ ngân hàng Quảng Ngãi
+                        </span>
+                      </h3>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Cột trái: Nhập liệu */}
+                        <div className="space-y-3.5">
+                          {/* Tổng giá trị nhà đất */}
+                          <div className="space-y-1">
+                            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">Giá trị bất động sản (VNĐ)</label>
+                            <input
+                              type="text"
+                              value={propertyValue.toLocaleString('vi-VN')}
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value.replace(/\./g, ''));
+                                setPropertyValue(isNaN(val) ? 0 : val);
+                              }}
+                              className="w-full h-9 px-3 text-xs font-semibold rounded-lg border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary/25 outline-none bg-white"
+                            />
+                            <p className="text-[10px] text-primary font-medium">Bằng chữ: {formatPrice(propertyValue)}</p>
+                          </div>
+
+                          {/* Tỷ lệ vay */}
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-[11px] font-bold text-gray-400 uppercase tracking-wide">
+                              <span>Tỷ lệ vay vốn</span>
+                              <span className="text-primary font-semibold">{loanRatio}%</span>
+                            </div>
+                            <input
+                              type="range"
+                              min="30"
+                              max="85"
+                              value={loanRatio}
+                              onChange={(e) => setLoanRatio(Number(e.target.value))}
+                              className="w-full accent-primary h-1.5 bg-gray-200 rounded-lg cursor-pointer"
+                            />
+                            <div className="flex justify-between text-[9px] text-gray-400 font-semibold">
+                              <span>Tối thiểu 30%</span>
+                              <span>Tối đa 85%</span>
+                            </div>
+                          </div>
+
+                          {/* Thời gian vay */}
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-[11px] font-bold text-gray-400 uppercase tracking-wide">
+                              <span>Thời gian vay</span>
+                              <span className="text-primary font-semibold">{loanTerm} năm ({loanTerm * 12} tháng)</span>
+                            </div>
+                            <input
+                              type="range"
+                              min="1"
+                              max="25"
+                              value={loanTerm}
+                              onChange={(e) => setLoanTerm(Number(e.target.value))}
+                              className="w-full accent-primary h-1.5 bg-gray-200 rounded-lg cursor-pointer"
+                            />
+                            <div className="flex justify-between text-[9px] text-gray-400 font-semibold">
+                              <span>1 năm</span>
+                              <span>25 năm</span>
+                            </div>
+                          </div>
+
+                          {/* Lãi suất */}
+                          <div className="space-y-1">
+                            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">Lãi suất vay năm (% / năm)</label>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="number"
+                                step="0.1"
+                                min="1"
+                                max="20"
+                                value={interestRate}
+                                onChange={(e) => setInterestRate(Number(e.target.value))}
+                                className="w-24 h-9 px-3 text-xs font-semibold rounded-lg border border-gray-200 focus:border-primary outline-none bg-white"
+                              />
+                              <span className="text-xs text-gray-500 font-medium">% / năm (ưu đãi trung bình tại Quảng Ngãi)</span>
+                            </div>
+                          </div>
+
+                          {/* Phương thức trả nợ */}
+                          <div className="space-y-1">
+                            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">Phương thức trả nợ</label>
+                            <div className="grid grid-cols-2 gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setPaymentMethod('declining')}
+                                className={`h-9 text-[11px] font-bold rounded-lg border transition-all ${
+                                  paymentMethod === 'declining'
+                                    ? 'border-primary bg-primary-light text-primary'
+                                    : 'border-gray-200 text-gray-500 hover:bg-gray-50 bg-white'
+                                }`}
+                              >
+                                Dư nợ giảm dần
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setPaymentMethod('equal')}
+                                className={`h-9 text-[11px] font-bold rounded-lg border transition-all ${
+                                  paymentMethod === 'equal'
+                                    ? 'border-primary bg-primary-light text-primary'
+                                    : 'border-gray-200 text-gray-500 hover:bg-gray-50 bg-white'
+                                }`}
+                              >
+                                Chia đều mỗi tháng
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Cột phải: Kết quả tính toán */}
+                        <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 space-y-4 flex flex-col justify-between">
+                          {(() => {
+                            const loanAmount = propertyValue * (loanRatio / 100);
+                            const monthlyInterest = interestRate / 12 / 100;
+                            const totalMonths = loanTerm * 12;
+                            
+                            let firstMonthPayment = 0;
+                            let firstMonthInterest = 0;
+                            let monthlyPrincipal = 0;
+                            let totalInterest = 0;
+                            
+                            if (paymentMethod === 'declining') {
+                              monthlyPrincipal = loanAmount / totalMonths;
+                              firstMonthInterest = loanAmount * monthlyInterest;
+                              firstMonthPayment = monthlyPrincipal + firstMonthInterest;
+                              
+                              let remainingDebt = loanAmount;
+                              for (let i = 0; i < totalMonths; i++) {
+                                const interest = remainingDebt * monthlyInterest;
+                                totalInterest += interest;
+                                remainingDebt -= monthlyPrincipal;
+                              }
+                            } else {
+                              const p = loanAmount;
+                              const r = monthlyInterest;
+                              const n = totalMonths;
+                              if (r > 0) {
+                                firstMonthPayment = (p * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+                              } else {
+                                firstMonthPayment = p / n;
+                              }
+                              totalInterest = (firstMonthPayment * n) - p;
+                              firstMonthInterest = p * r;
+                              monthlyPrincipal = firstMonthPayment - firstMonthInterest;
+                            }
+
+                            const totalPaid = loanAmount + totalInterest;
+
+                            return (
+                              <>
+                                <div className="space-y-3">
+                                  <div className="pb-2.5 border-b border-gray-200/50">
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">Cần chuẩn bị tự có ({100 - loanRatio}%)</p>
+                                    <p className="text-xs font-bold text-gray-700">{(propertyValue - loanAmount).toLocaleString('vi-VN')} đ</p>
+                                  </div>
+
+                                  <div className="pb-2.5 border-b border-gray-200/50">
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">Số tiền được ngân hàng giải ngân ({loanRatio}%)</p>
+                                    <p className="text-xs font-bold text-primary">{loanAmount.toLocaleString('vi-VN')} đ</p>
+                                  </div>
+
+                                  <div className="pb-2.5 border-b border-gray-200/50">
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">Trả tháng đầu tiên (Gốc + Lãi)</p>
+                                    <p className="text-sm font-extrabold text-cta">{Math.round(firstMonthPayment).toLocaleString('vi-VN')} đ</p>
+                                    <p className="text-[9px] text-gray-400 font-medium mt-0.5 leading-normal">
+                                      Trong đó: Gốc {Math.round(monthlyPrincipal).toLocaleString('vi-VN')} đ + Lãi {Math.round(firstMonthInterest).toLocaleString('vi-VN')} đ
+                                    </p>
+                                  </div>
+
+                                  <div>
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">Tổng tiền lãi phải trả toàn bộ thời hạn</p>
+                                    <p className="text-xs font-bold text-gray-700">{Math.round(totalInterest).toLocaleString('vi-VN')} đ</p>
+                                  </div>
+                                </div>
+
+                                <div className="bg-primary/5 rounded-lg p-2.5 border border-primary/5 text-center">
+                                  <p className="text-[9px] font-bold text-primary uppercase tracking-wider mb-0.5">Tổng số tiền trả góp (Gốc + Lãi)</p>
+                                  <p className="text-sm font-extrabold text-primary">{Math.round(totalPaid).toLocaleString('vi-VN')} đ</p>
+                                </div>
+                              </>
+                            );
+                          })()}
+                        </div>
                       </div>
-                      <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-primary rounded-full transition-all"
-                          style={{ width: `${projectData.constructionProgress}%` }}
-                        />
-                      </div>
-                      <p className="text-xs text-gray-400 mt-2">Dự kiến bàn giao: {isNaN(new Date(projectData.handoverDate).getTime()) ? 'Liên hệ' : new Date(projectData.handoverDate).toLocaleDateString('vi-VN')}</p>
                     </div>
                   </div>
-                )}
+                </div>
 
-                {/* Tab 1 — Vị trí */}
-                {activeTab === 1 && (
+                {/* Section 1 — Vị trí */}
+                <div ref={sectionRefs[1]} className="scroll-mt-24 pt-10 mt-10 border-t border-gray-100">
                   <NearbyTab project={projectData} />
-                )}
+                </div>
 
-                {/* Tab 2 — FAQ */}
-                {activeTab === 2 && (
+                {/* Section 2 — FAQ */}
+                <div ref={sectionRefs[2]} className="scroll-mt-24 pt-10 mt-10 border-t border-gray-100">
                   <div className="space-y-4">
                     <h2 className="text-base font-bold text-gray-900">Các câu hỏi thường gặp</h2>
 
@@ -902,7 +1185,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
                       </div>
                     </div>
                   </div>
-                )}
+                </div>
               </div>
             </div>
 
@@ -919,20 +1202,27 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
               </div>
               <div className="divide-y divide-gray-50">
                 {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                {unitsData.map((item: any) => (
-                  <Link key={item.id} href={item.href} className="flex gap-3 p-4 hover:bg-gray-50 transition-colors group">
-                    <div className="relative w-24 h-18 shrink-0 rounded-lg overflow-hidden" style={{ height: '72px' }}>
-                      <Image src={item.image} alt={item.title} fill className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="96px" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-800 line-clamp-2 group-hover:text-primary transition-colors leading-snug mb-1">
-                        {item.title}
-                      </p>
-                      <p className="text-sm font-bold text-primary">{item.price} <span className="text-gray-400 font-normal">·</span> <span className="text-gray-500 font-normal">{item.area}</span></p>
-                      <p className="text-xs text-gray-400 mt-0.5">{item.address} · {item.postedAt}</p>
-                    </div>
-                  </Link>
-                ))}
+                {unitsData.length > 0 ? (
+                  unitsData.map((item: any) => (
+                    <Link key={item.id} href={item.href} className="flex gap-3 p-4 hover:bg-gray-50 transition-colors group">
+                      <div className="relative w-24 h-18 shrink-0 rounded-lg overflow-hidden" style={{ height: '72px' }}>
+                        <Image src={item.image} alt={item.title} fill className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="96px" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-800 line-clamp-2 group-hover:text-primary transition-colors leading-snug mb-1">
+                          {item.title}
+                        </p>
+                        <p className="text-sm font-bold text-primary">{item.price} <span className="text-gray-400 font-normal">·</span> <span className="text-gray-500 font-normal">{item.area}</span></p>
+                        <p className="text-xs text-gray-400 mt-0.5">{item.address} · {item.postedAt}</p>
+                      </div>
+                    </Link>
+                  ))
+                ) : (
+                  <div className="p-8 text-center text-gray-400">
+                    <p className="text-sm font-semibold">Chưa có tin đăng mua bán nào tại dự án này.</p>
+                    <p className="text-xs text-gray-400 mt-1">Hãy là người đầu tiên đăng tin bán hoặc cho thuê tại {projectData.name}!</p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1065,6 +1355,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
               <img
                 src={projectData.gallery[lightboxIndex]}
                 alt={`Slide ${lightboxIndex + 1}`}
+                referrerPolicy="no-referrer"
                 className="max-h-full max-w-full object-contain rounded-xl shadow-2xl animate-in zoom-in-95 duration-200"
               />
 
@@ -1099,7 +1390,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
                   }`}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={img} alt={`Thumb ${idx + 1}`} className="w-full h-full object-cover" />
+                  <img src={img} alt={`Thumb ${idx + 1}`} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                 </button>
               ))}
             </div>
@@ -1109,3 +1400,4 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
     </div>
   );
 }
+

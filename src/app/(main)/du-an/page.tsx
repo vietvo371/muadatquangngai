@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, Suspense } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import {
   MapPin,
   Building,
@@ -193,7 +194,21 @@ const mapApiProject = (apiProj: any) => {
     thumbnail: apiProj.thumbnail || '/images/image_data/nha-pho-de-palace-river.jpg',
     status: apiProj.status || 'selling',
     type: apiProj.type || 'apartment',
-    district: apiProj.location?.district?.name ? slugify(apiProj.location.district.name) : 'tp-quang-ngai',
+    district: (() => {
+      const name = apiProj.location?.district?.name || apiProj.district;
+      if (!name) return 'tp-quang-ngai';
+      const clean = name
+        .toLowerCase()
+        .replace(/huyện/g, '')
+        .replace(/thành phố/g, '')
+        .replace(/thị xã/g, '')
+        .replace(/tp\./g, '')
+        .replace(/tx\./g, '')
+        .trim();
+      const slug = slugify(clean);
+      if (slug === 'quang-ngai') return 'tp-quang-ngai';
+      return slug;
+    })(),
     address: apiProj.location?.address || 'Quảng Ngãi',
     priceFrom: Number(apiProj.price?.from || 0),
     priceTo: apiProj.price?.to ? Number(apiProj.price.to) : undefined,
@@ -207,15 +222,37 @@ const mapApiProject = (apiProj: any) => {
   };
 };
 
-export default function DuAnPage() {
+function DuAnPageContent() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const [slide, setSlide] = useState(0);
   const [contactOpen, setContactOpen] = useState(false);
-  const [typeFilter, setTypeFilter] = useState('all');
-  const [districtFilter, setDistrictFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [priceFilter, setPriceFilter] = useState('all');
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
+
+  // Khởi tạo bộ lọc trực tiếp từ URL Query Parameters nếu có (ngăn mất dữ liệu khi F5)
+  const [typeFilter, setTypeFilter] = useState(() => searchParams?.get('type') || 'all');
+  const [districtFilter, setDistrictFilter] = useState(() => searchParams?.get('district') || 'all');
+  const [statusFilter, setStatusFilter] = useState(() => searchParams?.get('status') || 'all');
+  const [priceFilter, setPriceFilter] = useState(() => searchParams?.get('price') || 'all');
+  const [search, setSearch] = useState(() => searchParams?.get('q') || '');
+  const [page, setPage] = useState(() => Number(searchParams?.get('page') || '1'));
+
+  // Đồng bộ hóa trạng thái bộ lọc ngược lại URL Search Params bất cứ khi nào thay đổi
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (typeFilter !== 'all') params.set('type', typeFilter);
+    if (districtFilter !== 'all') params.set('district', districtFilter);
+    if (statusFilter !== 'all') params.set('status', statusFilter);
+    if (priceFilter !== 'all') params.set('price', priceFilter);
+    if (search.trim()) params.set('q', search.trim());
+    if (page > 1) params.set('page', String(page));
+
+    const currentPath = pathname || '/du-an';
+    const queryString = params.toString();
+    const newUrl = queryString ? `${currentPath}?${queryString}` : currentPath;
+    router.replace(newUrl, { scroll: false });
+  }, [typeFilter, districtFilter, statusFilter, priceFilter, search, page, pathname, router]);
 
   // Real API integration state
   const { fetchProjects } = useProjects();
@@ -564,5 +601,21 @@ export default function DuAnPage() {
 
       <ContactDialog open={contactOpen} onClose={() => setContactOpen(false)} />
     </div>
+  );
+}
+
+// Default export được bọc trong Suspense để tối ưu hóa SSR và ngăn deoptimization trong Next.js App Router
+export default function DuAnPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-3">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <p className="text-xs font-semibold text-gray-400">Đang tải danh sách dự án...</p>
+        </div>
+      }
+    >
+      <DuAnPageContent />
+    </Suspense>
   );
 }

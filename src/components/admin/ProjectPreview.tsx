@@ -37,6 +37,11 @@ interface PreviewProjectData {
   status: string;
   thumbnail?: string;
   images?: string[];
+  // Môi giới phụ trách được chọn — hiển thị đúng như trang du-an thật (thay vì tên mặc định)
+  agentName?: string;
+  agentTitle?: string;
+  // Bảng loại căn tùy chỉnh — nếu có thì ưu tiên hiển thị thay vì tự suy ra theo type
+  floor_plans?: Array<{ type: string; area: string; count: number; priceFrom: number }>;
 }
 
 interface ProjectPreviewProps {
@@ -236,12 +241,13 @@ export default function ProjectPreview({ data }: ProjectPreviewProps) {
   const handoverDate = data.handover_date || '';
   const legalStatus = data.legal || 'Đang cập nhật';
   const developer = data.investor || 'Chưa cập nhật';
-  const progress = data.construction_progress || 0;
   const address = data.location || 'Đang cập nhật';
   
   // Safe units count for estimating mock floor plan values
   const unitsCount = data.total_units && data.total_units > 0 ? data.total_units : 100;
   const floorPlansConfig = getFloorPlansConfig(data.type, unitsCount, data.min_price || 0, data.max_price || 0);
+  // Ưu tiên bảng giá tùy chỉnh (floor_plans) nếu admin đã nhập, ngược lại dùng bảng tự suy ra
+  const floorPlansToShow = data.floor_plans && data.floor_plans.length > 0 ? data.floor_plans : floorPlansConfig.plans;
 
   // Extract district from location
   const districtName = data.location?.split(',').slice(-2, -1)[0]?.trim() || 'TP Quảng Ngãi';
@@ -485,10 +491,27 @@ export default function ProjectPreview({ data }: ProjectPreviewProps) {
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">Đơn giá tự tính</p>
                         <p className="text-xs font-bold text-cta">
                           {(() => {
-                            if (!data.min_price || !data.total_area) return 'Đang cập nhật';
-                            const areaM2 = data.total_area * 10000;
-                            if (areaM2 <= 0) return 'Đang cập nhật';
-                            const pricePerM2 = data.min_price / areaM2;
+                            const minPrice = Number(data.min_price);
+                            const areaNum = Number(data.total_area);
+                            if (!minPrice || isNaN(areaNum) || areaNum <= 0) return 'Đang cập nhật';
+                            
+                            const unitsCount = Number(data.total_units);
+                            let avgUnitArea = 100; // default standard lot size in m2
+                            
+                            if (unitsCount > 0) {
+                              // Quy đổi diện tích dự án từ Hectare sang m2 (1 ha = 10,000 m2)
+                              const totalAreaM2 = areaNum * 10000;
+                              // Hệ số đất thương phẩm xây dựng thực tế chiếm khoảng 40% quy mô tổng thể dự án
+                              const saleableAreaM2 = totalAreaM2 * 0.4;
+                              avgUnitArea = saleableAreaM2 / unitsCount;
+                              if (avgUnitArea <= 0) {
+                                avgUnitArea = data.type === 'apartment' ? 70 : 120;
+                              }
+                            } else {
+                              avgUnitArea = data.type === 'apartment' ? 70 : 120;
+                            }
+                            
+                            const pricePerM2 = minPrice / avgUnitArea;
                             const millionPerM2 = pricePerM2 / 1000000;
                             if (millionPerM2 < 0.1) {
                               return `từ ${(millionPerM2 * 1000).toLocaleString('vi-VN')} nghìn/m²`;
@@ -548,7 +571,7 @@ export default function ProjectPreview({ data }: ProjectPreviewProps) {
                         {floorPlansConfig.title}
                       </h3>
                       <div className="divide-y divide-gray-50 rounded-xl border border-gray-100 overflow-hidden bg-white">
-                        {floorPlansConfig.plans.map((fp) => (
+                        {floorPlansToShow.map((fp) => (
                           <div key={fp.type} className="flex items-center justify-between px-3.5 py-2.5 hover:bg-gray-50/50 transition-colors">
                             <div className="flex items-center gap-2">
                               <Ruler className="h-3.5 w-3.5 text-gray-400 shrink-0" />
@@ -561,32 +584,6 @@ export default function ProjectPreview({ data }: ProjectPreviewProps) {
                           </div>
                         ))}
                       </div>
-                    </div>
-
-                    {/* Construction Progress Bar */}
-                    <div className="bg-gray-50/40 p-3 rounded-xl border border-gray-100">
-                      <h3 className="text-xs font-bold text-gray-900 mb-2 border-l-2 border-primary pl-2 uppercase tracking-wide text-[11px]">
-                        Tiến độ xây dựng
-                      </h3>
-                      <div className="flex justify-between text-[11px] mb-1.5 font-bold">
-                        <span className="text-gray-500">Hoàn thành thực tế</span>
-                        <span className="text-primary">{progress}%</span>
-                      </div>
-                      <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-primary rounded-full transition-all duration-300"
-                          style={{ width: `${progress}%` }}
-                        />
-                      </div>
-                      {data.construction_note && (
-                        <p className="text-xs font-bold text-primary mt-2 flex items-center gap-1 bg-primary/5 px-2.5 py-1.5 rounded-lg border border-primary/5 leading-relaxed">
-                          <CheckCircle className="h-3.5 w-3.5 text-primary shrink-0" />
-                          <span>Cột mốc thi công: {data.construction_note}</span>
-                        </p>
-                      )}
-                      <p className="text-[10px] text-gray-400 font-semibold mt-1.5">
-                        Dự kiến bàn giao: {!handoverDate || isNaN(new Date(handoverDate).getTime()) ? 'Chưa rõ' : new Date(handoverDate).toLocaleDateString('vi-VN')}
-                      </p>
                     </div>
                   </div>
                 )}
@@ -730,11 +727,11 @@ export default function ProjectPreview({ data }: ProjectPreviewProps) {
               <div className="p-3.5 space-y-3 bg-white">
                 <div className="flex items-center gap-3 pb-3.5 border-b border-gray-50">
                   <div className="w-8 h-8 rounded-full bg-primary-light flex items-center justify-center text-primary font-black text-xs shrink-0 select-none">
-                    V
+                    {(data.agentName?.trim() || 'Nguyễn Văn Việt').trim().split(' ').pop()?.charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-gray-800">Nguyễn Văn Việt</p>
-                    <p className="text-[10px] text-gray-400 font-semibold">Chuyên viên tư vấn dự án</p>
+                    <p className="text-xs font-bold text-gray-800">{data.agentName?.trim() || 'Nguyễn Văn Việt'}</p>
+                    <p className="text-[10px] text-gray-400 font-semibold">{data.agentTitle?.trim() || 'Chuyên viên tư vấn dự án'}</p>
                   </div>
                 </div>
 

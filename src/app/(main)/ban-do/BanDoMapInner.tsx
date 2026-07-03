@@ -69,8 +69,12 @@ export default function BanDoMapInner() {
     try {
       const params: Record<string, unknown> = {
         limit: 50,
-        ...filters,
+        type: filters.type,
       };
+      // Chỉ gửi filter giá khi người dùng đã chọn — gửi price_max=0 sẽ lọc hết kết quả
+      if (filters.price_min > 0) params.price_min = filters.price_min;
+      if (filters.price_max > 0) params.price_max = filters.price_max;
+      if (filters.category_id) params.category_id = filters.category_id;
       if (bounds) {
         params.north = bounds.north;
         params.south = bounds.south;
@@ -79,7 +83,7 @@ export default function BanDoMapInner() {
       }
       if (searchQuery) params.q = searchQuery;
 
-      const res = await api.get('/properties', { params });
+      const res = await api.get('/api/properties', { params });
       const data = res.data?.data || [];
       setProperties(data);
     } catch (err) {

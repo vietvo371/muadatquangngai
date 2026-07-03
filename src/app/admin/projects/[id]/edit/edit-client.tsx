@@ -61,6 +61,7 @@ interface ProjectFormData {
   utilities: string[];
   status: string;
   thumbnail: string;
+  floor_plans?: Array<{ type: string; area: string; count: number; priceFrom: number }>;
 }
 
 const initialFormData: ProjectFormData = {
@@ -212,6 +213,7 @@ export default function EditProjectClient({ id }: { id: string }) {
           location: project.location?.address ?? project.address ?? project.location ?? '',
           description: project.description || '',
           utilities: Array.isArray(project.utilities) ? project.utilities : [],
+          floor_plans: Array.isArray(project.floor_plans) ? project.floor_plans : undefined,
           status: project.status || 'draft',
           thumbnail: (project.images && project.images.length > 0) 
             ? project.images.join(',') 
@@ -918,7 +920,14 @@ export default function EditProjectClient({ id }: { id: string }) {
 
         {/* Live Preview Column */}
         <div className="hidden lg:block lg:sticky lg:top-6">
-          <ProjectPreview data={{ ...formData, images: projectImages.map(img => img.url) }} />
+          <ProjectPreview
+            data={{
+              ...formData,
+              images: projectImages.map(img => img.url),
+              agentName: agents.find(a => String(a.id) === String(formData.agent_id))?.name,
+              agentTitle: formData.agent_id ? 'Môi giới phụ trách' : undefined,
+            }}
+          />
         </div>
       </div>
     </div>
