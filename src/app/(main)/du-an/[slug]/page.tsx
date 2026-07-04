@@ -527,7 +527,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
   const unwrappedParams = use(params);
   const slug = unwrappedParams?.slug;
   const searchParams = useSearchParams();
-  const isPreview = searchParams.get('preview') === '1';
+  const isPreview = searchParams?.get('preview') === '1';
   const { fetchProjectDetail, fetchProjectUnits, isLoading } = useProjects();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [projectData, setProjectData] = useState<any>(null);
