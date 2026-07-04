@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, use } from 'react';
+import { useState, useEffect, use } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -275,6 +275,9 @@ const tabs = [
   { label: 'Câu hỏi thường gặp', sub: 'Hỗ trợ thắc mắc' },
 ];
 
+// id neo cho từng section (khớp thứ tự với `tabs`) — dùng cho tab cuộn + scrollspy
+const SECTION_IDS = ['du-an-tong-quan', 'du-an-vi-tri', 'du-an-faq'];
+
 type NearbyCategory = 'school' | 'supermarket' | 'park' | 'hospital';
 
 const nearbyTabs: { key: NearbyCategory; label: string; Icon: React.ElementType }[] = [
@@ -536,15 +539,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
   
   const [mainImg, setMainImg] = useState(0);
   const [activeTab, setActiveTab] = useState(0);
-  // Landing-page style: các section nằm trên cùng 1 trang, click tab sẽ cuộn tới section tương ứng
-  const sectionRefs = [useRef<HTMLDivElement>(null), useRef<HTMLDivElement>(null), useRef<HTMLDivElement>(null)];
+  // Landing-page style: các section nằm trên cùng 1 trang, click tab sẽ cuộn mượt tới section
+  // tương ứng. Dùng id + scrollIntoView; class scroll-mt-24 trên section lo phần chừa nav sticky.
   const scrollToSection = (i: number) => {
     setActiveTab(i);
-    const el = sectionRefs[i]?.current;
-    if (el) {
-      const y = el.getBoundingClientRect().top + window.scrollY - 90; // trừ chiều cao header sticky
-      window.scrollTo({ top: y, behavior: 'smooth' });
-    }
+    document.getElementById(SECTION_IDS[i])?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
   const [liked, setLiked] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
@@ -569,18 +568,19 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
   // Scrollspy: highlight tab tương ứng với section đang trong khung nhìn
   useEffect(() => {
     if (!projectData) return;
+    const els = SECTION_IDS.map((id) => document.getElementById(id));
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            const idx = sectionRefs.findIndex((r) => r.current === entry.target);
+            const idx = els.findIndex((el) => el === entry.target);
             if (idx >= 0) setActiveTab(idx);
           }
         });
       },
       { rootMargin: '-45% 0px -50% 0px', threshold: 0 }
     );
-    sectionRefs.forEach((r) => r.current && observer.observe(r.current));
+    els.forEach((el) => el && observer.observe(el));
     return () => observer.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectData]);
@@ -843,7 +843,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
               <div className="p-5">
 
                 {/* Section 0 — Tổng quan */}
-                <div ref={sectionRefs[0]} className="scroll-mt-24">
+                <div id={SECTION_IDS[0]} className="scroll-mt-24">
                   <div className="space-y-6">
                     {/* Thông tin dự án */}
                     <div>
@@ -1145,12 +1145,12 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
                 </div>
 
                 {/* Section 1 — Vị trí */}
-                <div ref={sectionRefs[1]} className="scroll-mt-24 pt-10 mt-10 border-t border-gray-100">
+                <div id={SECTION_IDS[1]} className="scroll-mt-24 pt-10 mt-10 border-t border-gray-100">
                   <NearbyTab project={projectData} />
                 </div>
 
                 {/* Section 2 — FAQ */}
-                <div ref={sectionRefs[2]} className="scroll-mt-24 pt-10 mt-10 border-t border-gray-100">
+                <div id={SECTION_IDS[2]} className="scroll-mt-24 pt-10 mt-10 border-t border-gray-100">
                   <div className="space-y-4">
                     <h2 className="text-base font-bold text-gray-900">Các câu hỏi thường gặp</h2>
 
