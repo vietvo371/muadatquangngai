@@ -823,7 +823,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
 
             {/* Tab nav — kiểu landing page: click sẽ cuộn tới section tương ứng */}
             <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-              <div className="flex border-b border-gray-100 overflow-x-auto sticky top-[68px] z-20 bg-white">
+              <div className="flex border-b border-gray-100 overflow-x-auto">
                 {tabs.map((tab, i) => (
                   <button
                     key={tab.label}
