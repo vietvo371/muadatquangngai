@@ -45,3 +45,5 @@ crawl_*.js
 crawled_*.json
 raw_properties.json
 *.zip
+
+/src/generated/prisma
