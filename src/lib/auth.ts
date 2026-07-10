@@ -11,6 +11,14 @@ export function unauthenticatedResponse(): NextResponse {
   });
 }
 
+/** Đối chiếu middleware IsAdmin.php — chạy sau auth:sanctum nên user luôn tồn tại ở đây. */
+export function forbiddenResponse(): NextResponse {
+  return new NextResponse(JSON.stringify({ success: false, message: 'Bạn không có quyền truy cập.' }), {
+    status: 403,
+    headers: { 'Content-Type': 'application/json; charset=utf-8' },
+  });
+}
+
 /**
  * Tương thích Laravel Sanctum's PersonalAccessToken — CÙNG 1 bảng
  * `personal_access_tokens`, CÙNG thuật toán, để token issue bởi backend nào cũng verify
@@ -154,6 +162,19 @@ export async function getAuthContext(request: Request): Promise<AuthContext | nu
 export async function getAuthUser(request: Request): Promise<AuthUser | null> {
   const ctx = await getAuthContext(request);
   return ctx?.user ?? null;
+}
+
+/**
+ * Đối chiếu middleware ['auth:sanctum', 'is_admin'] — dùng ở đầu mọi route admin:
+ *   const guard = await requireAdmin(request);
+ *   if (guard instanceof NextResponse) return guard;
+ *   const user = guard; // đã chắc chắn là admin
+ */
+export async function requireAdmin(request: Request): Promise<AuthUser | NextResponse> {
+  const user = await getAuthUser(request);
+  if (!user) return unauthenticatedResponse();
+  if (user.role !== 'admin') return forbiddenResponse();
+  return user;
 }
 
 export async function hashPassword(plain: string): Promise<string> {
