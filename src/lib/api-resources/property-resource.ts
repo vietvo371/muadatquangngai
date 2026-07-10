@@ -56,7 +56,9 @@ export interface PropertyRow {
   provinces: { id: bigint; name: string; slug: string | null };
   districts: { id: bigint; name: string; slug: string };
   categories: { id: bigint; name: string; slug: string; icon: string | null };
-  users: {
+  // users/property_media optional: route similar() không eager-load 2 quan hệ này,
+  // chỉ được truy cập khi opts.includeOwner/includeMedia = true (mặc định true).
+  users?: {
     id: bigint;
     name: string;
     phone: string | null;
@@ -65,7 +67,7 @@ export interface PropertyRow {
     rating: unknown;
     total_listings: number;
   };
-  property_media: Array<{
+  property_media?: Array<{
     id: bigint;
     type: string;
     url: string;
@@ -128,7 +130,18 @@ function fullAddress(street: string | null, ward: WardRow | null, district: { na
   return [street, ward?.name, district.name, province.name].filter(Boolean).join(', ');
 }
 
-export function mapPropertyResource(property: PropertyRow, ward: WardRow | null) {
+/**
+ * `opts.includeOwner`/`includeMedia`: đối chiếu `whenLoaded('user')`/`whenLoaded('media')`
+ * của PropertyResource.php — route nào eager-load quan hệ thì có khoá, không thì Laravel
+ * (qua resolve()) LƯỢC BỎ khoá hẳn. index()/show()/my-properties load đủ (mặc định true);
+ * similar() chỉ load province/district/category nên phải tắt owner+media để khớp shape thật.
+ */
+export function mapPropertyResource(
+  property: PropertyRow,
+  ward: WardRow | null,
+  opts: { includeOwner?: boolean; includeMedia?: boolean } = {}
+) {
+  const { includeOwner = true, includeMedia = true } = opts;
   const price = toFloat(property.price);
 
   return {
@@ -179,28 +192,36 @@ export function mapPropertyResource(property: PropertyRow, ward: WardRow | null)
       icon: property.categories.icon,
     },
 
-    owner: {
-      id: property.users.id,
-      name: property.users.name,
-      // owner.phone: chỉ trả khi request là chính chủ tin — Giai đoạn 1 chưa nối auth nên luôn ẩn (xem ghi chú đầu file)
-      avatar: property.users.avatar,
-      role: property.users.role,
-      rating: toFloat(property.users.rating),
-      total_listings: property.users.total_listings,
-    },
+    ...(includeOwner && property.users
+      ? {
+          owner: {
+            id: property.users.id,
+            name: property.users.name,
+            // owner.phone: chỉ trả khi request là chính chủ tin — Giai đoạn 1 chưa nối auth nên luôn ẩn (xem ghi chú đầu file)
+            avatar: property.users.avatar,
+            role: property.users.role,
+            rating: toFloat(property.users.rating),
+            total_listings: property.users.total_listings,
+          },
+        }
+      : {}),
 
-    media: property.property_media
-      .slice()
-      .sort((a, b) => a.sort_order - b.sort_order)
-      .map((m) => ({
-        id: m.id,
-        type: m.type,
-        url: m.url,
-        thumbnail: m.thumbnail ?? m.url,
-        caption: m.caption,
-        is_primary: m.is_primary,
-        sort_order: m.sort_order,
-      })),
+    ...(includeMedia && property.property_media
+      ? {
+          media: property.property_media
+            .slice()
+            .sort((a, b) => a.sort_order - b.sort_order)
+            .map((m) => ({
+              id: m.id,
+              type: m.type,
+              url: m.url,
+              thumbnail: m.thumbnail ?? m.url,
+              caption: m.caption,
+              is_primary: m.is_primary,
+              sort_order: m.sort_order,
+            })),
+        }
+      : {}),
 
     ...(property.property_features
       ? {
