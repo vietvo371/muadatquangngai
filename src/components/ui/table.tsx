@@ -4,10 +4,12 @@ const Table = React.forwardRef<
   HTMLTableElement,
   React.HTMLAttributes<HTMLTableElement>
 >(({ className, ...props }, ref) => (
-  <div className="relative w-full overflow-auto">
+  // min-w-[720px]: giữ độ rộng cột hợp lý, cuộn ngang trên mobile thay vì bóp chữ vỡ
+  // từng ký tự. Bảng nào cần khác có thể ghi đè bằng className (min-w-* truyền vào thắng).
+  <div className="relative w-full overflow-x-auto">
     <table
       ref={ref}
-      className={`w-full caption-bottom text-sm ${className}`}
+      className={`w-full min-w-[720px] caption-bottom text-sm ${className}`}
       {...props}
     />
   </div>
