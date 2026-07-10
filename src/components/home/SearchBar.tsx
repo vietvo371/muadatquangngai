@@ -152,55 +152,57 @@ export function SearchBar() {
 
       {/* Search input row */}
       <div className="relative">
-        <div className="flex rounded-b-xl rounded-tr-xl overflow-visible shadow-2xl">
-          {/* Category dropdown */}
-          <div className="relative z-10">
-            <button
-              onClick={() => { setShowCategoryMenu((v) => !v); setShowSuggestions(false); }}
-              className="h-full bg-white flex items-center gap-1.5 px-4 border-r border-gray-200 text-sm text-gray-600 hover:bg-gray-50 whitespace-nowrap transition-colors rounded-bl-xl"
-            >
-              {category}
-              <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${showCategoryMenu ? 'rotate-180' : ''}`} />
-            </button>
-            {showCategoryMenu && (
-              <div className="absolute top-full left-0 mt-1 w-44 bg-white rounded-lg shadow-xl border border-gray-100 z-50 py-1">
-                {categories.map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => { setCategory(cat); setShowCategoryMenu(false); }}
-                    className={`w-full text-left px-4 py-2 text-sm hover:bg-primary-light hover:text-primary transition-colors ${
-                      category === cat ? 'text-primary font-medium' : 'text-gray-700'
-                    }`}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </div>
-            )}
+        <div className="flex flex-col sm:flex-row rounded-b-xl rounded-tr-xl overflow-visible shadow-2xl">
+          {/* Category dropdown + text input — luôn ở 1 hàng, đủ chỗ ngay cả trên mobile 375px */}
+          <div className="flex">
+            <div className="relative z-10">
+              <button
+                onClick={() => { setShowCategoryMenu((v) => !v); setShowSuggestions(false); }}
+                className="h-full bg-white flex items-center gap-1.5 px-4 border-r border-gray-200 text-sm text-gray-600 hover:bg-gray-50 whitespace-nowrap transition-colors rounded-bl-xl sm:rounded-bl-xl"
+              >
+                {category}
+                <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${showCategoryMenu ? 'rotate-180' : ''}`} />
+              </button>
+              {showCategoryMenu && (
+                <div className="absolute top-full left-0 mt-1 w-44 bg-white rounded-lg shadow-xl border border-gray-100 z-50 py-1">
+                  {categories.map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => { setCategory(cat); setShowCategoryMenu(false); }}
+                      className={`w-full text-left px-4 py-2 text-sm hover:bg-primary-light hover:text-primary transition-colors ${
+                        category === cat ? 'text-primary font-medium' : 'text-gray-700'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Text input */}
+            <div className="flex items-center bg-white flex-1 px-4 gap-2 min-w-0">
+              <MapPin className="h-4 w-4 text-gray-400 shrink-0" />
+              <input
+                ref={inputRef}
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onFocus={() => setShowSuggestions(true)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSearch();
+                  if (e.key === 'Escape') setShowSuggestions(false);
+                }}
+                placeholder={isTyping ? '' : animatedPlaceholder}
+                className="w-full min-w-0 py-4 text-sm outline-none text-gray-700 placeholder:text-gray-400 bg-transparent"
+              />
+            </div>
           </div>
 
-          {/* Text input */}
-          <div className="flex items-center bg-white flex-1 px-4 gap-2">
-            <MapPin className="h-4 w-4 text-gray-400 shrink-0" />
-            <input
-              ref={inputRef}
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onFocus={() => setShowSuggestions(true)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleSearch();
-                if (e.key === 'Escape') setShowSuggestions(false);
-              }}
-              placeholder={isTyping ? '' : animatedPlaceholder}
-              className="flex-1 py-4 text-sm outline-none text-gray-700 placeholder:text-gray-400 bg-transparent"
-            />
-          </div>
-
-          {/* Submit */}
+          {/* Submit — hàng riêng, full-width trên mobile để không đẩy tràn viewport */}
           <button
             onClick={() => handleSearch()}
-            className="bg-cta hover:bg-cta-dark text-white px-6 font-bold text-sm flex items-center gap-2 transition-colors shrink-0 rounded-br-xl"
+            className="bg-cta hover:bg-cta-dark text-white px-6 py-3.5 sm:py-0 font-bold text-sm flex items-center justify-center gap-2 transition-colors shrink-0 rounded-b-xl sm:rounded-bl-none sm:rounded-br-xl"
           >
             <Search className="h-4 w-4" />
             Tìm kiếm
