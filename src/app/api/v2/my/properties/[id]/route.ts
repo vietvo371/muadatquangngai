@@ -85,7 +85,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     errors.push(new FieldError('price', 'Trường giá phải là số.'));
   }
   if ('area' in body && (!isNumeric(body.area) || body.area < 1)) {
-    errors.push(new FieldError('area', 'Trường diện tích phải lớn hơn hoặc bằng 1.'));
+    errors.push(new FieldError('area', 'Trường diện tích phải ít nhất là 1.'));
   }
   if ('province_id' in body && !isInteger(body.province_id)) {
     errors.push(new FieldError('province_id', 'Trường tỉnh/thành phố phải là số nguyên.'));

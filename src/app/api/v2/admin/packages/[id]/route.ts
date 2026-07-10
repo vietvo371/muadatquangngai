@@ -52,7 +52,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     errors.push(new FieldError('price', 'Trường giá phải là số.'));
   }
   if ('duration_days' in body && (!isInteger(body.duration_days) || body.duration_days < 1)) {
-    errors.push(new FieldError('duration_days', 'Trường số ngày phải lớn hơn hoặc bằng 1.'));
+    errors.push(new FieldError('duration_days', 'Trường số ngày phải ít nhất là 1.'));
   }
   if ('is_active' in body && body.is_active !== null && !isBoolean(body.is_active)) {
     errors.push(new FieldError('is_active', 'Trường is active phải là đúng hoặc sai.'));

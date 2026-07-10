@@ -95,7 +95,7 @@ export async function POST(request: Request) {
 
   const area = body.area;
   if (area === undefined || area === null) errors.push(new FieldError('area', 'Trường diện tích không được để trống.'));
-  else if (!isNumeric(area) || area < 1) errors.push(new FieldError('area', 'Trường diện tích phải lớn hơn hoặc bằng 1.'));
+  else if (!isNumeric(area) || area < 1) errors.push(new FieldError('area', 'Trường diện tích phải ít nhất là 1.'));
 
   const provinceId = body.province_id;
   if (provinceId === undefined || provinceId === null) errors.push(new FieldError('province_id', 'Trường tỉnh/thành phố không được để trống.'));

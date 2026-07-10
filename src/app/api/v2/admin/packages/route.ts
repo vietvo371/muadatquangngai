@@ -50,7 +50,7 @@ export async function POST(request: Request) {
 
   const durationDays = body.duration_days;
   if (durationDays === undefined || durationDays === null) errors.push(new FieldError('duration_days', 'Trường số ngày không được để trống.'));
-  else if (!isInteger(durationDays) || durationDays < 1) errors.push(new FieldError('duration_days', 'Trường số ngày phải lớn hơn hoặc bằng 1.'));
+  else if (!isInteger(durationDays) || durationDays < 1) errors.push(new FieldError('duration_days', 'Trường số ngày phải ít nhất là 1.'));
 
   if (body.is_active !== undefined && body.is_active !== null && !isBoolean(body.is_active)) {
     errors.push(new FieldError('is_active', 'Trường is active phải là đúng hoặc sai.'));
