@@ -33,8 +33,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   const errors: FieldError[] = [];
 
   if ('name' in body) {
-    if (!isString(body.name) || !body.name) errors.push(new FieldError('name', 'Trường tên phải là chuỗi.'));
-    else if (body.name.length > 100) errors.push(new FieldError('name', 'Trường tên không được lớn hơn 100 ký tự.'));
+    if (!isString(body.name) || !body.name) errors.push(new FieldError('name', 'Trường họ và tên phải là chuỗi.'));
+    else if (body.name.length > 100) errors.push(new FieldError('name', 'Trường họ và tên không được lớn hơn 100 ký tự.'));
   }
   if ('slug' in body && body.slug !== null) {
     if (!isString(body.slug) || body.slug.length > 100) errors.push(new FieldError('slug', 'Trường slug không được lớn hơn 100 ký tự.'));
@@ -44,7 +44,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     }
   }
   if ('type' in body && !inList(body.type, ['sale', 'rent', 'project'])) {
-    errors.push(new FieldError('type', 'Giá trị đã chọn trong trường loại không hợp lệ.'));
+    errors.push(new FieldError('type', 'Giá trị đã chọn trong trường loại tin không hợp lệ.'));
   }
   if ('sort_order' in body && body.sort_order !== null && !isInteger(body.sort_order)) {
     errors.push(new FieldError('sort_order', 'Trường sort order phải là số nguyên.'));

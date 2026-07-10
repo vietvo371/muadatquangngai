@@ -37,12 +37,12 @@ export async function POST(request: Request) {
   const errors: FieldError[] = [];
 
   const name = isString(body.name) ? body.name : undefined;
-  if (!name) errors.push(new FieldError('name', 'Trường tên không được để trống.'));
-  else if (name.length > 100) errors.push(new FieldError('name', 'Trường tên không được lớn hơn 100 ký tự.'));
+  if (!name) errors.push(new FieldError('name', 'Trường họ và tên không được để trống.'));
+  else if (name.length > 100) errors.push(new FieldError('name', 'Trường họ và tên không được lớn hơn 100 ký tự.'));
 
   const type = body.type;
-  if (!type) errors.push(new FieldError('type', 'Trường loại không được để trống.'));
-  else if (!inList(type, PACKAGE_TYPES)) errors.push(new FieldError('type', 'Giá trị đã chọn trong trường loại không hợp lệ.'));
+  if (!type) errors.push(new FieldError('type', 'Trường loại tin không được để trống.'));
+  else if (!inList(type, PACKAGE_TYPES)) errors.push(new FieldError('type', 'Giá trị đã chọn trong trường loại tin không hợp lệ.'));
 
   const price = body.price;
   if (price === undefined || price === null) errors.push(new FieldError('price', 'Trường giá không được để trống.'));

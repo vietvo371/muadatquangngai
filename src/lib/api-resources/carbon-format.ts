@@ -12,3 +12,16 @@ export function toVietnamIso8601(date: Date | null | undefined): string | null {
   if (!date) return null;
   return date.toISOString().replace(/\.\d{3}Z$/, '+07:00');
 }
+
+/**
+ * Format Carbon MẶC ĐỊNH khi model KHÔNG qua accessor/Resource riêng cho field đó
+ * (vd `created_at` trong TransactionResource dùng `$this->created_at` thô, không gọi
+ * `?->toIso8601String()`) — Carbon::serializeDate() convert sang UTC (trừ 7 giờ so với
+ * digit thô +07:00 trong DB) và in 6 chữ số micro giây, khác hẳn format `toVietnamIso8601`
+ * ở trên. Xác nhận qua curl thật: "2026-05-25T03:57:02.000000Z" (giờ thô là 10:57:02+07).
+ */
+export function toCarbonDefaultUtc(date: Date | null | undefined): string | null {
+  if (!date) return null;
+  const withVnOffset = new Date(date.getTime() - 7 * 60 * 60 * 1000);
+  return withVnOffset.toISOString().replace(/\.\d{3}Z$/, '.000000Z');
+}

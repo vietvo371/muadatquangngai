@@ -58,7 +58,7 @@ export async function POST(request: Request) {
   const group = isString(body.group) ? body.group : undefined;
   if (!group) errors.push(new FieldError('group', 'Trường group không được để trống.'));
   const type = isString(body.type) ? body.type : undefined;
-  if (!type) errors.push(new FieldError('type', 'Trường type không được để trống.'));
+  if (!type) errors.push(new FieldError('type', 'Trường loại tin không được để trống.'));
   const label = isString(body.label) ? body.label : undefined;
   if (!label) errors.push(new FieldError('label', 'Trường label không được để trống.'));
 

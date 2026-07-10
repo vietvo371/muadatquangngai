@@ -42,11 +42,11 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   const errors: FieldError[] = [];
 
   if ('name' in body) {
-    if (!isString(body.name) || !body.name) errors.push(new FieldError('name', 'Trường tên phải là chuỗi.'));
-    else if (body.name.length > 100) errors.push(new FieldError('name', 'Trường tên không được lớn hơn 100 ký tự.'));
+    if (!isString(body.name) || !body.name) errors.push(new FieldError('name', 'Trường họ và tên phải là chuỗi.'));
+    else if (body.name.length > 100) errors.push(new FieldError('name', 'Trường họ và tên không được lớn hơn 100 ký tự.'));
   }
   if ('type' in body && !inList(body.type, PACKAGE_TYPES)) {
-    errors.push(new FieldError('type', 'Giá trị đã chọn trong trường loại không hợp lệ.'));
+    errors.push(new FieldError('type', 'Giá trị đã chọn trong trường loại tin không hợp lệ.'));
   }
   if ('price' in body && (!isNumeric(body.price) || body.price < 0)) {
     errors.push(new FieldError('price', 'Trường giá phải là số.'));
