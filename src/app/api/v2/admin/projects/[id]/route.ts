@@ -25,7 +25,7 @@ function randomSuffix(length: number): string {
  * property active nào, cả 3 field rơi về NUMBER 0 (PHP `?? 0` fallback là int, không phải
  * string) — xác nhận qua so sánh project có/không có property active.
  */
-async function getProjectStats(projectId: bigint) {
+async function getProjectStats(projectId: bigint, totalUnits: number | null) {
   const activeAgg = await db.properties.aggregate({
     where: { project_id: projectId, status: 'active' },
     _count: { _all: true },
@@ -33,11 +33,10 @@ async function getProjectStats(projectId: bigint) {
     _max: { price: true },
     _avg: { price: true },
   });
-  const project = await db.projects.findUnique({ where: { id: projectId }, select: { total_units: true } });
 
   const activeCount = activeAgg._count._all;
   return {
-    total_units: project?.total_units ?? 0,
+    total_units: totalUnits ?? 0,
     active_units: activeCount,
     sold_units: 0,
     rented_units: 0,
@@ -66,9 +65,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
   // Không có FK constraint thật cho ward_id trên bảng projects nên Prisma không tạo được
   // quan hệ `wards` tự động (khác provinces/districts) — phải query tay như Phase 1.
-  const ward = project.ward_id ? await db.wards.findUnique({ where: { id: project.ward_id } }) : null;
-
-  const stats = await getProjectStats(project.id);
+  const [ward, stats] = await Promise.all([
+    project.ward_id ? db.wards.findUnique({ where: { id: project.ward_id } }) : Promise.resolve(null),
+    getProjectStats(project.id, project.total_units),
+  ]);
 
   return apiSuccess({ project: mapAdminProjectResource({ ...project, wards: ward }), stats });
 }

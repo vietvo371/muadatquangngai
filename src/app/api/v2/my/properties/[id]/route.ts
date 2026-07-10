@@ -2,6 +2,7 @@ import { db } from '@/lib/db';
 import { apiError, apiSuccess } from '@/lib/api-response';
 import { getAuthUser, unauthenticatedResponse } from '@/lib/auth';
 import { mapPropertyResource } from '@/lib/api-resources/property-resource';
+import { validateFeatureIds } from '@/lib/api-resources/property-validation';
 import { FieldError, validationErrorResponse, isNumeric, isInteger, isBoolean, inList, isString } from '@/lib/validation';
 import { slugify } from '@/lib/formatters';
 import crypto from 'node:crypto';
@@ -111,6 +112,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   if ('parking' in body && body.parking !== null && !isBoolean(body.parking)) {
     errors.push(new FieldError('parking', 'Trường chỗ để xe phải là đúng hoặc sai.'));
   }
+  if ('feature_ids' in body) errors.push(...(await validateFeatureIds(body.feature_ids)));
 
   if (errors.length > 0) return validationErrorResponse(errors);
 

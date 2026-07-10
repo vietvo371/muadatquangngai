@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { apiPaginated, apiSuccess, buildPaginationMeta } from '@/lib/api-response';
 import { getAuthUser, unauthenticatedResponse } from '@/lib/auth';
 import { mapPropertyResource, type WardRow } from '@/lib/api-resources/property-resource';
+import { validateFeatureIds } from '@/lib/api-resources/property-validation';
 import { FieldError, validationErrorResponse, isNumeric, isInteger, isBoolean, inList, isString } from '@/lib/validation';
 import { slugify } from '@/lib/formatters';
 
@@ -127,6 +128,7 @@ export async function POST(request: Request) {
   if (body.price_negotiable !== undefined && body.price_negotiable !== null && !isBoolean(body.price_negotiable)) {
     errors.push(new FieldError('price_negotiable', 'Trường thương lượng giá phải là đúng hoặc sai.'));
   }
+  errors.push(...(await validateFeatureIds(body.feature_ids)));
 
   if (errors.length > 0) return validationErrorResponse(errors);
 

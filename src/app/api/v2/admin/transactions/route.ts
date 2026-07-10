@@ -33,7 +33,7 @@ export async function GET(request: Request) {
   if (status) where.status = status;
   if (type) where.type = type;
   if (method) where.method = method;
-  if (userId) where.user_id = BigInt(userId);
+  if (userId && /^\d+$/.test(userId)) where.user_id = BigInt(userId); // bỏ qua filter nếu user_id không phải số nguyên, tránh BigInt() crash 500
   if (fromDate || toDate) {
     where.created_at = {};
     if (fromDate) where.created_at.gte = new Date(`${fromDate}T00:00:00.000Z`);

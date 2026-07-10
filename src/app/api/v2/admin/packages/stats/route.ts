@@ -8,15 +8,18 @@ export async function GET(request: Request) {
   const guard = await requireAdmin(request);
   if (guard instanceof NextResponse) return guard;
 
-  const packages = await db.packages.findMany();
-  const stats = await Promise.all(
-    packages.map(async (p) => ({
-      id: p.id,
-      name: p.name,
-      type: p.type,
-      active_subscriptions: await db.subscriptions.count({ where: { package_id: p.id, status: 'active' } }),
-    }))
-  );
+  const [packages, activeCounts] = await Promise.all([
+    db.packages.findMany(),
+    db.subscriptions.groupBy({ by: ['package_id'], where: { status: 'active' }, _count: { _all: true } }),
+  ]);
+  const countByPackage = new Map(activeCounts.map((c) => [c.package_id.toString(), c._count._all]));
+
+  const stats = packages.map((p) => ({
+    id: p.id,
+    name: p.name,
+    type: p.type,
+    active_subscriptions: countByPackage.get(p.id.toString()) ?? 0,
+  }));
 
   return apiSuccess(stats);
 }
