@@ -37,7 +37,9 @@ export async function GET(request: Request) {
     total_properties: totalProperties,
     active_properties: activeProperties,
     pending_properties: pendingProperties,
-    total_revenue: revenueAgg._sum.amount ? Number(revenueAgg._sum.amount) : 0,
+    // Laravel: `Transaction::sum('amount')` KHÔNG cast (khác stats() có `(float)` tường minh)
+    // — Postgres decimal sum trả về qua PDO dạng string, verify qua curl thật ("202000000").
+    total_revenue: revenueAgg._sum.amount ? String(revenueAgg._sum.amount) : '0',
     new_users_today: newUsersToday,
     new_listings_today: newListingsToday,
     pending_reports: pendingReports,

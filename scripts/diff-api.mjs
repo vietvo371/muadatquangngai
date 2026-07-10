@@ -23,11 +23,13 @@ const GLOBAL_IGNORE = new Set([
   'view_count', // cả 2 backend cùng ghi vào 1 DB khi gọi show() — count trôi tự nhiên khi test cả 2
 ]);
 
-// Giai đoạn 1 chưa nối auth cho route public (xem property-resource.ts) — 3 field này chỉ
-// xuất hiện cho user đã đăng nhập. Next.js luôn lược bỏ khoá đúng chuẩn; Laravel index() (do
-// gọi toArray() thủ công, không qua resolve()) serialize MissingValue thành `{}` thay vì lược
-// bỏ — coi `{}`/null ở Laravel khớp với "vắng mặt" ở Next.js.
-const AUTH_GATED_KEYS = new Set(['features', 'is_saved', 'phone']);
+// Field mà Next.js luôn lược bỏ đúng chuẩn khi quan hệ whenLoaded() không được eager-load,
+// nhưng Laravel index() (do gọi `(new XResource($item))->toArray($request)` THỦ CÔNG thay vì
+// qua resolve()) serialize MissingValue thành `{}` thay vì lược bỏ — coi `{}`/null ở Laravel
+// khớp với "vắng mặt" ở Next.js. Gồm: 3 field auth-gated ở property (Giai đoạn 1, xem
+// property-resource.ts) + agent/owner/ward ở AdminProjectController::index() (Giai đoạn 3,
+// chỉ eager-load province+district, không có agent/user/ward).
+const AUTH_GATED_KEYS = new Set(['features', 'is_saved', 'phone', 'agent', 'owner', 'ward']);
 
 function diff(a, b, path = '') {
   const diffs = [];
@@ -237,4 +239,90 @@ await checkInteraction('tạo tin qua Next.js -> đọc + xoá qua Laravel', asy
 
 console.log(`\n${3 - interactionFail}/3 luồng tương tác khớp.`);
 
-if (failCount > 0 || interactionFail > 0) process.exit(1);
+// ── Giai đoạn 3: Admin routes (GET tĩnh, cần token admin) ──
+// login 1 lần lấy token, dùng cho toàn bộ case admin bên dưới — không side-effect vì
+// chỉ GET/404/validation-error, không tạo/sửa/xoá dữ liệu thật.
+console.log('\n── Admin routes (Giai đoạn 3) ──');
+let adminFailCount = 0;
+const adminLogin = await fetchJson(LARAVEL_BASE, '/api/auth/login', {
+  method: 'POST',
+  body: { email: 'admin@batdongsan.local', password: 'password' },
+});
+
+if (adminLogin.status !== 200) {
+  console.log('❌ Không đăng nhập được admin — bỏ qua toàn bộ case admin.');
+  adminFailCount = 1;
+} else {
+  const adminToken = adminLogin.body.data.access_token;
+  const authHeader = { Authorization: `Bearer ${adminToken}` };
+
+  const ADMIN_CASES = [
+    { name: 'admin/dashboard', path: '/admin/dashboard', laravelPath: '/api/admin/dashboard' },
+    { name: 'admin/categories', path: '/admin/categories', laravelPath: '/api/admin/categories' },
+    { name: 'admin/settings', path: '/admin/settings', laravelPath: '/api/admin/settings' },
+    { name: 'admin/reports', path: '/admin/reports', laravelPath: '/api/admin/reports' },
+    { name: 'admin/packages', path: '/admin/packages', laravelPath: '/api/admin/packages' },
+    { name: 'admin/packages/stats', path: '/admin/packages/stats', laravelPath: '/api/admin/packages/stats' },
+    { name: 'admin/packages/999999 (404)', path: '/admin/packages/999999', laravelPath: '/api/admin/packages/999999' },
+    { name: 'admin/verifications', path: '/admin/verifications', laravelPath: '/api/admin/verifications' },
+    { name: 'admin/verifications/stats', path: '/admin/verifications/stats', laravelPath: '/api/admin/verifications/stats' },
+    { name: 'admin/banners', path: '/admin/banners', laravelPath: '/api/admin/banners' },
+    { name: 'admin/banners/999999 (404)', path: '/admin/banners/999999', laravelPath: '/api/admin/banners/999999' },
+    { name: 'admin/transactions?per_page=5', path: '/admin/transactions?per_page=5', laravelPath: '/api/admin/transactions?per_page=5' },
+    { name: 'admin/transactions/1', path: '/admin/transactions/1', laravelPath: '/api/admin/transactions/1' },
+    { name: 'admin/transactions/stats', path: '/admin/transactions/stats', laravelPath: '/api/admin/transactions/stats' },
+    // admin/properties KHÔNG có ở đây có chủ đích — Next.js dùng shape gọn hơn (nested
+    // category/district) thay vì raw dump của Laravel (đã disclose trong properties/
+    // route.ts), một khác biệt được CHỌN chứ không phải bug — diff tĩnh sẽ luôn đỏ ở đây.
+    { name: 'admin/projects?per_page=5', path: '/admin/projects?per_page=5', laravelPath: '/api/admin/projects?per_page=5' },
+    { name: 'admin/projects/999999 (404)', path: '/admin/projects/999999', laravelPath: '/api/admin/projects/999999' },
+    {
+      name: 'admin/categories: thiếu name+type (422)',
+      method: 'POST',
+      path: '/admin/categories',
+      laravelPath: '/api/admin/categories',
+      body: {},
+    },
+    {
+      name: 'admin/packages: type không hợp lệ (422)',
+      method: 'POST',
+      path: '/admin/packages',
+      laravelPath: '/api/admin/packages',
+      body: { name: 'x', type: 'bogus', price: 1, duration_days: 1 },
+    },
+    {
+      name: 'admin/projects: thiếu name+address (422)',
+      method: 'POST',
+      path: '/admin/projects',
+      laravelPath: '/api/admin/projects',
+      body: {},
+    },
+  ];
+
+  for (const c of ADMIN_CASES) {
+    const opts = { method: c.method, body: c.body, headers: authHeader };
+    const [l, n] = await Promise.all([
+      fetchJson(LARAVEL_BASE, c.laravelPath, opts),
+      fetchJson(NEXT_BASE, c.path, opts),
+    ]);
+
+    if (l.status !== n.status) {
+      console.log(`❌ ${c.name}: HTTP status khác nhau — laravel=${l.status} nextjs=${n.status}`);
+      adminFailCount++;
+      continue;
+    }
+
+    const result = diff(l.body, n.body);
+    if (result.length === 0) {
+      console.log(`✅ ${c.name}`);
+    } else {
+      console.log(`❌ ${c.name}: ${result.length} khác biệt`);
+      for (const d of result.slice(0, 20)) console.log('   -', d);
+      adminFailCount++;
+    }
+  }
+
+  console.log(`\n${ADMIN_CASES.length - adminFailCount}/${ADMIN_CASES.length} case admin khớp.`);
+}
+
+if (failCount > 0 || interactionFail > 0 || adminFailCount > 0) process.exit(1);

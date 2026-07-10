@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
 import { apiError, apiPaginated, apiSuccess, buildPaginationMeta } from '@/lib/api-response';
 import { mapCategoryResource } from '@/lib/api-resources/category-resource';
+import { toCarbonDefaultUtc } from '@/lib/api-resources/carbon-format';
 import { FieldError, validationErrorResponse, isString, isBoolean, isInteger, inList } from '@/lib/validation';
 import { slugify } from '@/lib/formatters';
 
@@ -12,7 +13,16 @@ function laravelBoolean(value: string | null): boolean {
   return ['1', 'true', 'on', 'yes'].includes(value.toLowerCase());
 }
 
-/** GET /api/v2/admin/categories — port của AdminCategoryController@index. */
+/**
+ * GET /api/v2/admin/categories — port của AdminCategoryController@index.
+ *
+ * Laravel gọi `$this->paginated($categories)` TRỰC TIẾP trên Eloquent Collection, KHÔNG
+ * bọc qua CategoryResource (khác show/store/update/toggle — cả 4 method còn lại dùng đúng
+ * CategoryResource) — cùng loại bug "quên wrap Resource" đã gặp ở PropertyController::
+ * index(), AdminTransactionController::index(). Route admin-only, không phải hợp đồng
+ * public nên giữ nguyên raw dump thật thay vì tự fix Laravel — verify qua curl thật
+ * (response có is_active/created_at/updated_at mà CategoryResource không hề khai báo).
+ */
 export async function GET(request: Request) {
   const guard = await requireAdmin(request);
   if (guard instanceof NextResponse) return guard;
@@ -30,7 +40,17 @@ export async function GET(request: Request) {
   ]);
 
   return apiPaginated(
-    rows.map((r) => mapCategoryResource(r)),
+    rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      slug: r.slug,
+      type: r.type,
+      icon: r.icon,
+      sort_order: r.sort_order,
+      is_active: r.is_active,
+      created_at: toCarbonDefaultUtc(r.created_at),
+      updated_at: toCarbonDefaultUtc(r.updated_at),
+    })),
     buildPaginationMeta(total, page, perPage)
   );
 }
