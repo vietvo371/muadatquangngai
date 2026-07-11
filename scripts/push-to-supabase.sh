@@ -17,17 +17,22 @@ set -euo pipefail
 : "${LOCAL_DB_URL:=postgresql://postgres:secret@127.0.0.1:5432/bds_db}"
 
 DUMP_FILE="$(mktemp -t bds_dump.XXXXXX.sql)"
-trap 'rm -f "$DUMP_FILE"' EXIT
+trap 'rm -f "$DUMP_FILE" "$DUMP_FILE.raw"' EXIT
 
 echo "==> Dump schema + data từ local (bỏ owner/privilege/spatial_ref_sys)..."
+# KHÔNG dùng --clean: nó sinh DROP SCHEMA public xung đột với extension postgis đã có
+# sẵn trên Supabase. Target (public trên Supabase) đang trống (chỉ có postgis) nên CREATE
+# TABLE chạy thẳng được. Lọc bỏ dòng CREATE EXTENSION/COMMENT ON EXTENSION để tránh xung
+# đột quyền (postgis đã cài sẵn, và role Supabase không tạo lại được trong public).
 pg_dump "$LOCAL_DB_URL" \
   --schema=public \
   --no-owner \
   --no-privileges \
   --exclude-table=spatial_ref_sys \
   --exclude-table-data=spatial_ref_sys \
-  --clean --if-exists \
-  --file="$DUMP_FILE"
+  --file="$DUMP_FILE.raw"
+grep -vE '^(CREATE EXTENSION|COMMENT ON EXTENSION|CREATE SCHEMA public|COMMENT ON SCHEMA public)' "$DUMP_FILE.raw" > "$DUMP_FILE"
+rm -f "$DUMP_FILE.raw"
 
 echo "==> Kích thước dump: $(du -h "$DUMP_FILE" | cut -f1)"
 
