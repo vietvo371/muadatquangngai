@@ -246,3 +246,17 @@ export function mapPropertyResource(
     updated_at: toVietnamIso8601(property.updated_at),
   };
 }
+
+/**
+ * Nạp ward cho tập property có ward_id — tái hiện side-effect fullAddress() lazy-load
+ * ward của Laravel (route không eager-load ward nhưng accessor fullAddress đụng
+ * $this->ward?->name làm ward xuất hiện trong address + location.ward khi tin có ward_id).
+ * Dùng ở featured/nearby/saved/similar. Trả Map wardId(string) -> WardRow.
+ */
+export async function loadWardsMap(props: Array<{ ward_id: bigint | null }>): Promise<Map<string, WardRow>> {
+  const ids = [...new Set(props.map((p) => p.ward_id).filter((w): w is bigint => w !== null))];
+  if (ids.length === 0) return new Map();
+  const { db } = await import('@/lib/db');
+  const wards = await db.wards.findMany({ where: { id: { in: ids } }, select: { id: true, name: true, slug: true } });
+  return new Map(wards.map((w) => [w.id.toString(), w]));
+}
