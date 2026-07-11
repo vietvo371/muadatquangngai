@@ -1,8 +1,10 @@
 import axios from "axios";
 
+// Sau rewire: mọi lời gọi dùng path /api/v2/* trên CÙNG origin (Next.js phục vụ cả trang
+// lẫn API). baseURL rỗng = same-origin (chạy đúng trên Vercel và dev :3000).
+// NEXT_PUBLIC_API_URL nếu set sẽ ghi đè — dùng khi muốn trỏ sang backend ngoài (vd Laravel).
 const getBaseURL = () => {
-  let url = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8888";
-  // Strip trailing slash if present
+  let url = process.env.NEXT_PUBLIC_API_URL || "";
   if (url.endsWith("/")) {
     url = url.substring(0, url.length - 1);
   }
@@ -30,8 +32,8 @@ api.interceptors.response.use(
   async (error) => {
     if (
       error.response?.status === 401 &&
-      !error.config?.url?.includes("/api/auth/login") &&
-      !error.config?.url?.includes("/api/auth/otp/login")
+      !error.config?.url?.includes("/auth/login") &&
+      !error.config?.url?.includes("/auth/otp/login")
     ) {
       if (typeof window !== "undefined") {
         localStorage.removeItem("access_token");

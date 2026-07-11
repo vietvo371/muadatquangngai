@@ -100,7 +100,7 @@ export function useSearch() {
     setError(null);
     
     try {
-      const response = await axios.get<SearchResponse>('/api/search', {
+      const response = await axios.get<SearchResponse>('/api/v2/search', {
         params: {
           keyword,
           ...filters,
@@ -147,7 +147,7 @@ export function useSearch() {
       setIsLoadingSuggestions(true);
       
       try {
-        const response = await axios.get('/api/search/suggest', {
+        const response = await axios.get('/api/v2/search/suggest', {
           params: { keyword, limit: 10 },
         });
         
@@ -170,7 +170,7 @@ export function useSearch() {
     setIsLoadingSuggestions(true);
     
     try {
-      const response = await axios.get('/api/search/suggest', {
+      const response = await axios.get('/api/v2/search/suggest', {
         params: { keyword, limit: 10 },
       });
       
@@ -194,7 +194,7 @@ export function useSearch() {
     setError(null);
     
     try {
-      const response = await axios.get('/api/search/map', {
+      const response = await axios.get('/api/v2/search/map', {
         params: {
           north: bounds.north,
           south: bounds.south,
@@ -222,7 +222,7 @@ export function useSearch() {
   // Get search count by type
   const getCountByType = useCallback(async (filters: Partial<SearchFilters> = {}) => {
     try {
-      const response = await axios.get('/api/search/count', { params: filters });
+      const response = await axios.get('/api/v2/search/count', { params: filters });
       return { 
         success: true, 
         data: response.data.data || { sale: 0, rent: 0, total: 0 } 

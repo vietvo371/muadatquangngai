@@ -60,7 +60,7 @@ export function useS3Upload(options: UseS3UploadOptions = {}) {
     try {
       // Get presigned URL from backend
       const path = `${folder}/${Date.now()}-${file.name}`;
-      const presignedResponse = await axios.get('/api/files/presigned-url', {
+      const presignedResponse = await axios.get('/api/v2/files/presigned-url', {
         params: { path },
       });
 
@@ -131,7 +131,7 @@ export function useS3Upload(options: UseS3UploadOptions = {}) {
     // If file has ID, delete from server
     if (file.id) {
       try {
-        await axios.delete(`/api/files/${file.id}`);
+        await axios.delete(`/api/v2/files/${file.id}`);
       } catch (err) {
         // Continue even if server delete fails
       }
@@ -146,7 +146,7 @@ export function useS3Upload(options: UseS3UploadOptions = {}) {
     for (const file of files) {
       if (file.id) {
         try {
-          await axios.delete(`/api/files/${file.id}`);
+          await axios.delete(`/api/v2/files/${file.id}`);
         } catch (err) {
           // Continue even if server delete fails
         }
@@ -191,7 +191,7 @@ export function usePresignedUrl() {
     setError(null);
 
     try {
-      const response = await axios.get('/api/files/presigned-url', {
+      const response = await axios.get('/api/v2/files/presigned-url', {
         params: { path },
       });
 

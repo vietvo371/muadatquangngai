@@ -83,7 +83,7 @@ export default function BanDoMapInner() {
       }
       if (searchQuery) params.q = searchQuery;
 
-      const res = await api.get('/api/properties', { params });
+      const res = await api.get('/api/v2/properties', { params });
       const data = res.data?.data || [];
       setProperties(data);
     } catch (err) {

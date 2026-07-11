@@ -31,7 +31,7 @@ export default function LoginPhonePage() {
 
     try {
       // TODO: Call API to send OTP
-      // await axios.post('/api/auth/otp/send', { phone, type: activeTab });
+      // await axios.post('/api/v2/auth/otp/send', { phone, type: activeTab });
       
       // For demo, go to OTP step
       setStep('otp');
@@ -54,7 +54,7 @@ export default function LoginPhonePage() {
 
     try {
       // TODO: Call API to verify OTP
-      // const response = await axios.post('/api/auth/otp/login', { phone, otp: code });
+      // const response = await axios.post('/api/v2/auth/otp/login', { phone, otp: code });
       
       // For demo, redirect to dashboard
       router.push('/dashboard');

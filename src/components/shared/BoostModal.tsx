@@ -58,7 +58,7 @@ export function BoostModal({ open, onOpenChange, propertyId, propertyTitle }: Bo
   const { data: boostInfo, isLoading } = useQuery({
     queryKey: ['boost-info', propertyId],
     queryFn: async () => {
-      const res = await api.get(`/api/properties/${propertyId}/boost`);
+      const res = await api.get(`/api/v2/properties/${propertyId}/boost`);
       return res.data as { success: boolean; data: BoostInfo };
     },
     enabled: open,
@@ -66,7 +66,7 @@ export function BoostModal({ open, onOpenChange, propertyId, propertyTitle }: Bo
 
   const boostMutation = useMutation({
     mutationFn: async (tier: string) => {
-      const res = await api.post(`/api/properties/${propertyId}/boost`, { tier });
+      const res = await api.post(`/api/v2/properties/${propertyId}/boost`, { tier });
       return res.data;
     },
     onSuccess: (data) => {
@@ -81,7 +81,7 @@ export function BoostModal({ open, onOpenChange, propertyId, propertyTitle }: Bo
 
   const renewMutation = useMutation({
     mutationFn: async () => {
-      const res = await api.post(`/api/properties/${propertyId}/renew`);
+      const res = await api.post(`/api/v2/properties/${propertyId}/renew`);
       return res.data;
     },
     onSuccess: (data) => {

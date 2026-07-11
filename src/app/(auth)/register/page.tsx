@@ -45,7 +45,7 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      const response = await axios.post('/api/auth/register', {
+      const response = await axios.post('/api/v2/auth/register', {
         name: formData.name,
         email: formData.email,
         phone: formData.phone,

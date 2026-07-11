@@ -125,7 +125,7 @@ export default function DangTinPage() {
   useEffect(() => {
     const loadCategories = async () => {
       try {
-        const res = await api.get('/api/categories');
+        const res = await api.get('/api/v2/categories');
         const data = res.data?.data || [];
         setApiCategories(data);
       } catch (err) {
@@ -209,7 +209,7 @@ export default function DangTinPage() {
         feature_ids: formData.features.length > 0 ? formData.features : undefined,
       };
 
-      const response = await api.post('/api/properties', payload);
+      const response = await api.post('/api/v2/properties', payload);
 
       if (response.data?.success || response.status === 201) {
         toast.success('Đăng tin thành công!', {

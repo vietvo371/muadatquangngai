@@ -29,7 +29,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const response = await axios.post('/api/auth/login', formData);
+      const response = await axios.post('/api/v2/auth/login', formData);
       
       if (response.data.success) {
         const loggedInUser = response.data.data.user;

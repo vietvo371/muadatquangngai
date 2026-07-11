@@ -67,7 +67,7 @@ export function useSocket(): UseSocketReturn {
     //   broadcaster: 'pusher',
     //   key: process.env.NEXT_PUBLIC_PUSHER_KEY,
     //   cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER,
-    //   authEndpoint: '/api/broadcasting/auth',
+    //   authEndpoint: '/api/v2/broadcasting/auth',
     //   auth: {
     //     headers: {
     //       Authorization: `Bearer ${token}`,
@@ -130,7 +130,7 @@ export function useSocket(): UseSocketReturn {
   // Send typing indicator
   const sendTyping = useCallback((conversationId: number) => {
     // TODO: Broadcast typing event via Pusher
-    // axios.post(`/api/conversations/${conversationId}/typing`);
+    // axios.post(`/api/v2/conversations/${conversationId}/typing`);
   }, []);
 
   return {

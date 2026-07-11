@@ -79,7 +79,7 @@ export function useProjects() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await axios.get<ProjectResponse>('/api/projects', {
+      const response = await axios.get<ProjectResponse>('/api/v2/projects', {
         params: filters,
       });
 
@@ -105,7 +105,7 @@ export function useProjects() {
     setError(null);
     setProject(null);
     try {
-      const response = await axios.get<ProjectDetailResponse>(`/api/projects/${slug}`);
+      const response = await axios.get<ProjectDetailResponse>(`/api/v2/projects/${slug}`);
       if (response.data.success) {
         setProject(response.data.data);
         return { success: true, data: response.data.data };
@@ -124,7 +124,7 @@ export function useProjects() {
   // Fetch properties/units inside a project
   const fetchProjectUnits = useCallback(async (projectId: number, page = 1) => {
     try {
-      const response = await axios.get(`/api/projects/${projectId}/units`, {
+      const response = await axios.get(`/api/v2/projects/${projectId}/units`, {
         params: { page, per_page: 6 },
       });
       return { success: true, data: response.data.data, meta: response.data.meta };

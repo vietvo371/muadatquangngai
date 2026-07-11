@@ -33,7 +33,7 @@ export default function PropertyManagementPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['my-properties', statusFilter, searchQuery],
     queryFn: () =>
-      api.get('/api/my/properties', {
+      api.get('/api/v2/my/properties', {
         params: {
           status: statusFilter === 'all' ? undefined : statusFilter,
           search: searchQuery || undefined,

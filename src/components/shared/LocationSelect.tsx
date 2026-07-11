@@ -65,7 +65,7 @@ export function LocationSelect({
     const fetchProvinces = async () => {
       setIsLoadingProvinces(true);
       try {
-        const response = await axios.get('/api/locations/provinces');
+        const response = await axios.get('/api/v2/locations/provinces');
         setProvinces(response.data.data || []);
       } catch (error) {
         console.error('Failed to fetch provinces:', error);
@@ -91,7 +91,7 @@ export function LocationSelect({
       setWards([]);
       
       try {
-        const response = await axios.get(`/api/locations/districts/${selectedProvince}`);
+        const response = await axios.get(`/api/v2/locations/districts/${selectedProvince}`);
         setDistricts(response.data.data || []);
       } catch (error) {
         console.error('Failed to fetch districts:', error);
@@ -114,7 +114,7 @@ export function LocationSelect({
       setSelectedWard(undefined);
       
       try {
-        const response = await axios.get(`/api/locations/wards/${selectedDistrict}`);
+        const response = await axios.get(`/api/v2/locations/wards/${selectedDistrict}`);
         setWards(response.data.data || []);
       } catch (error) {
         console.error('Failed to fetch wards:', error);

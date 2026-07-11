@@ -25,7 +25,7 @@ export function useAuth() {
     setError(null);
     
     try {
-      const response = await axios.post('/api/auth/login', { email, password });
+      const response = await axios.post('/api/v2/auth/login', { email, password });
       
       if (response.data.success) {
         const { user, access_token } = response.data.data;
@@ -55,7 +55,7 @@ export function useAuth() {
     setError(null);
     
     try {
-      const response = await axios.post('/api/auth/register', data);
+      const response = await axios.post('/api/v2/auth/register', data);
       
       if (response.data.success) {
         const { user, access_token } = response.data.data;
@@ -79,7 +79,7 @@ export function useAuth() {
     setError(null);
     
     try {
-      const response = await axios.post('/api/auth/otp/login', { phone, otp });
+      const response = await axios.post('/api/v2/auth/otp/login', { phone, otp });
       
       if (response.data.success) {
         const { user, access_token } = response.data.data;
@@ -101,7 +101,7 @@ export function useAuth() {
   const logout = useCallback(async () => {
     try {
       if (token) {
-        await axios.post('/api/auth/logout');
+        await axios.post('/api/v2/auth/logout');
       }
     } catch (err) {
       // Ignore logout API errors
@@ -113,7 +113,7 @@ export function useAuth() {
   // Refresh token
   const refreshToken = useCallback(async () => {
     try {
-      const response = await axios.post('/api/auth/refresh');
+      const response = await axios.post('/api/v2/auth/refresh');
       
       if (response.data.success) {
         setToken(response.data.data.access_token);
@@ -132,7 +132,7 @@ export function useAuth() {
     
     setLoading(true);
     try {
-      const response = await axios.get('/api/user/me');
+      const response = await axios.get('/api/v2/user/me');
       
       if (response.data.success) {
         setUser(response.data.data);
@@ -153,7 +153,7 @@ export function useAuth() {
     setError(null);
     
     try {
-      const response = await axios.put('/api/user/profile', data);
+      const response = await axios.put('/api/v2/user/profile', data);
       
       if (response.data.success) {
         setUser(response.data.data);
@@ -176,7 +176,7 @@ export function useAuth() {
     setError(null);
     
     try {
-      const response = await axios.put('/api/user/password', {
+      const response = await axios.put('/api/v2/user/password', {
         current_password: currentPassword,
         password: newPassword,
         password_confirmation: newPassword,
@@ -195,7 +195,7 @@ export function useAuth() {
   // Send OTP
   const sendOtp = useCallback(async (phone: string, type: 'login' | 'register' | 'verify' | 'reset' = 'login') => {
     try {
-      const response = await axios.post('/api/auth/otp/send', { phone, type });
+      const response = await axios.post('/api/v2/auth/otp/send', { phone, type });
       return { success: response.data.success, message: response.data.message };
     } catch (err: any) {
       const message = err.response?.data?.message || 'Gửi OTP thất bại';
@@ -209,7 +209,7 @@ export function useAuth() {
     setError(null);
     
     try {
-      const endpoint = provider === 'google' ? '/api/auth/oauth/google/callback' : '/api/auth/oauth/facebook/callback';
+      const endpoint = provider === 'google' ? '/api/v2/auth/oauth/google/callback' : '/api/v2/auth/oauth/facebook/callback';
       const response = await axios.post(endpoint, { code });
       
       if (response.data.success) {

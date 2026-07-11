@@ -103,72 +103,72 @@ export interface PaginatedResponse<T> {
 // Categories
 export const categoryApi = {
   list: async (params?: { active_only?: boolean; parent_only?: boolean }) => {
-    const { data } = await api.get<PaginatedResponse<Category>>('/api/admin/categories', { params });
+    const { data } = await api.get<PaginatedResponse<Category>>('/api/v2/admin/categories', { params });
     return data;
   },
 
   get: async (id: number) => {
-    const { data } = await api.get<Category>(`/api/admin/categories/${id}`);
+    const { data } = await api.get<Category>(`/api/v2/admin/categories/${id}`);
     return data;
   },
 
   create: async (payload: Partial<Category>) => {
-    const { data } = await api.post<Category>('/api/admin/categories', payload);
+    const { data } = await api.post<Category>('/api/v2/admin/categories', payload);
     return data;
   },
 
   update: async (id: number, payload: Partial<Category>) => {
-    const { data } = await api.put<Category>(`/api/admin/categories/${id}`, payload);
+    const { data } = await api.put<Category>(`/api/v2/admin/categories/${id}`, payload);
     return data;
   },
 
   delete: async (id: number) => {
-    await api.delete(`/api/admin/categories/${id}`);
+    await api.delete(`/api/v2/admin/categories/${id}`);
   },
 
   toggle: async (id: number) => {
-    const { data } = await api.put<Category>(`/api/admin/categories/${id}/toggle`);
+    const { data } = await api.put<Category>(`/api/v2/admin/categories/${id}/toggle`);
     return data;
   },
 
   reorder: async (order: number[]) => {
-    await api.post('/api/admin/categories/reorder', { order });
+    await api.post('/api/v2/admin/categories/reorder', { order });
   },
 };
 
 // Packages
 export const packageApi = {
   list: async (params?: { active_only?: boolean; type?: string }) => {
-    const { data } = await api.get<{ data: Package[] }>('/api/admin/packages', { params });
+    const { data } = await api.get<{ data: Package[] }>('/api/v2/admin/packages', { params });
     return data;
   },
 
   get: async (id: number) => {
-    const { data } = await api.get<Package>(`/api/admin/packages/${id}`);
+    const { data } = await api.get<Package>(`/api/v2/admin/packages/${id}`);
     return data;
   },
 
   create: async (payload: Partial<Package>) => {
-    const { data } = await api.post<Package>('/api/admin/packages', payload);
+    const { data } = await api.post<Package>('/api/v2/admin/packages', payload);
     return data;
   },
 
   update: async (id: number, payload: Partial<Package>) => {
-    const { data } = await api.put<Package>(`/api/admin/packages/${id}`, payload);
+    const { data } = await api.put<Package>(`/api/v2/admin/packages/${id}`, payload);
     return data;
   },
 
   delete: async (id: number) => {
-    await api.delete(`/api/admin/packages/${id}`);
+    await api.delete(`/api/v2/admin/packages/${id}`);
   },
 
   toggle: async (id: number) => {
-    const { data } = await api.put<Package>(`/api/admin/packages/${id}/toggle`);
+    const { data } = await api.put<Package>(`/api/v2/admin/packages/${id}/toggle`);
     return data;
   },
 
   stats: async () => {
-    const { data } = await api.get('/api/admin/packages/stats');
+    const { data } = await api.get('/api/v2/admin/packages/stats');
     return data;
   },
 };
@@ -181,7 +181,7 @@ export const projectApi = {
     search?: string;
     page?: number;
   }) => {
-    const { data } = await api.get<PaginatedResponse<Project>>('/api/admin/projects', { params });
+    const { data } = await api.get<PaginatedResponse<Project>>('/api/v2/admin/projects', { params });
     return data;
   },
 
@@ -191,31 +191,31 @@ export const projectApi = {
       data: { project: Project; stats: Record<string, unknown> };
       project?: Project;
       stats?: Record<string, unknown>;
-    }>(`/api/admin/projects/${id}`);
+    }>(`/api/v2/admin/projects/${id}`);
     return data;
   },
 
   create: async (payload: Partial<Project>) => {
-    const { data } = await api.post<Project>('/api/admin/projects', payload);
+    const { data } = await api.post<Project>('/api/v2/admin/projects', payload);
     return data;
   },
 
   update: async (id: number, payload: Partial<Project>) => {
-    const { data } = await api.put<Project>(`/api/admin/projects/${id}`, payload);
+    const { data } = await api.put<Project>(`/api/v2/admin/projects/${id}`, payload);
     return data;
   },
 
   delete: async (id: number) => {
-    await api.delete(`/api/admin/projects/${id}`);
+    await api.delete(`/api/v2/admin/projects/${id}`);
   },
 
   publish: async (id: number) => {
-    const { data } = await api.put<Project>(`/api/admin/projects/${id}/publish`);
+    const { data } = await api.put<Project>(`/api/v2/admin/projects/${id}/publish`);
     return data;
   },
 
   archive: async (id: number) => {
-    const { data } = await api.put<Project>(`/api/admin/projects/${id}/archive`);
+    const { data } = await api.put<Project>(`/api/v2/admin/projects/${id}/archive`);
     return data;
   },
 };
@@ -231,32 +231,32 @@ export const transactionApi = {
     to_date?: string;
     page?: number;
   }) => {
-    const { data } = await api.get<PaginatedResponse<Transaction>>('/api/admin/transactions', { params });
+    const { data } = await api.get<PaginatedResponse<Transaction>>('/api/v2/admin/transactions', { params });
     return data;
   },
 
   get: async (id: number) => {
-    const { data } = await api.get<Transaction>(`/api/admin/transactions/${id}`);
+    const { data } = await api.get<Transaction>(`/api/v2/admin/transactions/${id}`);
     return data;
   },
 
   stats: async (params?: { from_date?: string; to_date?: string }) => {
-    const { data } = await api.get('/api/admin/transactions/stats', { params });
+    const { data } = await api.get('/api/v2/admin/transactions/stats', { params });
     return data;
   },
 
   approve: async (id: number) => {
-    const { data } = await api.put<Transaction>(`/api/admin/transactions/${id}/approve`);
+    const { data } = await api.put<Transaction>(`/api/v2/admin/transactions/${id}/approve`);
     return data;
   },
 
   reject: async (id: number, reason?: string) => {
-    const { data } = await api.put<Transaction>(`/api/admin/transactions/${id}/reject`, { reason });
+    const { data } = await api.put<Transaction>(`/api/v2/admin/transactions/${id}/reject`, { reason });
     return data;
   },
 
   refund: async (id: number, reason?: string) => {
-    const { data } = await api.put<Transaction>(`/api/admin/transactions/${id}/refund`, { reason });
+    const { data } = await api.put<Transaction>(`/api/v2/admin/transactions/${id}/refund`, { reason });
     return data;
   },
 };
@@ -295,28 +295,28 @@ export interface VerificationStats {
 export const verificationApi = {
   list: async (params?: { type?: string; page?: number; per_page?: number }) => {
     const { data } = await api.get<{ data: Verification[]; meta: Record<string, number> }>(
-      '/api/admin/verifications', { params }
+      '/api/v2/admin/verifications', { params }
     );
     return data;
   },
 
   get: async (id: number) => {
-    const { data } = await api.get<{ data: Verification }>(`/api/admin/verifications/${id}`);
+    const { data } = await api.get<{ data: Verification }>(`/api/v2/admin/verifications/${id}`);
     return data;
   },
 
   approve: async (id: number) => {
-    const { data } = await api.put(`/api/admin/verifications/${id}/approve`);
+    const { data } = await api.put(`/api/v2/admin/verifications/${id}/approve`);
     return data;
   },
 
   reject: async (id: number, rejection_reason: string) => {
-    const { data } = await api.put(`/api/admin/verifications/${id}/reject`, { rejection_reason });
+    const { data } = await api.put(`/api/v2/admin/verifications/${id}/reject`, { rejection_reason });
     return data;
   },
 
   stats: async () => {
-    const { data } = await api.get<{ data: VerificationStats }>('/api/admin/verifications/stats');
+    const { data } = await api.get<{ data: VerificationStats }>('/api/v2/admin/verifications/stats');
     return data;
   },
 };
@@ -340,41 +340,41 @@ export interface AdminBanner {
 export const bannerAdminApi = {
   list: async (params?: { position?: string; page?: number }) => {
     const { data } = await api.get<{ data: AdminBanner[]; meta: Record<string, number> }>(
-      '/api/admin/banners', { params }
+      '/api/v2/admin/banners', { params }
     );
     return data;
   },
 
   get: async (id: number) => {
-    const { data } = await api.get<{ data: AdminBanner }>(`/api/admin/banners/${id}`);
+    const { data } = await api.get<{ data: AdminBanner }>(`/api/v2/admin/banners/${id}`);
     return data;
   },
 
   create: async (payload: Partial<AdminBanner>) => {
-    const { data } = await api.post<AdminBanner>('/api/admin/banners', payload);
+    const { data } = await api.post<AdminBanner>('/api/v2/admin/banners', payload);
     return data;
   },
 
   update: async (id: number, payload: Partial<AdminBanner>) => {
-    const { data } = await api.put<AdminBanner>(`/api/admin/banners/${id}`, payload);
+    const { data } = await api.put<AdminBanner>(`/api/v2/admin/banners/${id}`, payload);
     return data;
   },
 
   delete: async (id: number) => {
-    await api.delete(`/api/admin/banners/${id}`);
+    await api.delete(`/api/v2/admin/banners/${id}`);
   },
 
   toggle: async (id: number) => {
-    const { data } = await api.put<AdminBanner>(`/api/admin/banners/${id}/toggle`);
+    const { data } = await api.put<AdminBanner>(`/api/v2/admin/banners/${id}/toggle`);
     return data;
   },
 
   reorder: async (order: number[]) => {
-    await api.post('/api/admin/banners/reorder', { order });
+    await api.post('/api/v2/admin/banners/reorder', { order });
   },
 
   stats: async (id: number) => {
-    const { data } = await api.get(`/api/admin/banners/${id}/stats`);
+    const { data } = await api.get(`/api/v2/admin/banners/${id}/stats`);
     return data;
   },
 };
@@ -440,7 +440,7 @@ export const dashboardApi = {
         new_listings_today: number;
         pending_reports: number;
       };
-    }>('/api/admin/dashboard');
+    }>('/api/v2/admin/dashboard');
     return data;
   },
 };
@@ -453,22 +453,22 @@ export const propertyAdminApi = {
     q?: string;
     page?: number;
   }) => {
-    const { data } = await api.get<PaginatedResponse<AdminProperty>>('/api/admin/properties', { params });
+    const { data } = await api.get<PaginatedResponse<AdminProperty>>('/api/v2/admin/properties', { params });
     return data;
   },
 
   approve: async (id: number) => {
-    const { data } = await api.put<{ success: boolean; message?: string }>(`/api/admin/properties/${id}/approve`);
+    const { data } = await api.put<{ success: boolean; message?: string }>(`/api/v2/admin/properties/${id}/approve`);
     return data;
   },
 
   reject: async (id: number, reason?: string) => {
-    const { data } = await api.put<{ success: boolean; message?: string }>(`/api/admin/properties/${id}/reject`, { reason });
+    const { data } = await api.put<{ success: boolean; message?: string }>(`/api/v2/admin/properties/${id}/reject`, { reason });
     return data;
   },
 
   delete: async (id: number) => {
-    const { data } = await api.delete<{ success: boolean; message?: string }>(`/api/admin/properties/${id}`);
+    const { data } = await api.delete<{ success: boolean; message?: string }>(`/api/v2/admin/properties/${id}`);
     return data;
   },
 };
@@ -481,32 +481,32 @@ export const userAdminApi = {
     search?: string;
     page?: number;
   }) => {
-    const { data } = await api.get<PaginatedResponse<AdminUser>>('/api/admin/users', { params });
+    const { data } = await api.get<PaginatedResponse<AdminUser>>('/api/v2/admin/users', { params });
     return data;
   },
 
   ban: async (id: number) => {
-    const { data } = await api.put<{ success: boolean; message?: string }>(`/api/admin/users/${id}/ban`);
+    const { data } = await api.put<{ success: boolean; message?: string }>(`/api/v2/admin/users/${id}/ban`);
     return data;
   },
 
   unban: async (id: number) => {
-    const { data } = await api.put<{ success: boolean; message?: string }>(`/api/admin/users/${id}/unban`);
+    const { data } = await api.put<{ success: boolean; message?: string }>(`/api/v2/admin/users/${id}/unban`);
     return data;
   },
 
   updateRole: async (id: number, role: string) => {
-    const { data } = await api.put<{ success: boolean; message?: string }>(`/api/admin/users/${id}/role`, { role });
+    const { data } = await api.put<{ success: boolean; message?: string }>(`/api/v2/admin/users/${id}/role`, { role });
     return data;
   },
 
   create: async (payload: Partial<AdminUser> & { password?: string }) => {
-    const { data } = await api.post<{ success: boolean; data: AdminUser }>('/api/admin/users', payload);
+    const { data } = await api.post<{ success: boolean; data: AdminUser }>('/api/v2/admin/users', payload);
     return data;
   },
 
   update: async (id: number, payload: Partial<AdminUser>) => {
-    const { data } = await api.put<{ success: boolean; data: AdminUser }>(`/api/admin/users/${id}`, payload);
+    const { data } = await api.put<{ success: boolean; data: AdminUser }>(`/api/v2/admin/users/${id}`, payload);
     return data;
   },
 };
@@ -530,7 +530,7 @@ export const settingAdminApi = {
     const { data } = await api.get<{
       success: boolean;
       data: Record<string, AdminSetting[]>;
-    }>('/api/admin/settings/grouped');
+    }>('/api/v2/admin/settings/grouped');
     return data;
   },
 
@@ -539,7 +539,7 @@ export const settingAdminApi = {
       success: boolean;
       message: string;
       data: Record<string, string | null>;
-    }>('/api/admin/settings', { settings });
+    }>('/api/v2/admin/settings', { settings });
     return data;
   },
 };

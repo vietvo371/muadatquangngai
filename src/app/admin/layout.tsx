@@ -113,7 +113,7 @@ function AdminLayoutContent({
 
       // 3. Server-side verification: confirm token is still valid
       try {
-        const response = await axios.get('/api/user/me');
+        const response = await axios.get('/api/v2/user/me');
         const fetchedUser = response.data.data;
         const fetchedIsAdmin = fetchedUser.role === 'admin' || fetchedUser.role === 'super_admin';
 

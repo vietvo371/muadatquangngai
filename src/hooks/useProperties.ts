@@ -56,7 +56,7 @@ export function useProperties() {
     setError(null);
     
     try {
-      const response = await axios.get<PropertyResponse>('/api/properties', {
+      const response = await axios.get<PropertyResponse>('/api/v2/properties', {
         params: filters,
       });
       
@@ -83,7 +83,7 @@ export function useProperties() {
     setProperty(null);
     
     try {
-      const response = await axios.get<PropertyDetailResponse>(`/api/properties/${slugOrId}`);
+      const response = await axios.get<PropertyDetailResponse>(`/api/v2/properties/${slugOrId}`);
       
       if (response.data.success) {
         setProperty(response.data.data);
@@ -103,7 +103,7 @@ export function useProperties() {
   // Fetch featured properties
   const fetchFeatured = useCallback(async (limit = 10) => {
     try {
-      const response = await axios.get('/api/properties/featured', {
+      const response = await axios.get('/api/v2/properties/featured', {
         params: { limit },
       });
       
@@ -116,7 +116,7 @@ export function useProperties() {
   // Fetch nearby properties
   const fetchNearby = useCallback(async (lat: number, lng: number, radius = 5) => {
     try {
-      const response = await axios.get('/api/properties/nearby', {
+      const response = await axios.get('/api/v2/properties/nearby', {
         params: { lat, lng, radius },
       });
       
@@ -129,7 +129,7 @@ export function useProperties() {
   // Fetch similar properties
   const fetchSimilar = useCallback(async (propertyId: number, limit = 6) => {
     try {
-      const response = await axios.get(`/api/properties/${propertyId}/similar`, {
+      const response = await axios.get(`/api/v2/properties/${propertyId}/similar`, {
         params: { limit },
       });
       
@@ -145,7 +145,7 @@ export function useProperties() {
     setError(null);
     
     try {
-      const response = await axios.post('/api/my/properties', data);
+      const response = await axios.post('/api/v2/my/properties', data);
       
       if (response.data.success) {
         return { success: true, data: response.data.data };
@@ -168,7 +168,7 @@ export function useProperties() {
     setError(null);
     
     try {
-      const response = await axios.put(`/api/my/properties/${id}`, data);
+      const response = await axios.put(`/api/v2/my/properties/${id}`, data);
       
       if (response.data.success) {
         setProperty(response.data.data);
@@ -192,7 +192,7 @@ export function useProperties() {
     setError(null);
     
     try {
-      await axios.delete(`/api/my/properties/${id}`);
+      await axios.delete(`/api/v2/my/properties/${id}`);
       
       // Remove from list
       setProperties(prev => prev.filter(p => p.id !== id));
@@ -215,7 +215,7 @@ export function useProperties() {
     message?: string;
   }) => {
     try {
-      const response = await axios.post(`/api/properties/${propertyId}/contact`, data);
+      const response = await axios.post(`/api/v2/properties/${propertyId}/contact`, data);
       return { success: response.data.success, message: response.data.message };
     } catch (err: any) {
       return { success: false, error: err.response?.data?.message || 'Gửi liên hệ thất bại' };
@@ -225,7 +225,7 @@ export function useProperties() {
   // Save/Unsave property
   const toggleSave = useCallback(async (propertyId: number) => {
     try {
-      const response = await axios.post(`/api/my/saved/${propertyId}`);
+      const response = await axios.post(`/api/v2/my/saved/${propertyId}`);
       return { success: true, saved: response.data.saved };
     } catch (err: any) {
       return { success: false, error: err.response?.data?.message || 'Lỗi' };
@@ -238,7 +238,7 @@ export function useProperties() {
     setError(null);
     
     try {
-      const response = await axios.get('/api/my/properties', {
+      const response = await axios.get('/api/v2/my/properties', {
         params: filters,
       });
       
@@ -264,7 +264,7 @@ export function useProperties() {
     setError(null);
     
     try {
-      const response = await axios.get('/api/my/saved');
+      const response = await axios.get('/api/v2/my/saved');
       
       if (response.data.success) {
         setProperties(response.data.data);

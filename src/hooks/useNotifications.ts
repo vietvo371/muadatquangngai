@@ -39,7 +39,7 @@ export function useNotifications(): UseNotificationsReturn {
     setError(null);
     
     try {
-      const response = await axios.get('/api/notifications');
+      const response = await axios.get('/api/v2/notifications');
       
       if (response.data.success) {
         setNotifications(response.data.data);
@@ -54,7 +54,7 @@ export function useNotifications(): UseNotificationsReturn {
   // Fetch unread count only
   const fetchUnreadCount = useCallback(async () => {
     try {
-      const response = await axios.get('/api/notifications/count');
+      const response = await axios.get('/api/v2/notifications/count');
       return response.data.data?.unread_count || 0;
     } catch (err) {
       return 0;
@@ -64,7 +64,7 @@ export function useNotifications(): UseNotificationsReturn {
   // Mark single notification as read
   const markAsRead = useCallback(async (id: number) => {
     try {
-      await axios.put(`/api/notifications/${id}/read`);
+      await axios.put(`/api/v2/notifications/${id}/read`);
       setNotifications(prev =>
         prev.map(n => (n.id === id ? { ...n, read_at: new Date().toISOString() } : n))
       );
@@ -76,7 +76,7 @@ export function useNotifications(): UseNotificationsReturn {
   // Mark all as read
   const markAllAsRead = useCallback(async () => {
     try {
-      await axios.put('/api/notifications/read-all');
+      await axios.put('/api/v2/notifications/read-all');
       setNotifications(prev => prev.map(n => ({ ...n, read_at: n.read_at || new Date().toISOString() })));
     } catch (err: any) {
       console.error('Failed to mark all as read:', err);
@@ -86,7 +86,7 @@ export function useNotifications(): UseNotificationsReturn {
   // Delete notification
   const deleteNotification = useCallback(async (id: number) => {
     try {
-      await axios.delete(`/api/notifications/${id}`);
+      await axios.delete(`/api/v2/notifications/${id}`);
       setNotifications(prev => prev.filter(n => n.id !== id));
     } catch (err: any) {
       console.error('Failed to delete notification:', err);
