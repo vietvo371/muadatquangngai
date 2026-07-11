@@ -47,3 +47,5 @@ raw_properties.json
 *.zip
 
 /src/generated/prisma
+
+!.env.example

@@ -9,6 +9,8 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    // migrate/introspect dùng kết nối TRỰC TIẾP (Supabase port 5432) vì pooler pgbouncer
+    // (port 6543) không hỗ trợ. Fallback về DATABASE_URL cho local dev (Postgres thường).
+    url: process.env["DIRECT_URL"] ?? process.env["DATABASE_URL"],
   },
 });

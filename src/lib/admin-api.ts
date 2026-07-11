@@ -545,12 +545,46 @@ export const settingAdminApi = {
 };
 
 export const fileUploadApi = {
+  /**
+   * Upload ảnh THẲNG từ trình duyệt lên Cloudinary bằng unsigned upload preset —
+   * không đi qua server nên không dính giới hạn body ~4.5MB / timeout của Vercel
+   * serverless. Thay cho POST /api/files/upload (Laravel S3) cũ.
+   *
+   * Trả về shape { url, thumbnail, public_id, ... } khớp với ImageUploader
+   * (đọc res.url). thumbnail dùng transform c_fill,w_400 của Cloudinary.
+   */
   upload: async (file: File) => {
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    const preset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
+    if (!cloudName || !preset) {
+      throw new Error('Thiếu cấu hình Cloudinary (NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME / _UPLOAD_PRESET).');
+    }
+
     const form = new FormData();
     form.append('file', file);
-    const { data } = await api.post('/api/files/upload', form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+    form.append('upload_preset', preset);
+
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, {
+      method: 'POST',
+      body: form,
     });
-    return data.data;
+    if (!res.ok) {
+      const err = await res.json().catch(() => null);
+      throw new Error(err?.error?.message ?? 'Upload Cloudinary thất bại.');
+    }
+
+    const data = await res.json();
+    // secure_url dạng https://res.cloudinary.com/<cloud>/image/upload/v.../<public_id>.<ext>
+    // Chèn transform c_fill,w_400 vào ngay sau /upload/ để lấy thumbnail.
+    const thumbnail: string = data.secure_url.replace('/upload/', '/upload/c_fill,w_400,q_auto/');
+    return {
+      url: data.secure_url,
+      thumbnail,
+      public_id: data.public_id,
+      width: data.width,
+      height: data.height,
+      bytes: data.bytes,
+      format: data.format,
+    };
   },
 };

@@ -5,6 +5,9 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  // Prisma 7: connection URL KHÔNG đặt ở đây nữa — runtime dùng adapter PrismaPg
+  // (src/lib/db.ts, đọc DATABASE_URL pooler), migrate/introspect dùng datasource.url
+  // trong prisma.config.ts (đọc DIRECT_URL trực tiếp).
 }
 
 model banners {
