@@ -451,7 +451,7 @@ const mapApiUnit = (apiProp: any) => {
     title: apiProp.title,
     price: priceStr,
     area: apiProp.area ? `${apiProp.area}m²` : 'Không xác định',
-    address: apiProp.district ? `${apiProp.district.name}, Quảng Ngãi` : apiProp.address || 'Quảng Ngãi',
+    address: apiProp.location?.district ? `${apiProp.location.district.name}, Quảng Ngãi` : apiProp.address || 'Quảng Ngãi',
     postedAt: timeAgo(apiProp.published_at || apiProp.created_at),
     image: apiProp.thumbnail || '/images/image_data/Haus-Coastal.jpg',
     href: apiProp.type === 'rent' ? `/cho-thue/${apiProp.slug}` : `/mua-ban/${apiProp.slug}`,

@@ -32,16 +32,18 @@ const mapApiProperty = (apiProp: any) => {
     price: Number(apiProp.price),
     priceUnit: apiProp.price_unit === 'month' || apiProp.price_unit === 'per_month' ? 'per_month' : (apiProp.price_unit === 'per_m2' || apiProp.price_unit === 'm2' ? 'per_m2' : 'total'),
     area: Number(apiProp.area),
-    type: apiProp.type,
+    // API trả 'sell'/'rent' — PropertyCard chỉ nhận diện 'sale'/'rent' (dùng để build badge + href).
+    type: apiProp.type === 'sell' ? 'sale' : apiProp.type,
     category: apiProp.category?.name || 'Bất động sản',
     thumbnail: apiProp.thumbnail || '/images/image_data/Haus-Coastal.jpg',
-    location: apiProp.district ? `${apiProp.district.name}, Quảng Ngãi` : apiProp.address || 'Quảng Ngãi',
+    location: apiProp.location?.district ? `${apiProp.location.district.name}, Quảng Ngãi` : apiProp.address || 'Quảng Ngãi',
     bedrooms: Number(apiProp.bedrooms || 0),
     bathrooms: Number(apiProp.bathrooms || 0),
     isVip: apiProp.is_vip || 'normal',
+    // Field tên thật trên response là "owner", không phải "user".
     user: {
-      name: apiProp.user?.name || 'Môi giới',
-      avatar: apiProp.user?.avatar || null,
+      name: apiProp.owner?.name || 'Môi giới',
+      avatar: apiProp.owner?.avatar || null,
     },
     created_at: apiProp.created_at,
     views: apiProp.view_count || 0,
