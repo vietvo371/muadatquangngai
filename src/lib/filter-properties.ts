@@ -1,5 +1,9 @@
 import { FilterState } from '@/components/search/FilterSidebar';
 import { formatPrice } from '@/lib/formatters';
+import { SELL_CATEGORIES, RENT_CATEGORIES, PROJECT_CATEGORIES } from '@/lib/category-menu';
+
+const ALL_CATEGORIES = [...SELL_CATEGORIES, ...RENT_CATEGORIES, ...PROJECT_CATEGORIES];
+const categoryName = (id: string) => ALL_CATEGORIES.find((c) => String(c.id) === id)?.name ?? id;
 
 export interface FilterableProperty {
   id: string;
@@ -11,26 +15,18 @@ export interface FilterableProperty {
   bedrooms: number;
 }
 
-/** Extract district name from "TP Quảng Ngãi, Trần Phú" format */
-export function extractDistrict(location: string): string {
-  return location.split(',')[0]?.trim() ?? '';
-}
-
 /** Filter properties based on FilterState */
 export function filterProperties<T extends FilterableProperty>(
   properties: T[],
   filters: FilterState
 ): T[] {
   return properties.filter(p => {
-    // Types filter
-    if (filters.types.length > 0 && !filters.types.includes(p.category)) {
+    // Types filter (chỉ áp dụng cho dữ liệu mock cũ, khớp theo tên hiển thị)
+    if (filters.types.length > 0 && !filters.types.map(categoryName).includes(p.category)) {
       return false;
     }
 
-    // District filter
-    if (filters.district && extractDistrict(p.location) !== filters.district) {
-      return false;
-    }
+    // District filter — dữ liệu mock không có district_id nên bỏ qua, chỉ lọc trên API thật.
 
     // Price filter
     if (filters.priceMin !== '' && p.price < filters.priceMin) return false;
@@ -63,10 +59,10 @@ export interface FilterTag {
 export function buildFilterTags(filters: FilterState): FilterTag[] {
   const tags: FilterTag[] = [];
 
-  filters.types.forEach(t => tags.push({ id: `type-${t}`, label: t }));
+  filters.types.forEach(t => tags.push({ id: `type-${t}`, label: categoryName(t) }));
 
-  if (filters.district) {
-    tags.push({ id: 'district', label: `Khu vực: ${filters.district}` });
+  if (filters.district !== '') {
+    tags.push({ id: 'district', label: 'Khu vực đã chọn' });
   }
 
   if (filters.priceMin !== '' || filters.priceMax !== '') {

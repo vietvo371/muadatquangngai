@@ -4,15 +4,16 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { Menu, User, Bell } from 'lucide-react';
+import { Menu, User, Bell, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useAuthStore } from '@/stores/authStore';
+import { SELL_CATEGORIES, RENT_CATEGORIES, PROJECT_CATEGORIES, type CategoryMenuItem } from '@/lib/category-menu';
 
-const mainNavLinks = [
-  { href: '/mua-ban', label: 'Nhà đất bán' },
-  { href: '/cho-thue', label: 'Nhà đất cho thuê' },
-  { href: '/du-an', label: 'Dự án' },
+const mainNavLinks: Array<{ href: string; label: string; submenu?: CategoryMenuItem[] }> = [
+  { href: '/mua-ban', label: 'Nhà đất bán', submenu: SELL_CATEGORIES },
+  { href: '/cho-thue', label: 'Nhà đất cho thuê', submenu: RENT_CATEGORIES },
+  { href: '/du-an', label: 'Dự án', submenu: PROJECT_CATEGORIES },
   { href: '/tin-tuc', label: 'Tin tức' },
 ];
 
@@ -20,6 +21,8 @@ export function Header() {
   const pathname = usePathname();
   const { user, isAuthenticated } = useAuthStore();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
+  const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white shadow-sm">
@@ -44,20 +47,43 @@ export function Header() {
               const isActive = pathname === link.href ||
                 (pathname && link.href !== '/' && pathname.startsWith(link.href));
               return (
-                <Link
+                <div
                   key={link.href}
-                  href={link.href}
-                  className={`group relative inline-flex h-[60px] items-center whitespace-nowrap rounded-t-md px-4 text-sm font-semibold transition-colors ${
-                    isActive
-                      ? 'bg-primary-light text-primary'
-                      : 'text-gray-700 hover:text-primary'
-                  }`}
+                  className="relative"
+                  onMouseEnter={() => link.submenu && setOpenSubmenu(link.href)}
+                  onMouseLeave={() => setOpenSubmenu(null)}
                 >
-                  {link.label}
-                  <span className={`absolute bottom-0 left-0 right-0 h-[3px] bg-primary transition-transform origin-center ${
-                    isActive ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
-                  }`} />
-                </Link>
+                  <Link
+                    href={link.href}
+                    className={`group relative inline-flex h-[60px] items-center gap-1 whitespace-nowrap rounded-t-md px-4 text-sm font-semibold transition-colors ${
+                      isActive
+                        ? 'bg-primary-light text-primary'
+                        : 'text-gray-700 hover:text-primary'
+                    }`}
+                  >
+                    {link.label}
+                    {link.submenu && (
+                      <ChevronDown className={`h-3.5 w-3.5 transition-transform ${openSubmenu === link.href ? 'rotate-180' : ''}`} />
+                    )}
+                    <span className={`absolute bottom-0 left-0 right-0 h-[3px] bg-primary transition-transform origin-center ${
+                      isActive ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
+                    }`} />
+                  </Link>
+
+                  {link.submenu && openSubmenu === link.href && (
+                    <div className="absolute left-0 top-[60px] z-50 w-72 rounded-b-xl border border-gray-100 bg-white py-2 shadow-xl">
+                      {link.submenu.map((item) => (
+                        <Link
+                          key={item.id}
+                          href={`${link.href}?category=${item.id}`}
+                          className="block px-4 py-2 text-[13.5px] text-gray-700 hover:bg-primary-light hover:text-primary transition-colors"
+                        >
+                          {item.name}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
               );
             })}
           </nav>
@@ -121,14 +147,41 @@ export function Header() {
               <SheetContent side="right" className="w-80">
                 <div className="flex flex-col gap-1 mt-6">
                   {mainNavLinks.map((link) => (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className="px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg"
-                    >
-                      {link.label}
-                    </Link>
+                    <div key={link.href}>
+                      <div className="flex items-center">
+                        <Link
+                          href={link.href}
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          className="flex-1 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg"
+                        >
+                          {link.label}
+                        </Link>
+                        {link.submenu && (
+                          <button
+                            type="button"
+                            onClick={() => setMobileExpanded((v) => (v === link.href ? null : link.href))}
+                            className="p-3 text-gray-400 hover:text-gray-700"
+                            aria-label="Mở danh mục con"
+                          >
+                            <ChevronDown className={`h-4 w-4 transition-transform ${mobileExpanded === link.href ? 'rotate-180' : ''}`} />
+                          </button>
+                        )}
+                      </div>
+                      {link.submenu && mobileExpanded === link.href && (
+                        <div className="ml-4 flex flex-col gap-0.5 border-l border-gray-100 pl-3 pb-1">
+                          {link.submenu.map((item) => (
+                            <Link
+                              key={item.id}
+                              href={`${link.href}?category=${item.id}`}
+                              onClick={() => setIsMobileMenuOpen(false)}
+                              className="px-3 py-2 text-[13px] text-gray-600 hover:bg-gray-100 rounded-lg"
+                            >
+                              {item.name}
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   ))}
 
                   <hr className="my-3" />

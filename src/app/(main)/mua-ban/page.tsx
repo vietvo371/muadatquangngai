@@ -3,6 +3,7 @@
 import { Suspense, useState, useMemo, useCallback, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { PropertyCard } from '@/components/property/PropertyCard';
 import { FilterSidebar, FilterState, DEFAULT_FILTERS } from '@/components/search/FilterSidebar';
 import { FilterHorizontal } from '@/components/search/FilterHorizontal';
@@ -144,7 +145,8 @@ const mapApiProperty = (apiProp: any) => {
     price: Number(apiProp.price),
     priceUnit: apiProp.price_unit === 'month' ? 'per_month' : 'total',
     area: Number(apiProp.area),
-    type: apiProp.type,
+    // DB lưu 'sell'/'rent' — trang này (và mock data) dùng quy ước 'sale'/'rent'.
+    type: apiProp.type === 'sell' ? 'sale' : apiProp.type,
     category: apiProp.category?.name || 'Bất động sản',
     thumbnail: apiProp.thumbnail || '/images/image_data/Haus-Coastal.jpg',
     location: apiProp.location?.district ? `${apiProp.location.district.name}, Quảng Ngãi` : apiProp.address || 'Quảng Ngãi',
@@ -162,7 +164,8 @@ const mapApiProperty = (apiProp: any) => {
 
 function PropertyListingContent() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  
+  const searchParams = useSearchParams();
+
   // Real API integration state
   const { fetchProperties, isLoading: isApiLoading } = useProperties();
   const [apiProperties, setApiProperties] = useState<any[]>([]);
@@ -184,6 +187,14 @@ function PropertyListingContent() {
   const [contactOpen, setContactOpen] = useState(false);
   const [receiveEmail, setReceiveEmail] = useState(false);
 
+  // Đọc ?category= từ URL (click từ menu danh mục con trên header) — chạy lại mỗi khi query
+  // đổi, kể cả khi component không remount (điều hướng client-side trong cùng trang).
+  useEffect(() => {
+    const categoryParam = searchParams?.get('category');
+    setFilters((prev) => ({ ...prev, types: categoryParam ? [categoryParam] : [] }));
+    setPage(1);
+  }, [searchParams]);
+
   // Fetch real properties from the API
   useEffect(() => {
     const loadProperties = async () => {
@@ -196,7 +207,8 @@ function PropertyListingContent() {
       else if (sort === 'area_desc') sortParam = 'area_desc';
 
       const apiFilters: any = {
-        type: 'sale',
+        // DB lưu type='sell' cho tin bán, không phải 'sale'.
+        type: 'sell',
         page,
         per_page: 6,
         sort: sortParam,
@@ -204,7 +216,9 @@ function PropertyListingContent() {
 
       if (filters.priceMin !== '') apiFilters.price_min = filters.priceMin;
       if (filters.priceMax !== '') apiFilters.price_max = filters.priceMax;
-      
+      if (filters.types.length > 0) apiFilters.category = filters.types[0];
+      if (filters.district !== '') apiFilters.district = filters.district;
+
       if (filters.bedrooms !== 'any') {
         const bedVal = parseInt(filters.bedrooms);
         if (!isNaN(bedVal)) apiFilters.bedrooms = bedVal;
@@ -391,6 +405,7 @@ function PropertyListingContent() {
           onReset={resetFilters}
           searchQuery={searchQuery}
           onSearchQueryChange={setSearchQuery}
+          context="sell"
         />
 
         <div className="flex gap-8 items-start">
@@ -404,6 +419,7 @@ function PropertyListingContent() {
                 <FilterSidebar
                   filters={filters}
                   onFilterChange={(updates) => { updateFilters(updates); }}
+                  context="sell"
                   onApply={() => setMobileFilterOpen(false)}
                   onReset={() => { resetFilters(); setMobileFilterOpen(false); }}
                 />

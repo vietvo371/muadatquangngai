@@ -41,24 +41,31 @@ export function LocationSelect({
   onChange,
   disabled = false,
   className = '',
-  showWard = true,
+  // Sau đợt sáp nhập 2025, tỉnh Quảng Ngãi chỉ còn 2 cấp (Tỉnh -> Xã/Phường/Đặc khu),
+  // không còn cấp Phường/Xã con bên dưới -> mặc định ẩn bước ward.
+  showWard = false,
   required = false,
 }: LocationSelectProps) {
   const [provinces, setProvinces] = useState<Location[]>([]);
   const [districts, setDistricts] = useState<Location[]>([]);
   const [wards, setWards] = useState<Location[]>([]);
-  
+  const [districtSearch, setDistrictSearch] = useState('');
+
   const [selectedProvince, setSelectedProvince] = useState<number | undefined>(value.province_id);
   const [selectedDistrict, setSelectedDistrict] = useState<number | undefined>(value.district_id);
   const [selectedWard, setSelectedWard] = useState<number | undefined>(value.ward_id);
-  
+
   const [isLoadingProvinces, setIsLoadingProvinces] = useState(false);
   const [isLoadingDistricts, setIsLoadingDistricts] = useState(false);
   const [isLoadingWards, setIsLoadingWards] = useState(false);
-  
+
   const [openProvince, setOpenProvince] = useState(false);
   const [openDistrict, setOpenDistrict] = useState(false);
   const [openWard, setOpenWard] = useState(false);
+
+  const filteredDistricts = districtSearch
+    ? districts.filter((d) => d.name.toLowerCase().includes(districtSearch.toLowerCase()))
+    : districts;
 
   // Fetch provinces on mount
   useEffect(() => {
@@ -153,6 +160,7 @@ export function LocationSelect({
         setSelectedDistrict(id);
         setSelectedWard(undefined);
         setOpenDistrict(false);
+        setDistrictSearch('');
         break;
       case 'ward':
         nextWard = id;
@@ -232,10 +240,10 @@ export function LocationSelect({
         </div>
       </div>
 
-      {/* District */}
+      {/* District (thực chất là Xã/Phường/Đặc khu theo cơ cấu 96 đơn vị mới) */}
       <div className="flex-1 min-w-[150px]">
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Quận/Huyện {required && <span className="text-red-500">*</span>}
+          Xã/Phường/Đặc khu {required && <span className="text-red-500">*</span>}
         </label>
         <div className="relative">
           <button
@@ -250,25 +258,39 @@ export function LocationSelect({
               ) : (
                 <MapPin className="h-4 w-4 inline mr-2 text-gray-400" />
               )}
-              {getSelectedName('district') || 'Chọn Quận/Huyện'}
+              {getSelectedName('district') || 'Chọn Xã/Phường/Đặc khu'}
             </span>
             <ChevronDown className="h-4 w-4 text-gray-400" />
           </button>
 
           {openDistrict && (
-            <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-auto">
-              {districts.map((district) => (
-                <button
-                  key={district.id}
-                  type="button"
-                  onClick={() => handleSelect('district', district.id, district.name)}
-                  className={`w-full px-3 py-2 text-left hover:bg-gray-50 ${
-                    district.id === selectedDistrict ? 'bg-blue-50 text-blue-600' : ''
-                  }`}
-                >
-                  {district.name}
-                </button>
-              ))}
+            <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-72 overflow-hidden flex flex-col">
+              <input
+                type="text"
+                autoFocus
+                value={districtSearch}
+                onChange={(e) => setDistrictSearch(e.target.value)}
+                placeholder="Tìm xã/phường..."
+                className="w-full px-3 py-2 border-b text-sm focus:outline-none"
+                onClick={(e) => e.stopPropagation()}
+              />
+              <div className="overflow-auto">
+                {filteredDistricts.length === 0 && (
+                  <div className="px-3 py-2 text-sm text-gray-400">Không tìm thấy</div>
+                )}
+                {filteredDistricts.map((district) => (
+                  <button
+                    key={district.id}
+                    type="button"
+                    onClick={() => handleSelect('district', district.id, district.name)}
+                    className={`w-full px-3 py-2 text-left hover:bg-gray-50 ${
+                      district.id === selectedDistrict ? 'bg-blue-50 text-blue-600' : ''
+                    }`}
+                  >
+                    {district.name}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -326,6 +348,7 @@ export function LocationSelect({
             setOpenProvince(false);
             setOpenDistrict(false);
             setOpenWard(false);
+            setDistrictSearch('');
           }}
         />
       )}

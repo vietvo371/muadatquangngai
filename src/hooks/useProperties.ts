@@ -4,9 +4,11 @@ import type { Property, PropertyFormData } from '@/types/property';
 
 interface PropertyFilters {
   type?: 'sale' | 'rent';
-  category_id?: number;
-  province_id?: number;
-  district_id?: number;
+  // Tên khớp đúng query param mà GET /api/v2/properties đọc (category/province/district — không
+  // phải category_id/district_id, xem src/app/api/v2/properties/route.ts).
+  category?: number;
+  province?: number;
+  district?: number;
   price_min?: number;
   price_max?: number;
   area_min?: number;

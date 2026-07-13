@@ -13,7 +13,8 @@ import {
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
-import { FilterState, PROPERTY_TYPES } from './FilterSidebar';
+import { FilterState, FilterContext, getCategoriesForContext } from './FilterSidebar';
+import { RegionSelect } from '@/components/shared/RegionSelect';
 import { formatPrice } from '@/lib/formatters';
 
 interface FilterHorizontalProps {
@@ -23,6 +24,7 @@ interface FilterHorizontalProps {
   searchQuery: string;
   onSearchQueryChange: (query: string) => void;
   onSearchSubmit?: () => void;
+  context?: FilterContext;
 }
 
 const PRICE_PRESETS: Array<{ label: string; min: number | ''; max: number | '' }> = [
@@ -51,11 +53,13 @@ export function FilterHorizontal({
   searchQuery,
   onSearchQueryChange,
   onSearchSubmit,
+  context = 'sell',
 }: FilterHorizontalProps) {
   const [activeDropdown, setActiveDropdown] = useState<'type' | 'price' | 'area' | 'advanced' | null>(null);
   const [localSearch, setLocalSearch] = useState(searchQuery);
   const [isVerified, setIsVerified] = useState(false);
   const [isProAgent, setIsProAgent] = useState(false);
+  const propertyTypes = getCategoriesForContext(context);
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -88,11 +92,19 @@ export function FilterHorizontal({
     }
   };
 
-  const toggleType = (type: string) => {
-    const newTypes = filters.types.includes(type)
-      ? filters.types.filter(t => t !== type)
-      : [...filters.types, type];
+  const toggleType = (categoryId: string) => {
+    const newTypes = filters.types.includes(categoryId)
+      ? filters.types.filter(t => t !== categoryId)
+      : [...filters.types, categoryId];
     onFilterChange({ types: newTypes });
+  };
+
+  const typeLabel = () => {
+    if (filters.types.length === 0) return 'Loại nhà đất';
+    const names = filters.types
+      .map((id) => propertyTypes.find((t) => String(t.id) === id)?.name)
+      .filter(Boolean);
+    return `Loại: ${names.join(', ')}`;
   };
 
   const handlePricePreset = (min: number | '', max: number | '') => {
@@ -174,14 +186,14 @@ export function FilterHorizontal({
         <button
           onClick={() => setActiveDropdown(activeDropdown === 'advanced' ? null : 'advanced')}
           className={`h-9 px-3.5 rounded-lg border font-semibold flex items-center gap-1.5 transition-all duration-200 ${
-            activeDropdown === 'advanced' || filters.bedrooms !== 'any' || filters.direction || filters.legal
+            activeDropdown === 'advanced' || filters.bedrooms !== 'any' || filters.direction || filters.legal || filters.district !== ''
               ? 'bg-primary text-white border-primary shadow-sm shadow-primary/10'
               : 'bg-white hover:bg-gray-50 border-gray-200 text-gray-700'
           }`}
         >
           <SlidersHorizontal className="w-3.5 h-3.5" />
           <span>Lọc</span>
-          {(filters.bedrooms !== 'any' || filters.direction || filters.legal) && (
+          {(filters.bedrooms !== 'any' || filters.direction || filters.legal || filters.district !== '') && (
             <span className="w-2 h-2 rounded-full bg-cta animate-pulse" />
           )}
         </button>
@@ -209,23 +221,23 @@ export function FilterHorizontal({
                 : 'border-gray-200 hover:border-gray-350 bg-white'
             }`}
           >
-            <span>{filters.types.length > 0 ? `Loại: ${filters.types.join(', ')}` : 'Loại nhà đất'}</span>
+            <span>{typeLabel()}</span>
             <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 text-gray-400 ${activeDropdown === 'type' ? 'rotate-180' : ''}`} />
           </button>
-          
+
           {activeDropdown === 'type' && (
-            <div className="absolute top-[42px] left-0 w-[240px] bg-white border border-gray-150 rounded-xl shadow-xl p-3.5 z-40 animate-in fade-in-50 slide-in-from-top-2 duration-150">
+            <div className="absolute top-[42px] left-0 w-[280px] bg-white border border-gray-150 rounded-xl shadow-xl p-3.5 z-40 animate-in fade-in-50 slide-in-from-top-2 duration-150 max-h-80 overflow-auto">
               <h4 className="font-bold text-gray-800 text-[12px] uppercase tracking-wider mb-2.5">Chọn loại nhà đất</h4>
               <div className="space-y-3">
-                {PROPERTY_TYPES.map((type) => (
-                  <label key={type} className="flex items-center gap-2.5 cursor-pointer group">
+                {propertyTypes.map((type) => (
+                  <label key={type.id} className="flex items-center gap-2.5 cursor-pointer group">
                     <Checkbox
-                      id={`type-${type}`}
-                      checked={filters.types.includes(type)}
-                      onCheckedChange={() => toggleType(type)}
+                      id={`type-${type.id}`}
+                      checked={filters.types.includes(String(type.id))}
+                      onCheckedChange={() => toggleType(String(type.id))}
                       className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                     />
-                    <span className="text-[13px] text-gray-700 group-hover:text-gray-900 transition-colors">{type}</span>
+                    <span className="text-[13px] text-gray-700 group-hover:text-gray-900 transition-colors">{type.name}</span>
                   </label>
                 ))}
               </div>
@@ -481,22 +493,15 @@ export function FilterHorizontal({
             </div>
           </div>
 
-          {/* District Selection inside Lọc (Advanced) */}
+          {/* District Selection inside Lọc (Advanced) — 96 xã/phường/đặc khu, ưu tiên 9 khu vực nổi bật */}
           <div className="mt-4 pt-3.5 border-t border-gray-100 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
             <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
               <span className="text-[12px] font-bold text-gray-800 uppercase tracking-wider shrink-0 mr-2 sm:mb-0">Khu vực:</span>
-              <select
+              <RegionSelect
                 value={filters.district}
-                onChange={(e) => onFilterChange({ district: e.target.value })}
-                className="h-8.5 border border-gray-200 rounded-lg px-3 text-[12.5px] focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all text-gray-700 bg-white min-w-[160px]"
-              >
-                <option value="">Chọn Quận/Huyện</option>
-                <option value="TP Quảng Ngãi">TP Quảng Ngãi</option>
-                <option value="Bình Sơn">Huyện Bình Sơn</option>
-                <option value="Sơn Tịnh">Huyện Sơn Tịnh</option>
-                <option value="Tư Nghĩa">Huyện Tư Nghĩa</option>
-                <option value="Nghĩa Hành">Huyện Nghĩa Hành</option>
-              </select>
+                onChange={(id) => onFilterChange({ district: id })}
+                buttonClassName="h-8.5 border border-gray-200 rounded-lg px-3 text-[12.5px] focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all text-gray-700 bg-white min-w-[160px] flex items-center gap-1.5"
+              />
             </div>
 
             <div className="flex gap-2 justify-end">

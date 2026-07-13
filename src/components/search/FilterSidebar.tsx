@@ -4,11 +4,14 @@ import { useState } from 'react';
 import { ChevronDown, ChevronUp, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { RegionSelect } from '@/components/shared/RegionSelect';
+import { SELL_CATEGORIES, RENT_CATEGORIES, PROJECT_CATEGORIES, type CategoryMenuItem } from '@/lib/category-menu';
 
 export interface FilterState {
+  // category id (dạng string, khớp checkbox value) — danh sách tuỳ theo context (bán/thuê/dự án).
   types: string[];
-  district: string;
-  ward: string;
+  // district_id của 1 trong 96 xã/phường/đặc khu — '' nghĩa là "Tất cả khu vực".
+  district: number | '';
   priceMin: number | '';
   priceMax: number | '';
   areaMin: number | '';
@@ -22,7 +25,6 @@ export interface FilterState {
 export const DEFAULT_FILTERS: FilterState = {
   types: [],
   district: '',
-  ward: '',
   priceMin: '',
   priceMax: '',
   areaMin: '',
@@ -33,13 +35,15 @@ export const DEFAULT_FILTERS: FilterState = {
   legal: '',
 };
 
-export const PROPERTY_TYPES = [
-  'Nhà phố',
-  'Căn hộ',
-  'Đất nền',
-  'Biệt thự',
-  'Mặt bằng kinh doanh',
-];
+export type FilterContext = 'sell' | 'rent' | 'project';
+
+// Danh sách "Loại nhà đất" đồng bộ với menu danh mục con trên header (đã sửa theo Notion
+// 13/07) — mỗi context (bán/thuê/dự án) có bộ category riêng, không dùng chung 1 list nữa.
+export function getCategoriesForContext(context: FilterContext): CategoryMenuItem[] {
+  if (context === 'rent') return RENT_CATEGORIES;
+  if (context === 'project') return PROJECT_CATEGORIES;
+  return SELL_CATEGORIES;
+}
 
 const BEDROOM_OPTIONS = ['Bất kỳ', '1', '2', '3', '4+'];
 const BATHROOM_OPTIONS = ['Bất kỳ', '1', '2', '3+'];
@@ -66,9 +70,11 @@ interface FilterSidebarProps {
   onReset: () => void;
   open?: boolean;
   onClose?: () => void;
+  context?: FilterContext;
 }
 
-export function FilterSidebar({ filters, onFilterChange, onApply, onReset, open, onClose }: FilterSidebarProps) {
+export function FilterSidebar({ filters, onFilterChange, onApply, onReset, open, onClose, context = 'sell' }: FilterSidebarProps) {
+  const propertyTypes = getCategoriesForContext(context);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({
     type: false,
     location: false,
@@ -84,10 +90,10 @@ export function FilterSidebar({ filters, onFilterChange, onApply, onReset, open,
     setExpanded((prev) => ({ ...prev, [section]: !prev[section] }));
   };
 
-  const toggleType = (type: string) => {
-    const newTypes = filters.types.includes(type)
-      ? filters.types.filter(t => t !== type)
-      : [...filters.types, type];
+  const toggleType = (categoryId: string) => {
+    const newTypes = filters.types.includes(categoryId)
+      ? filters.types.filter(t => t !== categoryId)
+      : [...filters.types, categoryId];
     onFilterChange({ types: newTypes });
   };
 
@@ -117,46 +123,30 @@ export function FilterSidebar({ filters, onFilterChange, onApply, onReset, open,
   const sidebarContent = (
     <>
       {/* Types */}
-      <Section id="type" title="Loại bất động sản">
+      <Section id="type" title="Loại nhà đất">
         <div className="space-y-3">
-          {PROPERTY_TYPES.map((type) => (
-            <label key={type} className="flex items-center gap-2 cursor-pointer group">
+          {propertyTypes.map((type) => (
+            <label key={type.id} className="flex items-center gap-2 cursor-pointer group">
               <Checkbox
-                id={`type-${type}`}
-                checked={filters.types.includes(type)}
-                onCheckedChange={() => toggleType(type)}
+                id={`type-${type.id}`}
+                checked={filters.types.includes(String(type.id))}
+                onCheckedChange={() => toggleType(String(type.id))}
                 className="data-[state=checked]:bg-primary data-[state=checked]:border-primary focus-visible:ring-2 focus-visible:ring-primary/50"
-                aria-label={`Lọc theo ${type.toLowerCase()}`}
+                aria-label={`Lọc theo ${type.name.toLowerCase()}`}
               />
-              <label htmlFor={`type-${type}`} className="text-[14px] text-gray-700 group-hover:text-gray-900 transition-colors cursor-pointer">{type}</label>
+              <label htmlFor={`type-${type.id}`} className="text-[14px] text-gray-700 group-hover:text-gray-900 transition-colors cursor-pointer">{type.name}</label>
             </label>
           ))}
         </div>
       </Section>
 
-      {/* Location */}
+      {/* Location — 96 xã/phường/đặc khu, không còn cấp Phường/Xã con */}
       <Section id="location" title="Khu vực">
-        <select
+        <RegionSelect
           value={filters.district}
-          onChange={(e) => onFilterChange({ district: e.target.value })}
-          className="w-full h-10 border border-gray-200 rounded-lg px-3 text-[14px] focus:ring-[3px] focus:ring-primary/15 focus:border-primary outline-none transition-all mb-2 cursor-pointer text-gray-700"
-          aria-label="Chọn Quận/Huyện"
-        >
-          <option value="">Chọn Quận/Huyện</option>
-          <option value="TP Quảng Ngãi">TP Quảng Ngãi</option>
-          <option value="Bình Sơn">Huyện Bình Sơn</option>
-          <option value="Sơn Tịnh">Huyện Sơn Tịnh</option>
-          <option value="Tư Nghĩa">Huyện Tư Nghĩa</option>
-          <option value="Nghĩa Hành">Huyện Nghĩa Hành</option>
-        </select>
-        <select
-          value={filters.ward}
-          onChange={(e) => onFilterChange({ ward: e.target.value })}
-          className="w-full h-10 border border-gray-200 rounded-lg px-3 text-[14px] focus:ring-[3px] focus:ring-primary/15 focus:border-primary outline-none transition-all cursor-pointer text-gray-700 mt-2"
-          aria-label="Chọn Phường/Xã"
-        >
-          <option value="">Chọn Phường/Xã</option>
-        </select>
+          onChange={(id) => onFilterChange({ district: id })}
+          buttonClassName="w-full h-10 border border-gray-200 rounded-lg px-3 text-[14px] focus:ring-[3px] focus:ring-primary/15 focus:border-primary outline-none transition-all cursor-pointer text-gray-700 flex items-center justify-between"
+        />
       </Section>
 
       {/* Price */}
