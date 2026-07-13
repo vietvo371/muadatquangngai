@@ -1,6 +1,13 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { MapPin, ArrowRight } from 'lucide-react';
+
+// Blur placeholder cho banner_hero.jpg — ảnh nền là file tĩnh trong /public nên Next.js không
+// tự sinh blurDataURL được (chỉ auto với ảnh import qua module). Không có placeholder này,
+// 2 lớp gradient tối phủ lên ảnh (bg-gradient-to-t from-black/80...) sẽ paint ngay lập tức
+// (CSS thuần) trong khi ảnh còn đang tải, gây hiệu ứng chớp đen trước khi ảnh hiện ra.
+const HERO_BLUR_DATA_URL =
+  'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABQODxIPDRQSEBIXFRQYHjIhHhwcHj0sLiQySUBMS0dARkVQWnNiUFVtVkVGZIhlbXd7gYKBTmCNl4x9lnN+gXz/2wBDARUXFx4aHjshITt8U0ZTfHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHz/wAARCAALABADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwB91qTSEiMiNiOSpNV7QpdXaxudvGc9iay9x4GeDXSeG40khZXRWG7PIqnozNK+5//Z';
 import { SectionHeading } from '@/components/home/SectionHeading';
 import { SearchBar } from '@/components/home/SearchBar';
 import { ProjectCard } from '@/components/home/ProjectCard';
@@ -217,13 +224,15 @@ export default function HomePage() {
       ══════════════════════════════════ */}
       <section className="relative h-[520px] md:h-[600px] lg:h-[660px] z-10">
         {/* Background image — clipped riêng để không clip dropdown */}
-        <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute inset-0 overflow-hidden bg-slate-800">
           <Image
             src="/images/image_data/banner_hero.jpg"
             alt="Bất động sản Quảng Ngãi"
             fill
             className="object-cover object-center"
             priority
+            placeholder="blur"
+            blurDataURL={HERO_BLUR_DATA_URL}
           />
           {/* Multi-layer gradient for depth */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/5" />
