@@ -12,6 +12,7 @@ import {
 import { formatPrice, timeAgo } from '@/lib/formatters';
 import { ContactDialog } from '@/components/shared/ContactDialog';
 import { useProjects } from '@/hooks/useProjects';
+import { sanitizeRichText } from '@/lib/sanitize-html';
 
 const getDistrictQueryValue = (district?: string): string => {
   if (!district) return 'all';
@@ -910,10 +911,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
                         </div>
                       </div>
 
-                      {/* Mô tả */}
-                      <div className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">
-                        {projectData.overview}
-                      </div>
+                      {/* Mô tả — HTML từ RichTextEditor (H2/H3, ảnh chèn...), sanitize trước khi
+                          render. whitespace-pre-line vẫn giữ để mô tả cũ (text thường, chưa qua
+                          editor mới) xuống dòng đúng dù không có thẻ <br>. */}
+                      <div
+                        className="text-sm text-gray-600 leading-relaxed whitespace-pre-line [&_h2]:text-base [&_h2]:font-bold [&_h2]:text-gray-900 [&_h2]:mt-3 [&_h2]:mb-1.5 [&_h3]:text-[15px] [&_h3]:font-bold [&_h3]:text-gray-900 [&_h3]:mt-2.5 [&_h3]:mb-1 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-primary [&_a]:underline [&_img]:rounded-lg [&_img]:my-2 [&_img]:max-w-full"
+                        dangerouslySetInnerHTML={{ __html: sanitizeRichText(projectData.overview) }}
+                      />
                     </div>
 
                     {/* Tiện ích */}

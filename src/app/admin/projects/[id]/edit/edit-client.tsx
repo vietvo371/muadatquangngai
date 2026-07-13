@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import {
   Select,
@@ -29,6 +28,7 @@ import {
 import { projectApi, userAdminApi } from '@/lib/admin-api';
 import { slugify } from '@/lib/formatters';
 import ProjectLivePreview from '@/components/admin/ProjectLivePreview';
+import { RichTextEditor } from '@/components/shared/RichTextEditor';
 import { ImageUploader, UploadedFile } from '@/components/shared/ImageUploader';
 import { AddressAutocomplete } from '@/components/shared/AddressAutocomplete';
 import { PriceInput } from '@/components/shared/PriceInput';
@@ -638,12 +638,10 @@ export default function EditProjectClient({ id }: { id: string }) {
             <CardContent className="p-6">
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Mô tả dự án</label>
-                <Textarea
-                  name="description"
-                  placeholder="Nhập mô tả tổng quan về dự án, thông tin quy hoạch, hạ tầng kỹ thuật..."
+                <RichTextEditor
                   value={formData.description}
-                  onChange={handleChange}
-                  className="min-h-[120px] text-sm rounded-xl border-gray-200 focus:border-primary focus:ring-primary/10"
+                  onChange={(html) => setFormData((prev) => ({ ...prev, description: html }))}
+                  placeholder="Nhập mô tả tổng quan về dự án, thông tin quy hoạch, hạ tầng kỹ thuật..."
                 />
               </div>
             </CardContent>
