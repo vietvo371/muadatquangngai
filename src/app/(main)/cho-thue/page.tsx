@@ -3,7 +3,7 @@
 import { Suspense, useState, useMemo, useCallback, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { PropertyCard } from '@/components/property/PropertyCard';
 import { FilterSidebar, FilterState, DEFAULT_FILTERS } from '@/components/search/FilterSidebar';
 import { FilterHorizontal } from '@/components/search/FilterHorizontal';
@@ -18,6 +18,7 @@ import { ContactDialog } from '@/components/shared/ContactDialog';
 import { Switch } from '@/components/ui/switch';
 import { CONFIG } from '@/lib/config';
 import { useProperties } from '@/hooks/useProperties';
+import { parseFiltersFromSearchParams, buildSearchParamsFromState } from '@/lib/filter-url-sync';
 
 const mapApiProperty = (apiProp: any) => {
   return {
@@ -147,6 +148,8 @@ const mockProperties: MockProperty[] = [
 function PropertyListingContent() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname() || '/cho-thue';
 
   // Real API integration state
   const { fetchProperties, isLoading: isApiLoading } = useProperties();
@@ -157,25 +160,42 @@ function PropertyListingContent() {
     per_page: 6,
     total: 0,
   });
-  const [page, setPage] = useState(1);
+
+  // Toàn bộ filter/search/sort/page khởi tạo từ URL (F5, chia sẻ link, back/forward đều giữ
+  // đúng kết quả đã lọc) — xem src/lib/filter-url-sync.ts.
+  const initialUrlState = useMemo(() => parseFiltersFromSearchParams(searchParams), []); // eslint-disable-line react-hooks/exhaustive-deps
+  const [page, setPage] = useState(initialUrlState.page);
   const [useRealApi, setUseRealApi] = useState(true);
 
-  const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [filters, setFilters] = useState<FilterState>(initialUrlState.filters);
+  const [searchQuery, setSearchQuery] = useState(initialUrlState.searchQuery);
   const [isFiltering, setIsFiltering] = useState(false);
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
-  const [sort, setSort] = useState('newest');
+  const [sort, setSort] = useState(initialUrlState.sort);
   const [slide, setSlide] = useState(0);
   const [contactOpen, setContactOpen] = useState(false);
   const [receiveEmail, setReceiveEmail] = useState(false);
 
-  // Đọc ?category= từ URL (click từ menu danh mục con trên header) — chạy lại mỗi khi query
-  // đổi, kể cả khi component không remount (điều hướng client-side trong cùng trang).
+  // Đọc lại filter từ URL mỗi khi query đổi do điều hướng bên ngoài (click menu danh mục con ở
+  // header, nút back/forward) — component không remount nên cần effect riêng, không chỉ dựa vào
+  // giá trị khởi tạo ở trên.
   useEffect(() => {
-    const categoryParam = searchParams?.get('category');
-    setFilters((prev) => ({ ...prev, types: categoryParam ? [categoryParam] : [] }));
-    setPage(1);
+    const next = parseFiltersFromSearchParams(searchParams);
+    setFilters(next.filters);
+    setSearchQuery(next.searchQuery);
+    setSort(next.sort);
+    setPage(next.page);
   }, [searchParams]);
+
+  // Ghi filter/search/sort/page hiện tại vào URL. So sánh nội dung với URL thật hiện tại trước
+  // khi replace — tự chặn vòng lặp với effect đọc URL ở trên (round đó chỉ set lại state y hệt
+  // nên qs dựng ra sẽ khớp searchParams hiện tại, effect này bỏ qua thay vì replace lần nữa).
+  useEffect(() => {
+    const qs = buildSearchParamsFromState({ filters, searchQuery, sort, page }).toString();
+    if (qs === (searchParams?.toString() ?? '')) return;
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters, searchQuery, sort, page]);
 
   // Fetch real properties from the API
   useEffect(() => {
