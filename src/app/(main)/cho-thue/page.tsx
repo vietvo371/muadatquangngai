@@ -27,8 +27,7 @@ const mapApiProperty = (apiProp: any) => {
     price: Number(apiProp.price),
     priceUnit: apiProp.price_unit === 'month' || apiProp.price_unit === 'per_month' ? 'per_month' : (apiProp.price_unit === 'per_m2' || apiProp.price_unit === 'm2' ? 'per_m2' : 'total'),
     area: Number(apiProp.area),
-    // DB lưu 'sell'/'rent' — trang mua-ban/cho-thue dùng quy ước 'sale'/'rent' cho link.
-    type: apiProp.type === 'sell' ? 'sale' : apiProp.type,
+    type: apiProp.type,
     category: apiProp.category?.name || 'Bất động sản',
     thumbnail: apiProp.thumbnail || '/images/image_data/Haus-Coastal.jpg',
     location: apiProp.location?.district ? `${apiProp.location.district.name}, Quảng Ngãi` : apiProp.address || 'Quảng Ngãi',
@@ -68,7 +67,7 @@ interface MockProperty {
   price: number;
   priceUnit: 'total' | 'per_m2' | 'per_month';
   area: number;
-  type: 'sale' | 'rent';
+  type: 'sell' | 'rent';
   category: string;
   thumbnail: string;
   location: string;
@@ -320,7 +319,7 @@ function PropertyListingContent() {
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider mb-2.5 bg-cta text-white shadow-md">
                     ★ {p.isVip === 'diamond' ? 'DIAMOND' : p.isVip === 'vip_plus' ? 'VIP+' : 'VIP'}
                   </span>
-                  <Link href={`/${p.type === 'sale' ? 'mua-ban' : 'cho-thue'}/${p.slug}`}>
+                  <Link href={`/${p.type === 'sell' ? 'mua-ban' : 'cho-thue'}/${p.slug}`}>
                     <h2 className="text-xl md:text-2xl font-black text-white hover:text-primary transition-colors drop-shadow-md leading-tight mb-2 max-w-3xl cursor-pointer line-clamp-2">
                       {p.title}
                     </h2>
@@ -655,7 +654,7 @@ function PropertyListingContent() {
                   {featuredProperties.map((property) => (
                     <Link
                       key={property.id}
-                      href={`/${property.type === 'sale' ? 'mua-ban' : 'cho-thue'}/${property.slug}`}
+                      href={`/${property.type === 'sell' ? 'mua-ban' : 'cho-thue'}/${property.slug}`}
                       className="flex gap-3 p-3.5 hover:bg-gray-50 transition-colors group"
                     >
                       <div className="relative w-20 h-16 shrink-0 rounded-xl overflow-hidden bg-gray-50">

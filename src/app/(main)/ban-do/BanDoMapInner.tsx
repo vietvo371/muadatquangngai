@@ -55,7 +55,7 @@ export default function BanDoMapInner() {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState({
-    type: 'sale',
+    type: 'sell',
     price_min: 0,
     price_max: 0,
     category_id: undefined as number | undefined,
@@ -210,9 +210,9 @@ export default function BanDoMapInner() {
         <div className="flex items-center gap-3">
           <div className="hidden sm:flex bg-gray-50 p-1 rounded-full border border-gray-100">
             <button
-              onClick={() => setFilters((f) => ({ ...f, type: 'sale' }))}
+              onClick={() => setFilters((f) => ({ ...f, type: 'sell' }))}
               className={`px-4 py-1.5 text-[13px] font-bold rounded-full transition-all ${
-                filters.type === 'sale' ? 'bg-primary text-white shadow-sm' : 'text-gray-500 hover:text-gray-900'
+                filters.type === 'sell' ? 'bg-primary text-white shadow-sm' : 'text-gray-500 hover:text-gray-900'
               }`}
             >
               Mua bán
@@ -372,7 +372,7 @@ export default function BanDoMapInner() {
                       </Badge>
                     )}
                     <Badge className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-md text-white font-medium border-0">
-                      {selectedProperty.type === 'sale' ? 'Bán' : 'Cho thuê'}
+                      {selectedProperty.type === 'sell' ? 'Bán' : 'Cho thuê'}
                     </Badge>
                   </div>
                 )}
@@ -390,7 +390,7 @@ export default function BanDoMapInner() {
                     </p>
                   </div>
                   
-                  <Link href={`/${selectedProperty.type === 'sale' ? 'mua-ban' : 'cho-thue'}/${selectedProperty.slug}`}>
+                  <Link href={`/${selectedProperty.type === 'sell' ? 'mua-ban' : 'cho-thue'}/${selectedProperty.slug}`}>
                     <Button className="w-full bg-gray-900 hover:bg-black text-white font-bold h-10 rounded-xl">
                       Xem chi tiết
                     </Button>

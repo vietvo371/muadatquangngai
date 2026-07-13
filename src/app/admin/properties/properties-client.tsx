@@ -71,7 +71,7 @@ const MOCK_PROPERTIES = [
     thumbnail: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=100&h=100&fit=crop',
     status: 'active',
     verification_status: 'verified',
-    type: 'sale',
+    type: 'sell',
     category: 'Căn hộ',
     province: 'Quảng Ngãi',
     user: { id: 1, name: 'Nguyễn Văn Anh (Môi giới)' },
@@ -86,7 +86,7 @@ const MOCK_PROPERTIES = [
     thumbnail: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=100&h=100&fit=crop',
     status: 'pending',
     verification_status: 'pending',
-    type: 'sale',
+    type: 'sell',
     category: 'Nhà phố',
     province: 'Quảng Ngãi',
     user: { id: 2, name: 'Trần Thị Bình' },
@@ -101,7 +101,7 @@ const MOCK_PROPERTIES = [
     thumbnail: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=100&h=100&fit=crop',
     status: 'pending',
     verification_status: 'pending',
-    type: 'sale',
+    type: 'sell',
     category: 'Đất nền',
     province: 'Quảng Ngãi',
     user: { id: 3, name: 'Lê Văn Cường' },
@@ -131,7 +131,7 @@ const MOCK_PROPERTIES = [
     thumbnail: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=100&h=100&fit=crop',
     status: 'inactive',
     verification_status: 'verified',
-    type: 'sale',
+    type: 'sell',
     category: 'Đất nền',
     province: 'Quảng Ngãi',
     user: { id: 5, name: 'Đỗ Mỹ Linh (Đại lý)' },
@@ -597,7 +597,7 @@ export default function PropertiesClient() {
             </SelectTrigger>
             <SelectContent className="rounded-xl">
               <SelectItem value="all">Tất cả loại</SelectItem>
-              <SelectItem value="sale">Mua bán</SelectItem>
+              <SelectItem value="sell">Mua bán</SelectItem>
               <SelectItem value="rent">Cho thuê</SelectItem>
             </SelectContent>
           </Select>
@@ -673,7 +673,7 @@ export default function PropertiesClient() {
                             />
                             <div className="min-w-0 max-w-[240px]">
                               <a
-                                href={`${CLIENT_URL}/${property.type === 'sale' ? 'mua-ban' : 'cho-thue'}/${property.slug}`}
+                                href={`${CLIENT_URL}/${property.type === 'sell' ? 'mua-ban' : 'cho-thue'}/${property.slug}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="font-bold text-gray-900 text-[13px] leading-snug line-clamp-1 hover:text-primary transition-colors cursor-pointer"
@@ -731,7 +731,7 @@ export default function PropertiesClient() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48 rounded-xl p-1.5">
                               <DropdownMenuItem
-                                onClick={() => window.open(`${CLIENT_URL}/${property.type === 'sale' ? 'mua-ban' : 'cho-thue'}/${property.slug}`, '_blank', 'noopener,noreferrer')}
+                                onClick={() => window.open(`${CLIENT_URL}/${property.type === 'sell' ? 'mua-ban' : 'cho-thue'}/${property.slug}`, '_blank', 'noopener,noreferrer')}
                                 className="flex items-center w-full cursor-pointer font-medium text-gray-700 hover:text-gray-900"
                               >
                                 <Eye className="h-4 w-4 mr-2 text-gray-400" />

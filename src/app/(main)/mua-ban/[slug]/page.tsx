@@ -32,8 +32,7 @@ const mapApiProperty = (apiProp: any) => {
     price: Number(apiProp.price),
     priceUnit: apiProp.price_unit === 'month' || apiProp.price_unit === 'per_month' ? 'per_month' : (apiProp.price_unit === 'per_m2' || apiProp.price_unit === 'm2' ? 'per_m2' : 'total'),
     area: Number(apiProp.area),
-    // API trả 'sell'/'rent' — PropertyCard chỉ nhận diện 'sale'/'rent' (dùng để build badge + href).
-    type: apiProp.type === 'sell' ? 'sale' : apiProp.type,
+    type: apiProp.type,
     category: apiProp.category?.name || 'Bất động sản',
     thumbnail: apiProp.thumbnail || '/images/image_data/Haus-Coastal.jpg',
     location: apiProp.location?.district ? `${apiProp.location.district.name}, Quảng Ngãi` : apiProp.address || 'Quảng Ngãi',
@@ -105,7 +104,7 @@ const property = {
   id: '1',
   slug: 'can-ho-cao-cap-2pn-view-bien-my-khe',
   title: 'Căn hộ cao cấp 2PN view biển Mỹ Khê - Đầy đủ nội thất cao cấp',
-  type: 'sale',
+  type: 'sell',
   isVip: 'vip',
   price: 2800000000,
   priceUnit: 'total',

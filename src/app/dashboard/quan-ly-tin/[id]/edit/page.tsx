@@ -47,7 +47,7 @@ const REVERSE_DIRECTION_MAP: Record<string, string> = Object.fromEntries(
 
 // Form data interface
 interface PropertyFormData {
-  type: 'sale' | 'rent';
+  type: 'sell' | 'rent';
   category_id: string;
   title: string;
   description: string;
@@ -100,7 +100,7 @@ const featuresList = [
 ];
 
 const emptyFormData: PropertyFormData = {
-  type: 'sale',
+  type: 'sell',
   category_id: '',
   title: '',
   description: '',
@@ -170,7 +170,7 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
         setPropertySlug(data.slug || '');
 
         setFormData({
-          type: data.type || 'sale',
+          type: data.type || 'sell',
           category_id: String(data.category?.id ?? ''),
           title: data.title || '',
           description: data.description || '',
@@ -372,9 +372,9 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
                   <div className="grid grid-cols-2 gap-4">
                     <button
                       type="button"
-                      onClick={() => updateFormData({ type: 'sale', category_id: '' })}
+                      onClick={() => updateFormData({ type: 'sell', category_id: '' })}
                       className={`flex flex-col items-center justify-center p-5 border-2 rounded-xl transition-all duration-300 ${
-                        formData.type === 'sale'
+                        formData.type === 'sell'
                           ? 'border-primary bg-primary-light text-primary shadow-sm scale-[1.02]'
                           : 'border-gray-200 hover:border-gray-300 text-gray-500 hover:bg-gray-50'
                       }`}

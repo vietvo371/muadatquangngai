@@ -76,7 +76,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (!isString(body.description) || body.description.length < 50)
       errors.push(new FieldError('description', 'Trường mô tả phải có ít nhất 50 ký tự.'));
   }
-  if ('type' in body && !inList(body.type, ['sale', 'rent'])) {
+  if ('type' in body && !inList(body.type, ['sell', 'rent'])) {
     errors.push(new FieldError('type', 'Giá trị đã chọn trong trường loại tin không hợp lệ.'));
   }
   if ('category_id' in body && !isInteger(body.category_id)) {

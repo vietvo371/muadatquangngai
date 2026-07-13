@@ -32,8 +32,7 @@ const mapApiProperty = (apiProp: any) => {
     price: Number(apiProp.price),
     priceUnit: apiProp.price_unit === 'month' || apiProp.price_unit === 'per_month' ? 'per_month' : (apiProp.price_unit === 'per_m2' || apiProp.price_unit === 'm2' ? 'per_m2' : 'total'),
     area: Number(apiProp.area),
-    // API trả 'sell'/'rent' — PropertyCard chỉ nhận diện 'sale'/'rent' (dùng để build badge + href).
-    type: apiProp.type === 'sell' ? 'sale' : apiProp.type,
+    type: apiProp.type,
     category: apiProp.category?.name || 'Bất động sản',
     thumbnail: apiProp.thumbnail || '/images/image_data/Haus-Coastal.jpg',
     location: apiProp.location?.district ? `${apiProp.location.district.name}, Quảng Ngãi` : apiProp.address || 'Quảng Ngãi',

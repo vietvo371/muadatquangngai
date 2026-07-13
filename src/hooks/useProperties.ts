@@ -3,7 +3,7 @@ import axios from '@/lib/axios';
 import type { Property, PropertyFormData } from '@/types/property';
 
 interface PropertyFilters {
-  type?: 'sale' | 'rent';
+  type?: 'sell' | 'rent';
   // Tên khớp đúng query param mà GET /api/v2/properties đọc (category/province/district — không
   // phải category_id/district_id, xem src/app/api/v2/properties/route.ts).
   category?: number;

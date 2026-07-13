@@ -3,15 +3,15 @@
 interface ListingHeroProps {
   title: string;
   subtitle?: string;
-  type: 'sale' | 'rent';
+  type: 'sell' | 'rent';
   totalResults: number;
 }
 
 export function ListingHero({ title, subtitle, type, totalResults }: ListingHeroProps) {
-  const gradientFrom = type === 'sale' ? '#0c5d8f' : '#b91c1c';
-  const gradientTo = type === 'sale' ? '#1075b1' : '#e03131';
-  const statBg = type === 'sale' ? 'bg-primary/10' : 'bg-cta/10';
-  const statText = type === 'sale' ? 'text-primary' : 'text-cta';
+  const gradientFrom = type === 'sell' ? '#0c5d8f' : '#b91c1c';
+  const gradientTo = type === 'sell' ? '#1075b1' : '#e03131';
+  const statBg = type === 'sell' ? 'bg-primary/10' : 'bg-cta/10';
+  const statText = type === 'sell' ? 'text-primary' : 'text-cta';
 
   return (
     <div

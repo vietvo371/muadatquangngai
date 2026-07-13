@@ -84,7 +84,7 @@ export async function POST(request: Request) {
 
   const type = body.type;
   if (!type) errors.push(new FieldError('type', 'Trường loại tin không được để trống.'));
-  else if (!inList(type, ['sale', 'rent'])) errors.push(new FieldError('type', 'Giá trị đã chọn trong trường loại tin không hợp lệ.'));
+  else if (!inList(type, ['sell', 'rent'])) errors.push(new FieldError('type', 'Giá trị đã chọn trong trường loại tin không hợp lệ.'));
 
   const categoryId = body.category_id;
   if (categoryId === undefined || categoryId === null) errors.push(new FieldError('category_id', 'Trường danh mục không được để trống.'));

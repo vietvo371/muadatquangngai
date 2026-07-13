@@ -77,7 +77,7 @@ export async function POST(request: Request) {
 
   const type = body.type;
   if (!type) errors.push(new FieldError('type', 'Trường loại tin không được để trống.'));
-  else if (!inList(type, ['sale', 'rent', 'project'])) errors.push(new FieldError('type', 'Giá trị đã chọn trong trường loại tin không hợp lệ.'));
+  else if (!inList(type, ['sell', 'rent', 'project'])) errors.push(new FieldError('type', 'Giá trị đã chọn trong trường loại tin không hợp lệ.'));
 
   if (body.sort_order !== undefined && body.sort_order !== null && !isInteger(body.sort_order)) {
     errors.push(new FieldError('sort_order', 'Trường sort order phải là số nguyên.'));

@@ -1,4 +1,4 @@
-export type PropertyType = "sale" | "rent";
+export type PropertyType = "sell" | "rent";
 export type PropertyStatus =
   | "pending"
   | "active"

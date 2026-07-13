@@ -131,7 +131,7 @@ export default function PropertyManagementPage() {
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filtered.map((property: any) => (
             <div key={property.id} className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col h-full group">
-              <Link href={`/${property.type === 'sale' ? 'mua-ban' : 'cho-thue'}/${property.slug}`} className="block relative aspect-[4/3] bg-gray-100 overflow-hidden">
+              <Link href={`/${property.type === 'sell' ? 'mua-ban' : 'cho-thue'}/${property.slug}`} className="block relative aspect-[4/3] bg-gray-100 overflow-hidden">
                 {property.thumbnail ? (
                   <img src={property.thumbnail} alt={property.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                 ) : (
@@ -139,8 +139,8 @@ export default function PropertyManagementPage() {
                 )}
                 {/* Badges */}
                 <div className="absolute top-3 left-3 flex flex-col gap-2">
-                  <Badge className={`border-0 uppercase text-[10px] tracking-wider font-bold shadow-sm ${property.type === 'sale' ? 'bg-primary text-white' : 'bg-green-600 text-white'}`}>
-                    {property.type === 'sale' ? 'Bán' : 'Cho thuê'}
+                  <Badge className={`border-0 uppercase text-[10px] tracking-wider font-bold shadow-sm ${property.type === 'sell' ? 'bg-primary text-white' : 'bg-green-600 text-white'}`}>
+                    {property.type === 'sell' ? 'Bán' : 'Cho thuê'}
                   </Badge>
                   {property.is_vip && property.is_vip !== 'normal' && (
                     <Badge className="bg-cta text-white border-0 uppercase text-[10px] tracking-wider font-bold shadow-sm">
@@ -154,7 +154,7 @@ export default function PropertyManagementPage() {
               </Link>
               
               <div className="p-4 flex flex-col flex-1">
-                <Link href={`/${property.type === 'sale' ? 'mua-ban' : 'cho-thue'}/${property.slug}`}>
+                <Link href={`/${property.type === 'sell' ? 'mua-ban' : 'cho-thue'}/${property.slug}`}>
                   <h3 className="font-bold text-gray-900 line-clamp-2 mb-2 group-hover:text-primary transition-colors text-[15px] leading-tight">
                     {property.title}
                   </h3>
@@ -189,7 +189,7 @@ export default function PropertyManagementPage() {
             {filtered.map((property: any) => (
               <div key={property.id} className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 hover:bg-gray-50/50 transition-colors">
                 {/* Thumbnail */}
-                <Link href={`/${property.type === 'sale' ? 'mua-ban' : 'cho-thue'}/${property.slug}`} className="h-24 w-36 rounded-xl overflow-hidden bg-gray-100 shrink-0 relative block">
+                <Link href={`/${property.type === 'sell' ? 'mua-ban' : 'cho-thue'}/${property.slug}`} className="h-24 w-36 rounded-xl overflow-hidden bg-gray-100 shrink-0 relative block">
                   {property.thumbnail ? (
                     <img src={property.thumbnail} alt={property.title} className="h-full w-full object-cover hover:scale-105 transition-transform duration-500" />
                   ) : (
@@ -206,8 +206,8 @@ export default function PropertyManagementPage() {
                 <div className="flex-1 min-w-0 py-1">
                   <div className="flex items-center gap-2 flex-wrap mb-1.5">
                     <StatusBadge status={property.status} />
-                    <Badge className={`border-0 uppercase text-[10px] tracking-wider font-bold ${property.type === 'sale' ? 'bg-primary-light text-primary' : 'bg-green-100 text-green-700'}`}>
-                      {property.type === 'sale' ? 'Bán' : 'Cho thuê'}
+                    <Badge className={`border-0 uppercase text-[10px] tracking-wider font-bold ${property.type === 'sell' ? 'bg-primary-light text-primary' : 'bg-green-100 text-green-700'}`}>
+                      {property.type === 'sell' ? 'Bán' : 'Cho thuê'}
                     </Badge>
                   </div>
                   <Link href={`/dashboard/quan-ly-tin/${property.id}/edit`} className="font-bold text-gray-900 hover:text-primary truncate block text-base mb-2">
@@ -240,7 +240,7 @@ export default function PropertyManagementPage() {
                     </Button>
                   </Link>
                   <div className="flex gap-2 w-full">
-                    <Link href={`/${property.type === 'sale' ? 'mua-ban' : 'cho-thue'}/${property.slug}`} target="_blank" className="flex-1">
+                    <Link href={`/${property.type === 'sell' ? 'mua-ban' : 'cho-thue'}/${property.slug}`} target="_blank" className="flex-1">
                       <Button variant="ghost" className="h-9 w-full text-gray-500 hover:text-gray-900 bg-gray-50">
                         <ExternalLink className="h-4 w-4" />
                       </Button>

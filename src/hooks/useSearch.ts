@@ -13,7 +13,7 @@ interface SearchSuggestion {
 }
 
 interface SearchFilters {
-  type?: 'sale' | 'rent';
+  type?: 'sell' | 'rent';
   category_id?: number;
   province_id?: number;
   district_id?: number;

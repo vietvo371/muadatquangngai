@@ -43,7 +43,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       if (existing && existing.id !== category.id) errors.push(new FieldError('slug', 'Trường slug đã được sử dụng.'));
     }
   }
-  if ('type' in body && !inList(body.type, ['sale', 'rent', 'project'])) {
+  if ('type' in body && !inList(body.type, ['sell', 'rent', 'project'])) {
     errors.push(new FieldError('type', 'Giá trị đã chọn trong trường loại tin không hợp lệ.'));
   }
   if ('sort_order' in body && body.sort_order !== null && !isInteger(body.sort_order)) {

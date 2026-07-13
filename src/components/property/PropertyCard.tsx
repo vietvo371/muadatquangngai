@@ -46,8 +46,8 @@ export function PropertyCard({ property, className, variant = 'default' }: Prope
   const isVipActive = CONFIG.enableVip && isVipValue && isVipValue !== 'normal';
   const vip = isVipActive ? vipConfig[isVipValue] : vipConfig.normal;
   const location = property.location || property.address || '';
-  const typeLabel = property.type === 'sale' ? 'Bán' : property.type === 'rent' ? 'Cho thuê' : property.type;
-  const href = `/${property.type === 'sale' ? 'mua-ban' : 'cho-thue'}/${property.slug}`;
+  const typeLabel = property.type === 'sell' ? 'Bán' : property.type === 'rent' ? 'Cho thuê' : property.type;
+  const href = `/${property.type === 'sell' ? 'mua-ban' : 'cho-thue'}/${property.slug}`;
   // eslint-disable-next-line react-hooks/purity
   const isNew = property.created_at && (Date.now() - new Date(property.created_at).getTime() < 86400000);
 
@@ -166,7 +166,7 @@ export function PropertyCard({ property, className, variant = 'default' }: Prope
                 <p className="text-base font-bold text-[#e03131]">
                   {formatPrice(property.price, property.priceUnit)}
                 </p>
-                {property.area > 0 && property.type === 'sale' && (
+                {property.area > 0 && property.type === 'sell' && (
                   <p className="text-xs text-gray-400">
                     {formatPrice(Math.round(property.price / property.area))}/m²
                   </p>
@@ -308,7 +308,7 @@ export function PropertyCard({ property, className, variant = 'default' }: Prope
             <p className="text-[18px] font-bold text-[#e03131] leading-none">
               {formatPrice(property.price, property.priceUnit)}
             </p>
-            {property.area > 0 && property.type === 'sale' && (
+            {property.area > 0 && property.type === 'sell' && (
               <p className="text-[11px] text-gray-400 mt-0.5">
                 · {formatPrice(Math.round(property.price / property.area))}/m²
               </p>
