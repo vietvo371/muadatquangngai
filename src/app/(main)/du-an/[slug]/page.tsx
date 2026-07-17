@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, useRef, use } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -13,6 +13,8 @@ import { formatPrice, timeAgo } from '@/lib/formatters';
 import { ContactDialog } from '@/components/shared/ContactDialog';
 import { useProjects } from '@/hooks/useProjects';
 import { sanitizeRichText } from '@/lib/sanitize-html';
+import { visibleFloorPlans, minFloorPlanArea } from '@/lib/floor-plans';
+import { DEFAULT_PROJECT_TYPE, isLandLikeProjectType, getProjectTypeLabel } from '@/lib/project-type';
 
 const getDistrictQueryValue = (district?: string): string => {
   if (!district) return 'all';
@@ -42,7 +44,7 @@ const mockProject = {
   name: 'De Palace River - Nam Sông Trà Khúc',
   developer: 'Công ty Cổ phần Đầu tư Xây dựng Thương mại Trần Gia Hân',
   status: 'selling',
-  type: 'townhouse',
+  type: DEFAULT_PROJECT_TYPE,
   address: 'Khu Nam Sông Trà Khúc, Phường Lê Hồng Phong, TP. Quảng Ngãi',
   province: 'Quảng Ngãi',
   district: 'TP Quảng Ngãi',
@@ -186,14 +188,6 @@ const statusConfig = {
   archived:  { label: 'Đã lưu trữ',  bg: 'bg-yellow-100', text: 'text-yellow-700' },
 };
 
-const typeMap: Record<string, string> = {
-  townhouse: 'Nhà phố',
-  villa: 'Biệt thự',
-  apartment: 'Căn hộ chung cư',
-  commercial: 'Thương mại / Shophouse',
-  land: 'Đất nền',
-};
-
 interface FloorPlanConfig {
   title: string;
   unitLabel: string;
@@ -216,7 +210,8 @@ const getFloorPlansConfig = (
   const count = unitsCount && unitsCount > 0 ? unitsCount : 100;
 
   switch (type) {
-    case 'land':
+    case 'khu-do-thi-moi':
+    case 'khu-dan-cu':
       return {
         title: 'Loại lô đất điển hình',
         unitLabel: 'lô',
@@ -226,7 +221,8 @@ const getFloorPlansConfig = (
           { type: 'Lô biệt thự vườn', area: '250m²', count: Math.floor(count * 0.15), priceFrom: pMax },
         ],
       };
-    case 'villa':
+    case 'biet-thu-lien-ke-du-an':
+    case 'khu-nghi-duong-sinh-thai':
       return {
         title: 'Loại biệt thự điển hình',
         unitLabel: 'căn',
@@ -236,17 +232,7 @@ const getFloorPlansConfig = (
           { type: 'Biệt thự mặt tiền', area: '450m²', count: Math.floor(count * 0.15), priceFrom: pMax },
         ],
       };
-    case 'townhouse':
-      return {
-        title: 'Loại nhà phố điển hình',
-        unitLabel: 'căn',
-        plans: [
-          { type: 'Nhà phố liền kề', area: '90m²', count: Math.floor(count * 0.60), priceFrom: pMin },
-          { type: 'Shophouse thương mại', area: '120m²', count: Math.floor(count * 0.30), priceFrom: Math.floor(pMin * 1.30) },
-          { type: 'Căn góc Shophouse', area: '160m²', count: Math.floor(count * 0.10), priceFrom: pMax },
-        ],
-      };
-    case 'commercial':
+    case 'shophouse-du-an':
       return {
         title: 'Loại mặt bằng điển hình',
         unitLabel: 'căn',
@@ -256,7 +242,7 @@ const getFloorPlansConfig = (
           { type: 'Văn phòng thông tầng', area: '220m²', count: Math.floor(count * 0.15), priceFrom: pMax },
         ],
       };
-    case 'apartment':
+    case 'nha-o-xa-hoi':
     default:
       return {
         title: 'Loại căn hộ điển hình',
@@ -331,13 +317,13 @@ const mapApiProjectDetail = (apiProject: any) => {
   
   const unitsCount = apiProject.scale?.total_units || apiProject.total_units || 256;
   const floorPlansConfig = getFloorPlansConfig(
-    apiProject.type || 'apartment',
+    apiProject.type || DEFAULT_PROJECT_TYPE,
     unitsCount,
     priceFrom,
     priceTo
   );
   const floorPlans = apiProject.floor_plans || floorPlansConfig.plans;
-  const unitWord = (apiProject.type || 'apartment') === 'land' ? 'lô' : 'căn';
+  const unitWord = isLandLikeProjectType(apiProject.type || DEFAULT_PROJECT_TYPE) ? 'lô' : 'căn';
 
   const faq = apiProject.faq || [
     {
@@ -380,7 +366,7 @@ const mapApiProjectDetail = (apiProject: any) => {
     name: apiProject.name,
     developer: apiProject.developer || apiProject.investor || 'Chưa cập nhật',
     status: apiProject.status || 'selling',
-    type: apiProject.type || 'apartment',
+    type: apiProject.type || DEFAULT_PROJECT_TYPE,
     address: apiProject.location?.address || apiProject.address || 'Quảng Ngãi',
     province: provinceName,
     district: districtName,
@@ -549,6 +535,16 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
   const [liked, setLiked] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [contactOpen, setContactOpen] = useState(false);
+  const [descExpanded, setDescExpanded] = useState(false);
+  const [descOverflows, setDescOverflows] = useState(false);
+  const descRef = useRef<HTMLDivElement>(null);
+  const DESC_COLLAPSED_HEIGHT = 340;
+
+  useEffect(() => {
+    if (descRef.current) {
+      setDescOverflows(descRef.current.scrollHeight > DESC_COLLAPSED_HEIGHT + 20);
+    }
+  }, [projectData?.overview]);
 
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
@@ -810,7 +806,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
                 {[
                   { icon: LayoutGrid, label: 'Diện tích', value: projectData.totalArea },
                   { icon: Building, label: 'Block', value: `${projectData.totalBlocks} block` },
-                  { icon: Home, label: projectData.type === 'land' ? 'Lô đất' : 'Căn hộ', value: `${projectData.totalUnits} ${projectData.unitWord}` },
+                  { icon: Home, label: isLandLikeProjectType(projectData.type) ? 'Lô đất' : 'Căn hộ', value: `${projectData.totalUnits} ${projectData.unitWord}` },
                   { icon: Calendar, label: 'Bàn giao', value: isNaN(new Date(projectData.handoverDate).getTime()) ? '2026' : new Date(projectData.handoverDate).getFullYear().toString() },
                 ].map(({ icon: Icon, label, value }) => (
                   <div key={label} className="flex flex-col items-center py-3 px-2 text-center">
@@ -852,11 +848,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
                       <div className="grid grid-cols-2 gap-x-8 gap-y-2.5 text-sm mb-5">
                         {[
                           ['Chủ đầu tư', projectData.developer],
-                          ['Loại hình', typeMap[projectData.type] || 'Căn hộ chung cư'],
+                          ['Loại hình', getProjectTypeLabel(projectData.type)],
                           ['Tổng diện tích', projectData.totalArea],
                           ['Số block', `${projectData.totalBlocks} block`],
                           ['Số tầng', `${projectData.totalFloors} tầng`],
-                          [projectData.type === 'land' ? 'Số lô đất' : 'Số căn hộ', `${projectData.totalUnits} ${projectData.unitWord}`],
+                          [isLandLikeProjectType(projectData.type) ? 'Số lô đất' : 'Số lượng', `${projectData.totalUnits} ${projectData.unitWord}`],
                           ['Pháp lý', projectData.legal],
                           ['Bàn giao', isNaN(new Date(projectData.handoverDate).getTime()) ? 'Liên hệ' : new Date(projectData.handoverDate).toLocaleDateString('vi-VN')],
                         ].map(([k, v]) => (
@@ -878,34 +874,21 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="text-xs text-gray-400 mb-1">Đơn giá tự tính</p>
+                          <p className="text-xs text-gray-400 mb-1">Đơn giá dự tính</p>
                           <p className="text-sm font-bold text-cta">
                             {(() => {
-                              const areaNum = parseFloat(projectData.totalArea);
-                              if (!projectData.priceFrom || isNaN(areaNum) || areaNum <= 0) return 'Đang cập nhật';
-                              
-                              const unitsCount = Number(projectData.totalUnits);
-                              let avgUnitArea = 100; // default standard lot size in m2
-                              
-                              if (unitsCount > 0) {
-                                // Quy đổi diện tích dự án từ Hectare sang m2 (1 ha = 10,000 m2)
-                                const totalAreaM2 = areaNum * 10000;
-                                // Hệ số đất thương phẩm xây dựng thực tế chiếm khoảng 40% quy mô tổng thể dự án
-                                const saleableAreaM2 = totalAreaM2 * 0.4;
-                                avgUnitArea = saleableAreaM2 / unitsCount;
-                                if (avgUnitArea <= 0) {
-                                  avgUnitArea = projectData.type === 'apartment' ? 70 : 120;
-                                }
-                              } else {
-                                avgUnitArea = projectData.type === 'apartment' ? 70 : 120;
-                              }
-                              
-                              const pricePerM2 = projectData.priceFrom / avgUnitArea;
+                              // Đơn giá dự tính = Giá thấp nhất của dự án ÷ Diện tích nhỏ nhất
+                              // của loại mặt bằng điển hình đang hiển thị — lấy động từ mục
+                              // "Loại mặt bằng điển hình" (Admin quản lý), không hardcode.
+                              const minArea = minFloorPlanArea(projectData.floorPlans);
+                              if (!projectData.priceFrom || minArea <= 0) return 'Đang cập nhật';
+
+                              const pricePerM2 = projectData.priceFrom / minArea;
                               const millionPerM2 = pricePerM2 / 1000000;
                               if (millionPerM2 < 0.1) {
-                                return `từ ${(millionPerM2 * 1000).toLocaleString('vi-VN')} nghìn/m²`;
+                                return `từ ${(millionPerM2 * 1000).toLocaleString('vi-VN', { maximumFractionDigits: 1, minimumFractionDigits: 1 })} nghìn/m²`;
                               }
-                              return `từ ${millionPerM2.toLocaleString('vi-VN', { maximumFractionDigits: 1 })} triệu/m²`;
+                              return `từ ${millionPerM2.toLocaleString('vi-VN', { maximumFractionDigits: 1, minimumFractionDigits: 1 })} triệu/m²`;
                             })()}
                           </p>
                         </div>
@@ -913,11 +896,30 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
 
                       {/* Mô tả — HTML từ RichTextEditor (H2/H3, ảnh chèn...), sanitize trước khi
                           render. whitespace-pre-line vẫn giữ để mô tả cũ (text thường, chưa qua
-                          editor mới) xuống dòng đúng dù không có thẻ <br>. */}
-                      <div
-                        className="text-sm text-gray-600 leading-relaxed whitespace-pre-line [&_h2]:text-base [&_h2]:font-bold [&_h2]:text-gray-900 [&_h2]:mt-3 [&_h2]:mb-1.5 [&_h3]:text-[15px] [&_h3]:font-bold [&_h3]:text-gray-900 [&_h3]:mt-2.5 [&_h3]:mb-1 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-primary [&_a]:underline [&_img]:rounded-lg [&_img]:my-2 [&_img]:max-w-full"
-                        dangerouslySetInnerHTML={{ __html: sanitizeRichText(projectData.overview) }}
-                      />
+                          editor mới) xuống dòng đúng dù không có thẻ <br>. Thu gọn + nút "Xem thêm"
+                          khi nội dung dài (nhiều mục như "2. Vị trí ... có gì nổi bật?") để tránh
+                          chiếm quá nhiều chỗ ngay từ đầu trang. */}
+                      <div className="relative">
+                        <div
+                          ref={descRef}
+                          className={`text-sm text-gray-600 leading-relaxed whitespace-pre-line [&_h2]:text-base [&_h2]:font-bold [&_h2]:text-gray-900 [&_h2]:mt-3 [&_h2]:mb-1.5 [&_h3]:text-[15px] [&_h3]:font-bold [&_h3]:text-gray-900 [&_h3]:mt-2.5 [&_h3]:mb-1 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-primary [&_a]:underline [&_img]:rounded-lg [&_img]:my-2 [&_img]:max-w-full overflow-hidden transition-[max-height] duration-300 ${
+                            !descExpanded && descOverflows ? 'max-h-[340px]' : 'max-h-none'
+                          }`}
+                          dangerouslySetInnerHTML={{ __html: sanitizeRichText(projectData.overview) }}
+                        />
+                        {!descExpanded && descOverflows && (
+                          <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-white to-transparent pointer-events-none" />
+                        )}
+                      </div>
+                      {descOverflows && (
+                        <button
+                          type="button"
+                          onClick={() => setDescExpanded((v) => !v)}
+                          className="mt-2 text-sm font-semibold text-primary hover:underline"
+                        >
+                          {descExpanded ? 'Thu gọn' : 'Xem thêm'}
+                        </button>
+                      )}
                     </div>
 
                     {/* Tiện ích */}
@@ -938,7 +940,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
                       <h3 className="text-sm font-bold text-gray-900 mb-3">{projectData.floorPlansTitle || 'Loại căn hộ'}</h3>
                       <div className="divide-y divide-gray-50 rounded-xl border border-gray-100 overflow-hidden">
                         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                        {projectData.floorPlans.map((fp: any) => (
+                        {visibleFloorPlans(projectData.floorPlans).map((fp: any) => (
                           <div key={fp.type} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors">
                             <div className="flex items-center gap-3">
                               <Ruler className="h-4 w-4 text-gray-400" />
@@ -1293,11 +1295,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
                 <div className="px-4 py-3 space-y-3 text-sm">
                   {[
                     ['Chủ đầu tư', projectData.developer],
-                    ['Loại hình', typeMap[projectData.type] || 'Căn hộ chung cư'],
+                    ['Loại hình', getProjectTypeLabel(projectData.type)],
                     ['Tỉnh / TP', projectData.province],
                     ['Quận / Huyện', projectData.district],
                     ['Tổng diện tích', projectData.totalArea],
-                    [projectData.type === 'land' ? 'Số lô đất' : 'Số căn hộ', `${projectData.totalUnits} ${projectData.unitWord}`],
+                    [isLandLikeProjectType(projectData.type) ? 'Số lô đất' : 'Số lượng', `${projectData.totalUnits} ${projectData.unitWord}`],
                     ['Pháp lý', projectData.legal],
                   ].map(([k, v]) => (
                     <div key={k} className="flex justify-between gap-2">

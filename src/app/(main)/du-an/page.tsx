@@ -16,6 +16,7 @@ import { formatPrice, slugify } from '@/lib/formatters';
 import { ProjectListCard } from '@/components/project/ProjectListCard';
 import { ContactDialog } from '@/components/shared/ContactDialog';
 import { useProjects } from '@/hooks/useProjects';
+import { PROJECT_TYPE_OPTIONS, DEFAULT_PROJECT_TYPE } from '@/lib/project-type';
 
 const PAGE_SIZE = 4;
 
@@ -27,7 +28,7 @@ const projects = [
     developer: 'Công ty CP Địa Ốc Quảng Ngãi',
     thumbnail: '/images/image_data/nha-pho-de-palace-river.jpg',
     status: 'selling',
-    type: 'apartment',
+    type: 'khu-do-thi-moi',
     district: 'tp-quang-ngai',
     address: 'Đầu cầu Thạch Bích, TP Quảng Ngãi',
     priceFrom: 4500000000,
@@ -47,7 +48,7 @@ const projects = [
     developer: 'Công ty CP Đầu tư Starlight',
     thumbnail: '/images/image_data/Starlight---suc-hut-den-tu-vi-tri-dac-dia-nhat-trung-tam-Quang-Ngai-suc-hut-3-1733900371-424-width1000height563.jpg',
     status: 'upcoming',
-    type: 'apartment',
+    type: 'khu-do-thi-moi',
     district: 'tp-quang-ngai',
     address: 'Huỳnh Thúc Kháng, Ngọc Bảo Viên, TP Quảng Ngãi',
     priceFrom: 3200000000,
@@ -67,7 +68,7 @@ const projects = [
     developer: 'Công ty TNHH Đầu tư Nghĩa Giang',
     thumbnail: '/images/image_data/z7727089471705_b45383cbfb0c02dbb327ef0ea9fd2f7e.jpg',
     status: 'selling',
-    type: 'land',
+    type: 'khu-dan-cu',
     district: 'tu-nghia',
     address: 'Nghĩa Thuận, Tư Nghĩa, Quảng Ngãi',
     priceFrom: 300000000,
@@ -87,7 +88,7 @@ const projects = [
     developer: 'Công ty CP Xây dựng Hoàng Long',
     thumbnail: '/images/image_data/banner_hero.jpg',
     status: 'selling',
-    type: 'townhouse',
+    type: 'shophouse-du-an',
     district: 'tp-quang-ngai',
     address: 'Phan Đình Phùng, TP Quảng Ngãi',
     priceFrom: 4500000000,
@@ -107,7 +108,7 @@ const projects = [
     developer: 'Công ty CP BĐS Haus',
     thumbnail: '/images/image_data/Haus-Coastal.jpg',
     status: 'upcoming',
-    type: 'villa',
+    type: 'khu-nghi-duong-sinh-thai',
     district: 'duc-pho',
     address: 'Ven biển Sa Huỳnh, TX Đức Phổ, Quảng Ngãi',
     priceFrom: 8000000000,
@@ -132,13 +133,9 @@ const statusConfig = {
   archived:  { label: 'Đã lưu trữ',  bg: 'bg-yellow-100', text: 'text-yellow-700', dot: 'bg-yellow-400' },
 };
 
-const typeConfig: Record<string, string> = {
-  apartment: 'Căn hộ chung cư',
-  villa: 'Biệt thự',
-  townhouse: 'Nhà phố',
-  commercial: 'Thương mại',
-  land: 'Đất nền',
-};
+const typeConfig: Record<string, string> = Object.fromEntries(
+  PROJECT_TYPE_OPTIONS.map((opt) => [opt.value, opt.label])
+);
 
 const districts = [
   { value: 'all', label: 'Tất cả khu vực' },
@@ -153,11 +150,7 @@ const districts = [
 
 const types = [
   { value: 'all', label: 'Tất cả loại hình' },
-  { value: 'apartment', label: 'Căn hộ chung cư' },
-  { value: 'villa', label: 'Biệt thự' },
-  { value: 'townhouse', label: 'Nhà phố' },
-  { value: 'land', label: 'Đất nền' },
-  { value: 'commercial', label: 'Thương mại' },
+  ...PROJECT_TYPE_OPTIONS,
 ];
 
 const statuses = [
@@ -193,7 +186,7 @@ const mapApiProject = (apiProj: any) => {
     developer: apiProj.developer || 'Chủ đầu tư',
     thumbnail: apiProj.thumbnail || '/images/image_data/nha-pho-de-palace-river.jpg',
     status: apiProj.status || 'selling',
-    type: apiProj.type || 'apartment',
+    type: apiProj.type || DEFAULT_PROJECT_TYPE,
     district: (() => {
       const name = apiProj.location?.district?.name || apiProj.district;
       if (!name) return 'tp-quang-ngai';

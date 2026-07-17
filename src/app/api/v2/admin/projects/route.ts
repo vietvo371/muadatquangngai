@@ -8,6 +8,7 @@ import { mapDistrictFromAddress } from '@/lib/api-resources/project-district-map
 import { validateProjectFields } from '@/lib/api-resources/project-validation';
 import { FieldError, validationErrorResponse, isInteger } from '@/lib/validation';
 import { slugify } from '@/lib/formatters';
+import { DEFAULT_PROJECT_TYPE } from '@/lib/project-type';
 
 function randomSuffix(length: number): string {
   const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -78,7 +79,7 @@ export async function POST(request: Request) {
   if (!('province_id' in body)) body.province_id = 64;
   if (!('user_id' in body)) body.user_id = Number(guard.id);
   if (!('status' in body)) body.status = 'draft';
-  if (!('type' in body)) body.type = 'townhouse';
+  if (!('type' in body)) body.type = DEFAULT_PROJECT_TYPE;
 
   if (!('district_id' in body)) {
     const addressText = (body.address as string) ?? '';
@@ -121,6 +122,7 @@ export async function POST(request: Request) {
       construction_progress: (body.construction_progress as number) ?? null,
       construction_note: (body.construction_note as string) ?? null,
       utilities: body.utilities ?? undefined,
+      floor_plans: body.floor_plans ?? undefined,
       address: body.address as string,
       thumbnail: (body.thumbnail as string) ?? null,
       view_count: 0,

@@ -123,6 +123,9 @@ export async function validateProjectFields(
   if (body.utilities !== undefined && body.utilities !== null && !Array.isArray(body.utilities)) {
     errors.push(new FieldError('utilities', 'Trường utilities phải là một mảng.'));
   }
+  if (body.floor_plans !== undefined && body.floor_plans !== null && !Array.isArray(body.floor_plans)) {
+    errors.push(new FieldError('floor_plans', 'Trường floor plans phải là một mảng.'));
+  }
 
   if (opts.requireAddress) {
     if (!isString(body.address) || !body.address) errors.push(new FieldError('address', 'Trường địa chỉ không được để trống.'));

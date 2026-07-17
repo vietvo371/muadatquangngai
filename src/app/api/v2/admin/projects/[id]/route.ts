@@ -99,7 +99,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   if ('investor' in body) body.developer = body.investor;
   if ('location' in body) body.address = body.location;
 
-  if ('location' in body || 'address' in body) {
+  // Chỉ suy luận district_id từ address khi client KHÔNG gửi kèm — form edit đã có
+  // LocationSelect chọn đúng 1 trong 96 xã/phường/đặc khu, không được ghi đè giá trị đó.
+  if (('location' in body || 'address' in body) && !('district_id' in body)) {
     const addressText = (body.address as string) ?? '';
     body.district_id = Number(mapDistrictFromAddress(addressText));
   }
@@ -138,6 +140,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   if ('construction_progress' in body) data.construction_progress = body.construction_progress;
   if ('construction_note' in body) data.construction_note = body.construction_note;
   if ('utilities' in body) data.utilities = body.utilities;
+  if ('floor_plans' in body) data.floor_plans = body.floor_plans;
   if ('address' in body) data.address = body.address;
   if ('thumbnail' in body) data.thumbnail = body.thumbnail;
 

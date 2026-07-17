@@ -60,6 +60,7 @@ import {
 } from 'lucide-react';
 import { formatPrice } from '@/lib/formatters';
 import { projectApi, type Project } from '@/lib/admin-api';
+import { DEFAULT_PROJECT_TYPE, getProjectTypeLabel } from '@/lib/project-type';
 
 // Dynamic client URL from env
 const CLIENT_URL = process.env.NEXT_PUBLIC_CLIENT_URL || 'http://localhost:3000';
@@ -72,19 +73,11 @@ type ProjectStatus = 'draft' | 'upcoming' | 'selling' | 'paused' | 'completed' |
 
 /**
  * getTypeLabel — Chuyển `type` thành nhãn hiển thị tiếng Việt.
- * Đồng bộ với các SelectItem trong form Thêm mới / Chỉnh sửa.
+ * Đồng bộ với PROJECT_TYPE_OPTIONS trong form Thêm mới / Chỉnh sửa (@/lib/project-type).
  * Thay cho trường `category` tự nhập trước đây.
  */
-const TYPE_LABELS: Record<string, string> = {
-  land:       'Đất nền',
-  villa:      'Biệt thự',
-  townhouse:  'Nhà phố / Shophouse',
-  apartment:  'Chung cư / Căn hộ',
-  commercial: 'Thương mại',
-};
-
 function getTypeLabel(type?: string): string {
-  return TYPE_LABELS[type ?? ''] ?? 'Bất động sản';
+  return getProjectTypeLabel(type);
 }
 
 /**
@@ -209,7 +202,7 @@ export default function ProjectsClient() {
           // category không có trên API — derive từ type thông qua getTypeLabel()
           investor: apiProj.developer ?? apiProj.investor ?? 'Đang cập nhật',
           created_at: apiProj.created_at,
-          type: apiProj.type || 'townhouse',
+          type: apiProj.type || DEFAULT_PROJECT_TYPE,
           description: apiProj.description || '',
           total_area: apiProj.scale?.total_area ?? apiProj.total_area ?? 0,
           total_units: apiProj.scale?.total_units ?? apiProj.total_units ?? 0,

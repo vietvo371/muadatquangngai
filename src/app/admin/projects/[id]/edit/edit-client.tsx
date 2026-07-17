@@ -28,6 +28,8 @@ import {
 import { projectApi, userAdminApi } from '@/lib/admin-api';
 import { slugify } from '@/lib/formatters';
 import ProjectLivePreview from '@/components/admin/ProjectLivePreview';
+import { FloorPlansEditor, type FloorPlanRow } from '@/components/admin/FloorPlansEditor';
+import { toStoredFloorPlans, fromStoredFloorPlans } from '@/lib/floor-plans';
 import { RichTextEditor } from '@/components/shared/RichTextEditor';
 import { ImageUploader, UploadedFile } from '@/components/shared/ImageUploader';
 import { AddressAutocomplete } from '@/components/shared/AddressAutocomplete';
@@ -35,6 +37,7 @@ import { PriceInput } from '@/components/shared/PriceInput';
 import { LocationSelect } from '@/components/shared/LocationSelect';
 // PREDEFINED_UTILITIES được chia sẻ với create form và ProjectPreview — Single Source of Truth
 import { PREDEFINED_UTILITIES } from '@/lib/project-utilities';
+import { PROJECT_TYPE_OPTIONS, DEFAULT_PROJECT_TYPE, isLandLikeProjectType } from '@/lib/project-type';
 
 
 interface ProjectFormData {
@@ -54,6 +57,8 @@ interface ProjectFormData {
   construction_note: string;
   province_id?: number;
   district_id?: number;
+  district_name?: string;
+  province_name?: string;
   ward_id?: number;
   agent_id?: number;
   location: string;
@@ -61,14 +66,14 @@ interface ProjectFormData {
   utilities: string[];
   status: string;
   thumbnail: string;
-  floor_plans?: Array<{ type: string; area: string; count: number; priceFrom: number }>;
+  floor_plans: FloorPlanRow[];
 }
 
 const initialFormData: ProjectFormData = {
   name: '',
   slug: '',
   investor: '',
-  type: 'townhouse',
+  type: DEFAULT_PROJECT_TYPE,
   min_price: 0,
   max_price: 0,
   total_area: 0,
@@ -88,6 +93,7 @@ const initialFormData: ProjectFormData = {
   utilities: [],
   status: 'draft',
   thumbnail: '',
+  floor_plans: [],
 };
 
 export default function EditProjectClient({ id }: { id: string }) {
@@ -128,14 +134,14 @@ export default function EditProjectClient({ id }: { id: string }) {
 
   const getLogicWarnings = () => {
     const warnings: string[] = [];
-    if (formData.type === 'apartment' && formData.total_floors < 1) {
-      warnings.push('Loại hình Chung cư thường có ít nhất 1 tầng cao.');
+    if (formData.type === 'nha-o-xa-hoi' && formData.total_floors < 1) {
+      warnings.push('Loại hình Nhà ở xã hội thường có ít nhất 1 tầng cao.');
     }
-    if (formData.type === 'land' && formData.total_floors > 1) {
-      warnings.push('Đất nền thường không ghi nhận số tầng cao dự án.');
+    if (isLandLikeProjectType(formData.type) && formData.total_floors > 1) {
+      warnings.push('Khu đô thị mới / Khu dân cư thường không ghi nhận số tầng cao dự án.');
     }
-    if (formData.type === 'land' && formData.total_units < 1) {
-      warnings.push('Đất nền nên ghi nhận tổng số lô đất (Tổng số căn).');
+    if (isLandLikeProjectType(formData.type) && formData.total_units < 1) {
+      warnings.push('Khu đô thị mới / Khu dân cư nên ghi nhận tổng số lô đất (Tổng số căn).');
     }
     if ((formData.status === 'selling' || formData.status === 'upcoming') && formData.handover_date) {
       const handover = new Date(formData.handover_date);
@@ -195,7 +201,7 @@ export default function EditProjectClient({ id }: { id: string }) {
           name: project.name || '',
           slug: project.slug || '',
           investor: project.developer ?? project.investor ?? '',
-          type: project.type || 'townhouse',
+          type: project.type || DEFAULT_PROJECT_TYPE,
           min_price: project.price?.from ?? project.price_from ?? project.min_price ?? 0,
           max_price: project.price?.to ?? project.price_to ?? project.max_price ?? 0,
           total_area: project.scale?.total_area ?? project.total_area ?? 0,
@@ -208,12 +214,14 @@ export default function EditProjectClient({ id }: { id: string }) {
           construction_note: project.construction_note || '',
           province_id: project.province_id ?? project.location?.province?.id ?? 64,
           district_id: project.district_id ?? project.location?.district?.id ?? undefined,
+          district_name: project.location?.district?.name ?? undefined,
+          province_name: project.location?.province?.name ?? undefined,
           ward_id: project.ward_id ?? project.location?.ward?.id ?? undefined,
           agent_id: project.agent_id ?? project.agent?.id ?? undefined,
           location: project.location?.address ?? project.address ?? project.location ?? '',
           description: project.description || '',
           utilities: Array.isArray(project.utilities) ? project.utilities : [],
-          floor_plans: Array.isArray(project.floor_plans) ? project.floor_plans : undefined,
+          floor_plans: fromStoredFloorPlans(project.floor_plans),
           status: project.status || 'draft',
           thumbnail: (project.images && project.images.length > 0) 
             ? project.images.join(',') 
@@ -361,6 +369,7 @@ export default function EditProjectClient({ id }: { id: string }) {
         utilities: formData.utilities.length > 0 ? formData.utilities : undefined,
         status: formData.status as any,
         thumbnail: formData.thumbnail || undefined,
+        floor_plans: toStoredFloorPlans(formData.floor_plans),
       };
 
       await projectApi.update(Number(id), payload);
@@ -500,14 +509,16 @@ export default function EditProjectClient({ id }: { id: string }) {
                     onValueChange={(val) => handleSelectChange('type', val)}
                   >
                     <SelectTrigger className="w-full h-10 text-sm rounded-xl border-gray-200 bg-white">
-                      <SelectValue placeholder="Chọn loại hình" />
+                      {/* Base UI Select.Value không tự resolve nhãn từ SelectItem như Radix —
+                          phải tự map value -> label bằng children function. */}
+                      <SelectValue placeholder="Chọn loại hình">
+                        {(value: string) => PROJECT_TYPE_OPTIONS.find((o) => o.value === value)?.label ?? value}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent className="rounded-xl">
-                      <SelectItem value="townhouse">Nhà phố</SelectItem>
-                      <SelectItem value="villa">Biệt thự</SelectItem>
-                      <SelectItem value="apartment">Chung cư</SelectItem>
-                      <SelectItem value="commercial">Thương mại / Shophouse</SelectItem>
-                      <SelectItem value="land">Đất nền</SelectItem>
+                      {PROJECT_TYPE_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -744,6 +755,12 @@ export default function EditProjectClient({ id }: { id: string }) {
             </CardContent>
           </Card>
 
+          {/* Card 4b: Loại mặt bằng điển hình */}
+          <FloorPlansEditor
+            value={formData.floor_plans}
+            onChange={(rows) => setFormData((prev) => ({ ...prev, floor_plans: rows }))}
+          />
+
           {/* Card 5: Vị trí & Trạng thái */}
           <Card className="border border-gray-100 shadow-sm rounded-2xl bg-white overflow-hidden hover:shadow-md transition-shadow duration-300">
             <CardHeader className="bg-gray-50/50 border-b border-gray-100 py-4 px-6">
@@ -765,6 +782,8 @@ export default function EditProjectClient({ id }: { id: string }) {
                       ...prev,
                       province_id: val.province_id,
                       district_id: val.district_id,
+                      district_name: val.district_name,
+                      province_name: val.province_name,
                       ward_id: val.ward_id,
                       location: prev.location || [val.ward_name, val.district_name, val.province_name].filter(Boolean).join(', ')
                     }));
@@ -924,6 +943,7 @@ export default function EditProjectClient({ id }: { id: string }) {
               images: projectImages.map(img => img.url),
               agentName: agents.find(a => String(a.id) === String(formData.agent_id))?.name,
               agentTitle: formData.agent_id ? 'Môi giới phụ trách' : undefined,
+              floor_plans: toStoredFloorPlans(formData.floor_plans),
             }}
           />
         </div>

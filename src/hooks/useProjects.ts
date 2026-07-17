@@ -17,7 +17,9 @@ export interface Project {
   description: string;
   thumbnail: string;
   status: 'upcoming' | 'selling' | 'completed' | 'paused';
-  type: 'apartment' | 'villa' | 'townhouse' | 'commercial' | 'land';
+  // Khớp slug PROJECT_CATEGORIES (xem @/lib/project-type) — dùng string vì nguồn thật là bảng
+  // categories, không phải enum cố định.
+  type: string;
   location: {
     province?: { id: number; name: string };
     district?: { id: number; name: string };

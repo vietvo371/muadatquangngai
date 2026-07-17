@@ -372,7 +372,10 @@ model projects {
   description                    String?
   thumbnail                      String?
   status                         String                    @default("upcoming") @db.VarChar(20)
-  type                           String                    @db.VarChar(20)
+  // VarChar(30) — đủ chỗ cho slug dài nhất trong PROJECT_CATEGORIES (@/lib/project-type),
+  // vd. "khu-nghi-duong-sinh-thai" (24 ký tự). VarChar(20) cũ tràn khi migrate LOẠI HÌNH
+  // sang khớp 7 mục menu "Dự án" (Notion "SỬA WEBSITE 17/07").
+  type                           String                    @db.VarChar(30)
   province_id                    BigInt
   district_id                    BigInt
   ward_id                        BigInt?

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef } from 'react';
+import { DEFAULT_PROJECT_TYPE } from '@/lib/project-type';
 
 /**
  * Dữ liệu nháp từ form quản trị — cùng shape với ProjectPreview cũ.
@@ -27,7 +28,9 @@ export interface LivePreviewData {
   images?: string[];
   agentName?: string;
   agentTitle?: string;
-  floor_plans?: Array<{ type: string; area: string; count: number; priceFrom: number }>;
+  floor_plans?: Array<{ type: string; area: string; count: number; priceFrom: number; visible?: boolean }>;
+  district_name?: string;
+  province_name?: string;
 }
 
 /**
@@ -42,11 +45,15 @@ function toApiShape(d: LivePreviewData) {
     name: d.name || 'Tên dự án',
     developer: d.investor || 'Chưa cập nhật',
     description: d.description || '',
-    type: d.type || 'townhouse',
+    type: d.type || DEFAULT_PROJECT_TYPE,
     status: d.status || 'selling',
     images,
     thumbnail: images[0] || undefined,
-    location: { address: d.location || '' },
+    location: {
+      address: d.location || '',
+      district: d.district_name ? { name: d.district_name } : undefined,
+      province: d.province_name ? { name: d.province_name } : undefined,
+    },
     scale: {
       total_area: d.total_area || 0,
       total_units: d.total_units || 0,

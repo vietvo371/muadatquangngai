@@ -1,22 +1,21 @@
 /**
- * Port của phần suy luận district_id từ address text trong
- * AdminProjectController@store/@update (Laravel dùng mb_strtolower + str_contains).
- * Danh sách id/từ khóa copy nguyên văn, chỉ đổi thứ tự if/else sang mảng để dễ đọc —
- * thứ tự kiểm tra PHẢI giữ nguyên vì "nghĩa hành"/"chợ chùa" đứng trước "trà bồng" v.v.
- * ảnh hưởng đến match đầu tiên khi address chứa nhiều từ khóa.
+ * Fallback: suy luận district_id từ address text khi client không gửi district_id kèm
+ * theo (chỉ dùng ở route tạo mới, xem admin/projects/route.ts POST). Sau sáp nhập 2025,
+ * tỉnh chỉ còn 96 xã/phường/đặc khu (id = 10000 + mã khoa, xem prisma/seed-data/qn-96-units.json)
+ * — id cũ (627-641, huyện/thị xã) đã bị xoá khỏi bảng districts, KHÔNG được dùng lại.
  */
 const DISTRICT_KEYWORDS: Array<{ keywords: string[]; id: bigint }> = [
-  { keywords: ['tư nghĩa'], id: BigInt(634) },
-  { keywords: ['sơn tịnh'], id: BigInt(631) },
-  { keywords: ['bình sơn'], id: BigInt(628) },
-  { keywords: ['đức phổ'], id: BigInt(636) },
-  { keywords: ['mộ đức'], id: BigInt(639) },
-  { keywords: ['nghĩa hành', 'chợ chùa'], id: BigInt(635) },
-  { keywords: ['lý sơn'], id: BigInt(641) },
-  { keywords: ['trà bồng'], id: BigInt(629) },
+  { keywords: ['tư nghĩa'], id: BigInt(10123) }, // Xã Tư Nghĩa
+  { keywords: ['sơn tịnh'], id: BigInt(10127) }, // Xã Sơn Tịnh
+  { keywords: ['bình sơn'], id: BigInt(10117) }, // Xã Bình Sơn
+  { keywords: ['đức phổ'], id: BigInt(10129) }, // Phường Đức Phổ
+  { keywords: ['mộ đức'], id: BigInt(10119) }, // Xã Mộ Đức
+  { keywords: ['nghĩa hành', 'chợ chùa'], id: BigInt(10122) }, // Xã Nghĩa Hành
+  { keywords: ['lý sơn'], id: BigInt(10124) }, // Đặc khu Lý Sơn
+  { keywords: ['trà bồng'], id: BigInt(10128) }, // Xã Trà Bồng
 ];
 
-const DEFAULT_DISTRICT_ID = BigInt(627); // TP Quảng Ngãi
+const DEFAULT_DISTRICT_ID = BigInt(10113); // Phường Cẩm Thành (trung tâm TP Quảng Ngãi cũ)
 
 export function mapDistrictFromAddress(address: string): bigint {
   const addr = address.toLowerCase();
