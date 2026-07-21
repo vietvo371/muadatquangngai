@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import api from '@/lib/axios';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,116 +17,59 @@ import {
   Star,
   ShieldCheck,
   Users,
-  CheckCircle,
 } from 'lucide-react';
-import { AgentCard } from '@/components/agent/AgentCard';
+import { AgentCard, type Agent } from '@/components/agent/AgentCard';
 
-const agents = [
-  {
-    id: 1,
-    name: 'Nguyễn Văn A',
-    avatar: null,
-    phone: '0901234567',
-    rating: 4.8,
-    review_count: 156,
-    total_listings: 45,
-    total_sold: 120,
-    experience_years: 10,
-    areas: ['Phường Cẩm Thành'],
-    company: 'Sàn GD BĐS Quảng Ngãi',
-    verified: true,
-  },
-  {
-    id: 2,
-    name: 'Trần Thị B',
-    avatar: null,
-    phone: '0912345678',
-    rating: 4.9,
-    review_count: 203,
-    total_listings: 68,
-    total_sold: 180,
-    experience_years: 7,
-    areas: ['Phường Cẩm Thành', 'Đặc khu Lý Sơn'],
-    company: 'Hải Phát Land',
-    verified: true,
-  },
-  {
-    id: 3,
-    name: 'Lê Văn C',
-    avatar: null,
-    phone: '0923456789',
-    rating: 4.6,
-    review_count: 89,
-    total_listings: 32,
-    total_sold: 65,
-    experience_years: 4,
-    areas: ['Đặc khu Lý Sơn', 'Xã Bình Sơn'],
-    company: 'Lý Sơn Real',
-    verified: false,
-  },
-  {
-    id: 4,
-    name: 'Phạm Thị D',
-    avatar: null,
-    phone: '0934567890',
-    rating: 4.7,
-    review_count: 134,
-    total_listings: 55,
-    total_sold: 98,
-    experience_years: 8,
-    areas: ['Phường Cẩm Thành'],
-    company: 'Đất Xanh Miền Trung',
-    verified: true,
-  },
-  {
-    id: 5,
-    name: 'Hoàng Văn E',
-    avatar: null,
-    phone: '0945678901',
-    rating: 4.5,
-    review_count: 67,
-    total_listings: 25,
-    total_sold: 40,
-    experience_years: 3,
-    areas: ['Xã Mộ Đức', 'Xã Nghĩa Hành'],
-    company: 'Tự do',
-    verified: false,
-  },
-  {
-    id: 6,
-    name: 'Đinh Thị F',
-    avatar: null,
-    phone: '0956789012',
-    rating: 5.0,
-    review_count: 312,
-    total_listings: 110,
-    total_sold: 250,
-    experience_years: 12,
-    areas: ['Xã Bình Sơn', 'Xã Sơn Tịnh'],
-    company: 'VSIP Quảng Ngãi',
-    verified: true,
-  }
-];
 
 export default function AgentsListPage() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [provinceFilter, setProvinceFilter] = useState('all');
-  const [sortBy, setSortBy] = useState('rating');
+  const [districtFilter, setDistrictFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('listings');
 
-  const filteredAgents = agents
-    .filter((agent) => {
-      if (searchQuery && !agent.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-      if (provinceFilter !== 'all' && !agent.areas.includes(provinceFilter)) return false;
-      return true;
-    })
-    .sort((a, b) => {
-      if (sortBy === 'rating') return b.rating - a.rating;
-      if (sortBy === 'listings') return b.total_listings - a.total_listings;
-      if (sortBy === 'reviews') return b.review_count - a.review_count;
-      return 0;
-    });
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [districts, setDistricts] = useState<Array<{ id: number; name: string }>>([]);
 
-  const avgRating = (agents.reduce((sum, a) => sum + a.rating, 0) / agents.length).toFixed(1);
+  // Khu vực nạp từ DB thay vì liệt kê tay — danh sách 96 xã/phường đổi thì trang tự theo.
+  useEffect(() => {
+    api.get('/api/v2/locations/provinces')
+      .then((res) => {
+        const province = res.data?.data?.[0];
+        if (!province) return;
+        return api.get(`/api/v2/locations/districts/${province.id}`)
+          .then((d) => setDistricts(d.data?.data ?? []));
+      })
+      .catch(() => setDistricts([]));
+  }, []);
+
+  const loadAgents = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ sort: sortBy, per_page: '48' });
+      if (searchQuery.trim()) params.set('q', searchQuery.trim());
+      if (districtFilter !== 'all') params.set('district_id', districtFilter);
+      const res = await api.get(`/api/v2/agents?${params.toString()}`);
+      setAgents(res.data?.data ?? []);
+      setTotal(res.data?.meta?.total ?? 0);
+    } catch {
+      setAgents([]);
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
+  }, [searchQuery, districtFilter, sortBy]);
+
+  // Gõ tìm kiếm thì hoãn một nhịp, tránh bắn request mỗi lần nhấn phím.
+  useEffect(() => {
+    const t = setTimeout(loadAgents, searchQuery ? 400 : 0);
+    return () => clearTimeout(t);
+  }, [loadAgents, searchQuery]);
+
+  const filteredAgents = agents;
+  const avgRating = agents.length
+    ? (agents.reduce((sum, a) => sum + (a.rating ?? 0), 0) / agents.length).toFixed(1)
+    : '0';
 
   return (
     <div className="flex flex-col bg-white">
@@ -212,25 +156,20 @@ export default function AgentsListPage() {
                 Danh sách Môi giới
               </h2>
               <p className="text-sm font-medium text-gray-500 mt-2">
-                Đã tìm thấy <span className="font-bold text-gray-900">{filteredAgents.length}</span> chuyên gia phù hợp với nhu cầu của bạn
+                Đã tìm thấy <span className="font-bold text-gray-900">{total}</span> chuyên gia phù hợp với nhu cầu của bạn
               </p>
             </div>
 
             <div className="flex flex-col sm:flex-row items-center gap-3">
-              <Select value={provinceFilter} onValueChange={(v) => v && setProvinceFilter(v)}>
+              <Select value={districtFilter} onValueChange={(v) => v && setDistrictFilter(v)}>
                 <SelectTrigger className="w-full sm:w-48 h-11 bg-white border-gray-200 rounded-xl font-medium">
                   <SelectValue placeholder="Khu vực hoạt động" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-72">
                   <SelectItem value="all">Tất cả khu vực</SelectItem>
-                  {/* Tên đơn vị theo cơ cấu sau sáp nhập 2025. Giá trị phải khớp đúng chuỗi
-                      trong mảng areas của từng môi giới, nếu không lọc sẽ không ra ai. */}
-                  <SelectItem value="Phường Cẩm Thành">Phường Cẩm Thành</SelectItem>
-                  <SelectItem value="Đặc khu Lý Sơn">Đặc khu Lý Sơn</SelectItem>
-                  <SelectItem value="Xã Mộ Đức">Xã Mộ Đức</SelectItem>
-                  <SelectItem value="Xã Bình Sơn">Xã Bình Sơn</SelectItem>
-                  <SelectItem value="Xã Sơn Tịnh">Xã Sơn Tịnh</SelectItem>
-                  <SelectItem value="Xã Nghĩa Hành">Xã Nghĩa Hành</SelectItem>
+                  {districts.map((d) => (
+                    <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
 
@@ -239,23 +178,31 @@ export default function AgentsListPage() {
                   <SelectValue placeholder="Sắp xếp theo" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="listings">Số tin đang đăng nhiều nhất</SelectItem>
                   <SelectItem value="rating">Đánh giá cao nhất</SelectItem>
-                  <SelectItem value="listings">Số tin đăng nhiều nhất</SelectItem>
-                  <SelectItem value="reviews">Lượt đánh giá nhiều nhất</SelectItem>
+                  <SelectItem value="newest">Tham gia gần đây nhất</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
 
           {/* Agents Grid */}
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-            {filteredAgents.map((agent) => (
-              <AgentCard key={agent.id} agent={agent} />
-            ))}
-          </div>
+          {loading ? (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="h-64 rounded-2xl bg-gray-100 animate-pulse" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+              {filteredAgents.map((agent) => (
+                <AgentCard key={agent.id} agent={agent} />
+              ))}
+            </div>
+          )}
 
           {/* Empty State */}
-          {filteredAgents.length === 0 && (
+          {!loading && filteredAgents.length === 0 && (
             <div className="text-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm mt-8">
               <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-5">
                 <Users className="h-10 w-10 text-gray-300" />
@@ -265,7 +212,7 @@ export default function AgentsListPage() {
               <Button 
                 variant="outline" 
                 className="mt-6 font-bold rounded-xl"
-                onClick={() => { setSearchQuery(''); setProvinceFilter('all'); }}
+                onClick={() => { setSearchQuery(''); setDistrictFilter('all'); }}
               >
                 Xóa bộ lọc
               </Button>

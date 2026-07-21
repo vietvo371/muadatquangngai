@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, use } from 'react';
+import { useState, use, useEffect } from 'react';
+import api from '@/lib/axios';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,7 +15,6 @@ import {
   Star,
   MapPin,
   Phone,
-  Mail,
   Calendar,
   ShieldCheck,
   Home,
@@ -26,101 +26,33 @@ import {
 } from 'lucide-react';
 import { formatDate } from '@/lib/formatters';
 
-// Mock agent data
-const agent = {
-  id: 1,
-  name: 'Nguyễn Văn A',
-  avatar: null,
-  phone: '0901234567',
-  email: 'nguyenvana@email.com',
-  address: 'Đà Nẵng',
-  areas: ['Phường Cẩm Thành', 'Đặc khu Lý Sơn'],
-  company: 'Sàn GD BĐS Quảng Ngãi',
-  rating: 4.8,
-  total_reviews: 156,
-  total_listings: 45,
-  total_sold: 120,
-  bio: 'Tôi là chuyên gia bất động sản với 10 năm kinh nghiệm tại khu vực Quảng Ngãi và Đà Nẵng. Chuyên môn chính của tôi là phân khúc căn hộ cao cấp, nhà phố thương mại và đất nền dự án ven biển. Phương châm làm việc: Uy tín tạo niềm tin, tận tâm tạo giá trị. Tôi cam kết mang đến cho khách hàng những sản phẩm BĐS chất lượng nhất với dịch vụ pháp lý minh bạch, nhanh gọn.',
-  verified: true,
-  verified_at: '2023-01-01',
-  joined_at: '2020-01-01',
-  social: {
-    facebook: 'https://facebook.com',
-    zalo: 'zalo.me',
-  },
-  stats: {
-    response_rate: 98,
-    response_time: '< 1 giờ',
-    years_experience: 10,
-  },
-};
-
-// Mock listings
-const listings = [
-  {
-    id: 1,
-    title: 'Căn hộ cao cấp 2PN view biển Mỹ Khê',
-    slug: 'can-ho-cao-cap-2pn-view-bien',
-    price: 3500000000,
-    area: 75,
-    thumbnail: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400&h=300&fit=crop',
-    address: 'Đường Võ Nguyên Giáp, Sơn Trà, Đà Nẵng',
-    type: 'apartment',
-    bedrooms: 2,
-    status: 'active',
-  },
-  {
-    id: 2,
-    title: 'Nhà phố 3 tầng mặt tiền đường lớn',
-    slug: 'nha-pho-3-tang-mat-tien',
-    price: 4500000000,
-    area: 120,
-    thumbnail: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400&h=300&fit=crop',
-    address: 'Quang Trung, Hải Châu, Đà Nẵng',
-    type: 'townhouse',
-    bedrooms: 4,
-    status: 'active',
-  },
-  {
-    id: 3,
-    title: 'Đất nền KDC An Phú Quý 200m2',
-    slug: 'dat-nen-kdc-an-phu-quy',
-    price: 1800000000,
-    area: 200,
-    thumbnail: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=400&h=300&fit=crop',
-    address: 'Tịnh Long, Quảng Ngãi',
-    type: 'land',
-    status: 'active',
-  },
-];
-
-// Mock reviews
-const reviews = [
-  {
-    id: 1,
-    user: { name: 'Khách hàng A', avatar: null },
-    rating: 5,
-    content: 'Anh A rất nhiệt tình, tư vấn chi tiết và hỗ trợ xuyên suốt quá trình giao dịch. Các thủ tục pháp lý được xử lý nhanh gọn. Highly recommended!',
-    created_at: '2024-01-15',
-    property: 'Căn hộ cao cấp 2PN',
-  },
-  {
-    id: 2,
-    user: { name: 'Khách hàng B', avatar: null },
-    rating: 5,
-    content: 'Dịch vụ chuyên nghiệp, thủ tục nhanh gọn. Đã mua nhà thành công nhờ sự hỗ trợ của anh A. Sẽ tiếp tục hợp tác trong tương lai.',
-    created_at: '2024-01-10',
-    property: 'Nhà phố 3 tầng',
-  },
-  {
-    id: 3,
-    user: { name: 'Khách hàng C', avatar: null },
-    rating: 4,
-    content: 'Tư vấn tốt, sản phẩm đa dạng và giá cả hợp lý so với thị trường. Điểm trừ nhỏ là do lịch bận nên thời gian xem nhà bị dời lại 1 ngày.',
-    created_at: '2024-01-05',
-    property: 'Đất nền KDC',
-  },
-];
+/** Khớp phản hồi GET /api/v2/agents/[id]. */
+interface AgentProfile {
+  id: number;
+  name: string;
+  avatar: string | null;
+  phone: string | null;
+  bio: string | null;
+  address: string | null;
+  rating: number;
+  review_count: number;
+  total_listings: number;
+  company: string | null;
+  district: { id: number; name: string } | null;
+  province: { id: number; name: string } | null;
+  verified: boolean;
+  license_number: string | null;
+  joined_at: string | null;
+  reviews: Array<{
+    id: number;
+    rating: number;
+    comment: string | null;
+    created_at: string | null;
+    reviewer: { id: number; name: string; avatar: string | null };
+  }>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  properties: any[];
+}
 
 export default function AgentProfilePage({
   params,
@@ -128,9 +60,44 @@ export default function AgentProfilePage({
   params: Promise<{ id: string }>;
 }) {
   const unwrappedParams = use(params);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const id = unwrappedParams?.id;
   const [activeTab, setActiveTab] = useState('listings');
+
+  const [agent, setAgent] = useState<AgentProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+
+  useEffect(() => {
+    if (!id) return;
+    // Không gọi setLoading(true) ngay trong thân effect — state khởi tạo đã là true, và gọi
+    // setState đồng bộ ở đây làm React render lồng thêm một vòng không cần thiết.
+    api.get(`/api/v2/agents/${id}`)
+      .then((res) => setAgent(res.data?.data ?? null))
+      .catch(() => setNotFound(true))
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="bg-gray-50 min-h-screen flex items-center justify-center">
+        <p className="text-gray-500">Đang tải hồ sơ môi giới...</p>
+      </div>
+    );
+  }
+
+  if (notFound || !agent) {
+    return (
+      <div className="bg-gray-50 min-h-screen flex flex-col items-center justify-center gap-4 px-4">
+        <p className="text-lg font-bold text-gray-900">Không tìm thấy nhà môi giới này</p>
+        <Link href="/moi-gioi" className="text-primary font-semibold hover:underline">
+          Quay lại danh bạ môi giới
+        </Link>
+      </div>
+    );
+  }
+
+  const listings = agent.properties;
+  const reviews = agent.reviews;
 
   return (
     <div className="bg-gray-50 min-h-screen pb-20">
@@ -191,7 +158,7 @@ export default function AgentProfilePage({
                     <span className="w-1 h-1 rounded-full bg-gray-300"></span>
                     <span className="flex items-center gap-1.5">
                       <MapPin className="h-4 w-4 text-gray-400" />
-                      {agent.areas.join(', ')}
+                      {agent.district?.name ?? agent.province?.name ?? 'Quảng Ngãi'}
                     </span>
                   </div>
                 </div>
@@ -201,7 +168,7 @@ export default function AgentProfilePage({
                   <Star className="h-6 w-6 fill-amber-500 text-amber-500" />
                   <div className="text-left">
                     <p className="text-lg font-black text-gray-900 leading-none">{agent.rating} <span className="text-sm font-medium text-gray-500">/ 5</span></p>
-                    <p className="text-xs font-bold text-gray-500 uppercase">{agent.total_reviews} đánh giá</p>
+                    <p className="text-xs font-bold text-gray-500 uppercase">{agent.review_count} đánh giá</p>
                   </div>
                 </div>
               </div>
@@ -238,26 +205,21 @@ export default function AgentProfilePage({
               <div className="p-4 bg-gray-50 border-b border-gray-100">
                 <h3 className="font-bold text-gray-900 flex items-center gap-2">
                   <TrendingUp className="h-5 w-5 text-primary" />
-                  Thống kê giao dịch
+                  Thống kê
                 </h3>
               </div>
+              {/* Chỉ hiện con số có nguồn trong DB. Trước đây khối này có "Đã bán/thuê 120",
+                  "Tỷ lệ phản hồi 98%", "Kinh nghiệm 10 năm" — hệ thống không theo dõi bất kỳ
+                  chỉ số nào trong đó, toàn bộ là số bịa. */}
               <CardContent className="p-5">
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-white border border-gray-100 rounded-xl p-3 text-center shadow-sm">
-                    <p className="text-3xl font-black text-gray-900 mb-1">{agent.total_sold}</p>
-                    <p className="text-xs font-bold text-gray-500 uppercase">Đã bán/thuê</p>
-                  </div>
                   <div className="bg-white border border-gray-100 rounded-xl p-3 text-center shadow-sm">
                     <p className="text-3xl font-black text-primary mb-1">{agent.total_listings}</p>
                     <p className="text-xs font-bold text-gray-500 uppercase">Tin đang đăng</p>
                   </div>
                   <div className="bg-white border border-gray-100 rounded-xl p-3 text-center shadow-sm">
-                    <p className="text-2xl font-black text-gray-900 mb-1">{agent.stats.response_rate}%</p>
-                    <p className="text-xs font-bold text-gray-500 uppercase">Tỷ lệ phản hồi</p>
-                  </div>
-                  <div className="bg-white border border-gray-100 rounded-xl p-3 text-center shadow-sm">
-                    <p className="text-2xl font-black text-gray-900 mb-1">{agent.stats.years_experience} năm</p>
-                    <p className="text-xs font-bold text-gray-500 uppercase">Kinh nghiệm</p>
+                    <p className="text-3xl font-black text-gray-900 mb-1">{agent.review_count}</p>
+                    <p className="text-xs font-bold text-gray-500 uppercase">Lượt đánh giá</p>
                   </div>
                 </div>
               </CardContent>
@@ -285,12 +247,6 @@ export default function AgentProfilePage({
                   </div>
                   <div className="flex items-center gap-3 text-[15px]">
                     <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center shrink-0">
-                      <Mail className="h-4 w-4 text-gray-500" />
-                    </div>
-                    <span className="font-medium text-gray-900">{agent.email}</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-[15px]">
-                    <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center shrink-0">
                       <MapPin className="h-4 w-4 text-gray-500" />
                     </div>
                     <span className="font-medium text-gray-900">{agent.address}</span>
@@ -299,7 +255,7 @@ export default function AgentProfilePage({
                     <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center shrink-0">
                       <Calendar className="h-4 w-4 text-gray-500" />
                     </div>
-                    <span className="font-medium text-gray-500">Thành viên từ {formatDate(agent.joined_at)}</span>
+                    <span className="font-medium text-gray-500">Thành viên từ {agent.joined_at ? formatDate(agent.joined_at) : 'chưa rõ'}</span>
                   </div>
                 </div>
               </CardContent>
@@ -355,7 +311,7 @@ export default function AgentProfilePage({
                             <Star key={i} className={`h-5 w-5 ${i < Math.floor(agent.rating) ? 'fill-amber-500 text-amber-500' : 'text-amber-200 fill-amber-200'}`} />
                           ))}
                         </div>
-                        <p className="text-sm font-bold text-gray-500 uppercase">{agent.total_reviews} đánh giá</p>
+                        <p className="text-sm font-bold text-gray-500 uppercase">{agent.review_count} đánh giá</p>
                       </div>
                       
                       <div className="flex-1 w-full space-y-2">
@@ -376,7 +332,18 @@ export default function AgentProfilePage({
                   </Card>
 
                   {reviews.map((review) => (
-                    <ReviewCard key={review.id} review={review} showProperty />
+                    <ReviewCard
+                      key={review.id}
+                      // API trả reviewer/comment, ReviewCard nhận user/content — chuyển ở đây
+                      // thay vì đổi ReviewCard vì component đó còn dùng ở trang chi tiết BĐS.
+                      review={{
+                        id: review.id,
+                        user: { name: review.reviewer.name, avatar: review.reviewer.avatar },
+                        rating: review.rating,
+                        content: review.comment ?? '',
+                        created_at: review.created_at ?? '',
+                      }}
+                    />
                   ))}
                 </div>
               )}

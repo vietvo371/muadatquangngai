@@ -3,19 +3,24 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Star, Phone, MapPin, Building, ChevronRight } from 'lucide-react';
+import { Star, Phone, MapPin, Building, ChevronRight, ShieldCheck } from 'lucide-react';
 
-interface Agent {
+/**
+ * Khớp phản hồi GET /api/v2/agents. Nhiều trường cho phép rỗng vì DB không bắt buộc —
+ * môi giới mới đăng ký có thể chưa điền công ty, chưa có đánh giá nào.
+ */
+export interface Agent {
   id: number;
   name: string;
   avatar: string | null;
-  phone: string;
+  phone: string | null;
+  bio?: string | null;
   rating?: number;
   review_count?: number;
   total_listings?: number;
-  experience_years?: number;
-  areas?: string[];
-  company?: string;
+  company?: string | null;
+  district?: { id: number; name: string } | null;
+  verified?: boolean;
   slug?: string;
 }
 
@@ -57,10 +62,17 @@ export function AgentCard({ agent }: AgentCardProps) {
                   <Star className="h-3.5 w-3.5 fill-yellow-500 text-yellow-500" />
                   {agent.rating || 5.0} <span className="font-medium text-gray-400">({agent.review_count || 0})</span>
                 </div>
-                <div className="w-1 h-1 rounded-full bg-gray-300"></div>
-                <div className="font-medium text-gray-600">
-                  {agent.experience_years ? `${agent.experience_years} năm KN` : 'Chuyên nghiệp'}
-                </div>
+                {agent.verified && (
+                  <>
+                    <div className="w-1 h-1 rounded-full bg-gray-300"></div>
+                    {/* Chỉ hiện khi hồ sơ đã được duyệt trong bảng verifications — không gắn
+                        nhãn "chuyên nghiệp" cho mọi người như trước. */}
+                    <div className="flex items-center gap-1 font-medium text-primary">
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                      Đã xác minh
+                    </div>
+                  </>
+                )}
               </div>
               
               {agent.company && (
@@ -82,8 +94,7 @@ export function AgentCard({ agent }: AgentCardProps) {
                 <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Khu vực</p>
                 <p className="font-bold text-gray-900 text-sm leading-none flex items-center justify-end gap-1">
                   <MapPin className="h-3 w-3 text-gray-400" />
-                  {agent.areas && agent.areas.length > 0 ? agent.areas[0] : 'Quảng Ngãi'}
-                  {agent.areas && agent.areas.length > 1 && <span className="text-gray-400 font-medium">+{agent.areas.length - 1}</span>}
+                  {agent.district?.name ?? 'Quảng Ngãi'}
                 </p>
               </div>
             </div>
@@ -91,10 +102,19 @@ export function AgentCard({ agent }: AgentCardProps) {
         </div>
 
         <div className="grid grid-cols-2 border-t border-gray-100 divide-x divide-gray-100">
-          <Button variant="ghost" className="h-12 rounded-none text-primary hover:text-primary hover:bg-primary-light/10 font-bold text-[13px]">
-            <Phone className="h-4 w-4 mr-1.5" />
-            Gọi ngay
-          </Button>
+          {agent.phone ? (
+            <a href={`tel:${agent.phone}`} className="flex w-full">
+              <Button variant="ghost" className="h-12 w-full rounded-none text-primary hover:text-primary hover:bg-primary-light/10 font-bold text-[13px]">
+                <Phone className="h-4 w-4 mr-1.5" />
+                Gọi ngay
+              </Button>
+            </a>
+          ) : (
+            <Button variant="ghost" disabled className="h-12 rounded-none font-bold text-[13px] text-gray-400">
+              <Phone className="h-4 w-4 mr-1.5" />
+              Chưa có SĐT
+            </Button>
+          )}
           <Link href={agentUrl} className="flex w-full">
             <Button variant="ghost" className="h-12 w-full rounded-none text-gray-600 hover:text-gray-900 font-bold bg-white text-[13px]">
               Xem hồ sơ
