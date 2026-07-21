@@ -130,7 +130,45 @@ export async function POST(request: Request) {
   }
   errors.push(...(await validateFeatureIds(body.feature_ids)));
 
+  // Ảnh: client upload thẳng lên Cloudinary rồi gửi kèm URL. Chỉ nhận URL (không nhận
+  // file) nên chỉ cần validate kiểu và độ dài khớp cột VarChar(500).
+  const rawImages = body.images;
+  let images: Array<{ url: string; thumbnail: string | null; is_primary: boolean; sort_order: number }> = [];
+  if (rawImages !== undefined && rawImages !== null) {
+    if (!Array.isArray(rawImages)) {
+      errors.push(new FieldError('images', 'Trường hình ảnh phải là một mảng.'));
+    } else if (rawImages.length > 20) {
+      errors.push(new FieldError('images', 'Trường hình ảnh không được nhiều hơn 20 ảnh.'));
+    } else {
+      for (let i = 0; i < rawImages.length; i++) {
+        const img = rawImages[i];
+        const url = img && isString(img.url) ? img.url : undefined;
+        if (!url) {
+          errors.push(new FieldError(`images.${i}.url`, 'Trường đường dẫn ảnh không được để trống.'));
+        } else if (url.length > 500) {
+          errors.push(new FieldError(`images.${i}.url`, 'Trường đường dẫn ảnh không được lớn hơn 500 ký tự.'));
+        }
+      }
+      if (errors.length === 0) {
+        images = rawImages.map((img: Record<string, unknown>, i: number) => ({
+          url: img.url as string,
+          thumbnail: isString(img.thumbnail) && img.thumbnail.length <= 500 ? img.thumbnail : null,
+          is_primary: Boolean(img.is_primary),
+          sort_order: isInteger(img.sort_order) ? (img.sort_order as number) : i,
+        }));
+        // Luôn đảm bảo đúng 1 ảnh đại diện — nếu client không đánh dấu thì lấy ảnh đầu.
+        const primaryIdx = images.findIndex((img) => img.is_primary);
+        images = images.map((img, i) => ({
+          ...img,
+          is_primary: i === (primaryIdx >= 0 ? primaryIdx : 0),
+        }));
+      }
+    }
+  }
+
   if (errors.length > 0) return validationErrorResponse(errors);
+
+  const primaryImage = images.find((img) => img.is_primary) ?? images[0];
 
   const now = new Date();
   const slug = `${slugify(title!)}-${randomSuffix(6)}`;
@@ -172,9 +210,25 @@ export async function POST(request: Request) {
       depth: body.depth != null ? String(body.depth) : null,
       meta_title: body.meta_title ?? null,
       meta_description: body.meta_description ?? null,
+      thumbnail: primaryImage?.thumbnail ?? primaryImage?.url ?? null,
       published_at: now,
       created_at: now,
       updated_at: now,
+      // Nested create — property + ảnh ghi chung một transaction ngầm của Prisma,
+      // không sinh tin mồ côi không ảnh nếu bước ghi ảnh lỗi.
+      ...(images.length > 0 && {
+        property_media: {
+          create: images.map((img) => ({
+            type: 'image',
+            url: img.url,
+            thumbnail: img.thumbnail,
+            is_primary: img.is_primary,
+            sort_order: img.sort_order,
+            created_at: now,
+            updated_at: now,
+          })),
+        },
+      }),
     },
     include: PROPERTY_INCLUDE,
   });

@@ -39,7 +39,7 @@ interface PropertyFormData {
   street: string;
   
   // Step 2: Media
-  images: Array<{ url: string; name: string; size: number; isPrimary?: boolean }>;
+  images: Array<{ url: string; thumbnail?: string; name: string; size: number; isPrimary?: boolean }>;
   
   // Step 3: Details & Pricing
   price: number;
@@ -150,7 +150,9 @@ export default function DangTinPage() {
   const canProceed = () => {
     switch (currentStep) {
       case 1:
-        return formData.type && formData.category_id && formData.title.length >= 10 && formData.description.length >= 20 && formData.province_id && formData.district_id;
+        // Mô tả tối thiểu 50 ký tự — khớp đúng validate của POST /api/v2/my/properties,
+        // nếu để 20 thì user đi hết 4 bước rồi mới bị server từ chối ở bước cuối.
+        return formData.type && formData.category_id && formData.title.length >= 10 && formData.description.length >= 50 && formData.province_id && formData.district_id;
       case 2:
         return formData.images.length > 0;
       case 3:
@@ -207,9 +209,17 @@ export default function DangTinPage() {
         street: formData.street || undefined,
         address: address || formData.street || 'Việt Nam',
         feature_ids: formData.features.length > 0 ? formData.features : undefined,
+        // Ảnh đã upload sẵn lên Cloudinary ở bước 2 — chỉ gửi URL để API ghi vào
+        // property_media. Thiếu mảng này thì ảnh người dùng tải lên bị mất trắng.
+        images: formData.images.map((img, i) => ({
+          url: img.url,
+          thumbnail: img.thumbnail,
+          is_primary: img.isPrimary ?? i === 0,
+          sort_order: i,
+        })),
       };
 
-      const response = await api.post('/api/v2/properties', payload);
+      const response = await api.post('/api/v2/my/properties', payload);
 
       if (response.data?.success || response.status === 201) {
         toast.success('Đăng tin thành công!', {
@@ -336,6 +346,12 @@ export default function DangTinPage() {
                     rows={7}
                     className="mt-2 bg-gray-50 border-gray-200 focus:ring-primary focus:border-primary resize-none"
                   />
+                  <div className="flex justify-between items-center mt-1.5">
+                    <p className="text-xs text-gray-500">Tối thiểu 50 ký tự</p>
+                    <p className={`text-xs font-medium ${formData.description.length < 50 ? 'text-gray-400' : 'text-green-600'}`}>
+                      {formData.description.length}/50
+                    </p>
+                  </div>
                 </div>
               </section>
 
@@ -562,7 +578,10 @@ export default function DangTinPage() {
           {currentStep === 4 && (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <h3 className="text-lg font-bold text-gray-900 mb-2 pb-2 border-b text-center">Chọn gói đăng tin</h3>
-              <p className="text-center text-gray-500 text-sm mb-8">Tin đăng sẽ được kiểm duyệt trong vòng 24h sau khi thanh toán.</p>
+              <p className="text-center text-gray-500 text-sm mb-2">Tin đăng sẽ được kiểm duyệt trong vòng 24h.</p>
+              <p className="text-center text-gray-400 text-[13px] mb-8">
+                Các gói trả phí đang được hoàn thiện — hiện tại tin đăng miễn phí với gói Tin Thường.
+              </p>
               
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {PACKAGES.map((pkg) => (
@@ -575,6 +594,7 @@ export default function DangTinPage() {
                     features={pkg.features}
                     isPopular={pkg.isPopular}
                     color={pkg.color}
+                    comingSoon={pkg.price > 0}
                     selected={formData.package_id === pkg.id}
                     onSelect={(id) => updateFormData({ package_id: id })}
                   />

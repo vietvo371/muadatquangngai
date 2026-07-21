@@ -12,6 +12,8 @@ interface PackageCardProps {
   isPopular?: boolean;
   color: 'normal' | 'vip' | 'vip_plus' | 'diamond';
   selected?: boolean;
+  /** Gói chưa mở bán (chưa nối cổng thanh toán) — hiển thị mờ, không chọn được. */
+  comingSoon?: boolean;
   onSelect: (id: string) => void;
 }
 
@@ -23,17 +25,27 @@ export function PackageCard({
   features,
   isPopular,
   selected,
+  comingSoon,
   onSelect,
 }: PackageCardProps) {
   return (
-    <div 
+    <div
       className={cn(
-        "relative rounded-2xl border-2 transition-all duration-300 cursor-pointer overflow-hidden bg-white",
-        selected ? "border-primary bg-primary-light shadow-md" : "border-gray-100 hover:border-primary/50 hover:shadow-sm"
+        "relative rounded-2xl border-2 transition-all duration-300 overflow-hidden bg-white",
+        comingSoon
+          ? "border-gray-100 opacity-60 cursor-not-allowed"
+          : selected
+            ? "border-primary bg-primary-light shadow-md cursor-pointer"
+            : "border-gray-100 hover:border-primary/50 hover:shadow-sm cursor-pointer"
       )}
-      onClick={() => onSelect(id)}
+      onClick={() => { if (!comingSoon) onSelect(id); }}
+      aria-disabled={comingSoon}
     >
-      {isPopular && (
+      {comingSoon ? (
+        <div className="absolute top-0 right-0 bg-gray-400 text-white text-[11px] font-bold px-3 py-1 rounded-bl-xl rounded-tr-xl">
+          Sắp có
+        </div>
+      ) : isPopular && (
         <div className="absolute top-0 right-0 bg-primary text-white text-[11px] font-bold px-3 py-1 rounded-bl-xl rounded-tr-xl">
           Khuyên dùng
         </div>
@@ -58,9 +70,11 @@ export function PackageCard({
 
         <div className={cn(
           "w-full h-10 rounded-xl flex items-center justify-center font-bold text-[14px] transition-colors",
-          selected ? "bg-primary text-white" : "bg-gray-50 text-gray-700 group-hover:bg-gray-100"
+          comingSoon
+            ? "bg-gray-100 text-gray-400"
+            : selected ? "bg-primary text-white" : "bg-gray-50 text-gray-700 group-hover:bg-gray-100"
         )}>
-          {selected ? 'Đang chọn' : 'Chọn gói này'}
+          {comingSoon ? 'Sắp ra mắt' : selected ? 'Đang chọn' : 'Chọn gói này'}
         </div>
       </div>
     </div>
