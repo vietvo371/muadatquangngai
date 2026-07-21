@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, Building2, MapPin, Phone, ShieldCheck, Users, ChevronRight, Globe } from 'lucide-react';
+import { AGENCY_BUSINESS_TYPES, agencyBusinessTypeLabel } from '@/lib/agency-business-types';
 
 interface Agency {
   id: number;
@@ -19,6 +20,7 @@ interface Agency {
   address: string | null;
   phone: string | null;
   website: string | null;
+  business_type: string;
   verified: boolean;
   agent_count: number;
   total_listings: number;
@@ -31,6 +33,7 @@ export default function AgenciesPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [districtFilter, setDistrictFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
   const [sortBy, setSortBy] = useState('listings');
   const [districts, setDistricts] = useState<Array<{ id: number; name: string }>>([]);
 
@@ -52,6 +55,7 @@ export default function AgenciesPage() {
       const params = new URLSearchParams({ sort: sortBy, per_page: '48' });
       if (searchQuery.trim()) params.set('q', searchQuery.trim());
       if (districtFilter !== 'all') params.set('district_id', districtFilter);
+      if (typeFilter !== 'all') params.set('business_type', typeFilter);
       const res = await api.get(`/api/v2/agencies?${params.toString()}`);
       setAgencies(res.data?.data ?? []);
       setTotal(res.data?.meta?.total ?? 0);
@@ -61,7 +65,7 @@ export default function AgenciesPage() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, districtFilter, sortBy]);
+  }, [searchQuery, districtFilter, typeFilter, sortBy]);
 
   // Gõ tìm kiếm thì hoãn một nhịp, tránh bắn request mỗi lần nhấn phím.
   useEffect(() => {
@@ -91,6 +95,18 @@ export default function AgenciesPage() {
                 className="pl-9 h-11 bg-gray-50 border-gray-200 rounded-xl"
               />
             </div>
+
+            <Select value={typeFilter} onValueChange={(v) => v && setTypeFilter(v)}>
+              <SelectTrigger className="w-full sm:w-56 h-11 bg-white border-gray-200 rounded-xl font-medium">
+                <SelectValue placeholder="Lĩnh vực" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả lĩnh vực</SelectItem>
+                {AGENCY_BUSINESS_TYPES.map((t) => (
+                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
             <Select value={districtFilter} onValueChange={(v) => v && setDistrictFilter(v)}>
               <SelectTrigger className="w-full sm:w-52 h-11 bg-white border-gray-200 rounded-xl font-medium">
@@ -152,12 +168,17 @@ export default function AgenciesPage() {
                       <Link href={`/doanh-nghiep/${a.slug}`} className="font-bold text-gray-900 hover:text-primary line-clamp-2">
                         {a.name}
                       </Link>
-                      {a.verified && (
-                        <Badge className="mt-1 bg-primary-light/60 text-primary border-0 text-[11px] font-semibold gap-1">
-                          <ShieldCheck className="h-3 w-3" />
-                          Đã xác minh
+                      <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                        <Badge variant="outline" className="text-[11px] font-medium text-gray-500 border-gray-200">
+                          {agencyBusinessTypeLabel(a.business_type)}
                         </Badge>
-                      )}
+                        {a.verified && (
+                          <Badge className="bg-primary-light/60 text-primary border-0 text-[11px] font-semibold gap-1">
+                            <ShieldCheck className="h-3 w-3" />
+                            Đã xác minh
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -180,19 +201,23 @@ export default function AgenciesPage() {
                     )}
                   </div>
 
-                  <div className="bg-gray-50 rounded-xl p-3 flex justify-between items-center mb-3">
-                    <div>
-                      <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Tin đang đăng</p>
-                      <p className="font-extrabold text-primary text-lg leading-none mt-0.5">{a.total_listings}</p>
+                  {/* Chỉ sàn giao dịch mới có môi giới/tin đăng gắn kèm — chủ đầu tư, nhà
+                      thầu... hiện khối này sẽ luôn là 0/0, không có ý nghĩa gì để xem. */}
+                  {a.business_type === 'brokerage' && (
+                    <div className="bg-gray-50 rounded-xl p-3 flex justify-between items-center mb-3">
+                      <div>
+                        <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Tin đang đăng</p>
+                        <p className="font-extrabold text-primary text-lg leading-none mt-0.5">{a.total_listings}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Môi giới</p>
+                        <p className="font-bold text-gray-900 text-lg leading-none mt-0.5 flex items-center justify-end gap-1">
+                          <Users className="h-3.5 w-3.5 text-gray-400" />
+                          {a.agent_count}
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Môi giới</p>
-                      <p className="font-bold text-gray-900 text-lg leading-none mt-0.5 flex items-center justify-end gap-1">
-                        <Users className="h-3.5 w-3.5 text-gray-400" />
-                        {a.agent_count}
-                      </p>
-                    </div>
-                  </div>
+                  )}
 
                   <Link
                     href={`/doanh-nghiep/${a.slug}`}

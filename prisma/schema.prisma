@@ -103,10 +103,10 @@ model districts {
   properties  properties[]
   users       users[]
   wards       wards[]
+  agencies    agencies[]
 
   @@index([province_id], map: "districts_province_id_index")
   @@index([slug], map: "districts_slug_index")
-  agencies    agencies[]
 }
 
 model failed_jobs {
@@ -552,10 +552,10 @@ model provinces {
   projects   projects[]
   properties properties[]
   users      users[]
+  agencies   agencies[]
 
   @@index([region], map: "provinces_region_index")
   @@index([slug], map: "provinces_slug_index")
-  agencies   agencies[]
 }
 
 model reports {
@@ -658,23 +658,23 @@ model subscriptions {
 }
 
 model transactions {
-  id             BigInt    @id @default(autoincrement())
-  uuid           String    @unique(map: "transactions_uuid_unique") @db.Uuid
-  user_id        BigInt
-  type           String    @db.VarChar(20)
-  method         String?   @db.VarChar(20)
-  amount         Decimal   @db.Decimal(15, 0)
-  status         String    @default("pending") @db.VarChar(20)
-  reference_type String?   @db.VarChar(100)
-  reference_id   BigInt?
-  gateway_ref    String?   @db.VarChar(255)
+  id              BigInt    @id @default(autoincrement())
+  uuid            String    @unique(map: "transactions_uuid_unique") @db.Uuid
+  user_id         BigInt
+  type            String    @db.VarChar(20)
+  method          String?   @db.VarChar(20)
+  amount          Decimal   @db.Decimal(15, 0)
+  status          String    @default("pending") @db.VarChar(20)
+  reference_type  String?   @db.VarChar(100)
+  reference_id    BigInt?
+  gateway_ref     String?   @db.VarChar(255)
   // Khoá chống tạo giao dịch trùng khi người dùng bấm thanh toán nhiều lần (spec mục 8.3).
   // Unique + nullable: Postgres cho phép nhiều NULL nên giao dịch cũ không bị ảnh hưởng.
-  idempotency_key String?  @unique(map: "transactions_idempotency_key_unique") @db.VarChar(64)
-  note           String?
-  created_at     DateTime? @db.Timestamp(0)
-  updated_at     DateTime? @db.Timestamp(0)
-  users          users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "transactions_user_id_foreign")
+  idempotency_key String?   @unique(map: "transactions_idempotency_key_unique") @db.VarChar(64)
+  note            String?
+  created_at      DateTime? @db.Timestamp(0)
+  updated_at      DateTime? @db.Timestamp(0)
+  users           users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "transactions_user_id_foreign")
 
   @@index([status], map: "transactions_status_index")
   @@index([type], map: "transactions_type_index")
@@ -687,21 +687,25 @@ model transactions {
 /// công ty gõ lệch một dấu là thành hai công ty khác nhau, và không thể có logo, trang
 /// riêng hay đếm tin theo công ty. Cột cũ vẫn giữ để không mất dữ liệu đã nhập.
 model agencies {
-  id          BigInt     @id @default(autoincrement())
-  name        String     @db.VarChar(255)
-  slug        String     @unique(map: "agencies_slug_unique") @db.VarChar(255)
-  logo        String?    @db.VarChar(500)
-  description String?
-  address     String?    @db.VarChar(500)
-  province_id BigInt?
-  district_id BigInt?
-  phone       String?    @db.VarChar(20)
-  email       String?    @db.VarChar(255)
-  website     String?    @db.VarChar(255)
-  is_verified Boolean    @default(false)
-  is_active   Boolean    @default(true)
-  created_at  DateTime?  @db.Timestamp(0)
-  updated_at  DateTime?  @db.Timestamp(0)
+  id            BigInt    @id @default(autoincrement())
+  name          String    @db.VarChar(255)
+  slug          String    @unique(map: "agencies_slug_unique") @db.VarChar(255)
+  logo          String?   @db.VarChar(500)
+  description   String?
+  address       String?   @db.VarChar(500)
+  province_id   BigInt?
+  district_id   BigInt?
+  phone         String?   @db.VarChar(20)
+  email         String?   @db.VarChar(255)
+  website       String?   @db.VarChar(255)
+  /// Lĩnh vực hoạt động: developer|construction|design|brokerage|interior|materials|other.
+  /// Không phải mọi doanh nghiệp trong danh bạ đều là sàn môi giới — chủ đầu tư, nhà thầu
+  /// xây dựng, đơn vị thiết kế cũng thuộc danh bạ nhưng không có môi giới/tin đăng gắn kèm.
+  business_type String    @default("brokerage") @db.VarChar(20)
+  is_verified   Boolean   @default(false)
+  is_active     Boolean   @default(true)
+  created_at    DateTime? @db.Timestamp(0)
+  updated_at    DateTime? @db.Timestamp(0)
 
   provinces provinces? @relation(fields: [province_id], references: [id], onUpdate: NoAction, map: "agencies_province_id_foreign")
   districts districts? @relation(fields: [district_id], references: [id], onUpdate: NoAction, map: "agencies_district_id_foreign")

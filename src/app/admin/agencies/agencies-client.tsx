@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { agencyAdminApi, type AdminAgency } from '@/lib/admin-api';
 import api from '@/lib/axios';
+import { AGENCY_BUSINESS_TYPES, agencyBusinessTypeLabel, type AgencyBusinessType } from '@/lib/agency-business-types';
 
 /** Trạng thái form dùng chung cho cả tạo mới và sửa. */
 interface AgencyFormState {
@@ -32,13 +33,14 @@ interface AgencyFormState {
   phone: string;
   email: string;
   website: string;
+  business_type: AgencyBusinessType;
   is_verified: boolean;
   is_active: boolean;
 }
 
 const EMPTY_FORM: AgencyFormState = {
   name: '', logo: '', description: '', address: '', district_id: '',
-  phone: '', email: '', website: '', is_verified: false, is_active: true,
+  phone: '', email: '', website: '', business_type: 'brokerage', is_verified: false, is_active: true,
 };
 
 export default function AgenciesClient() {
@@ -46,6 +48,7 @@ export default function AgenciesClient() {
   const [agencies, setAgencies] = useState<AdminAgency[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState('all');
   const [districts, setDistricts] = useState<Array<{ id: number; name: string }>>([]);
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -76,9 +79,12 @@ export default function AgenciesClient() {
 
   const filtered = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return agencies;
-    return agencies.filter((a) => a.name.toLowerCase().includes(q));
-  }, [agencies, searchQuery]);
+    return agencies.filter((a) => {
+      if (typeFilter !== 'all' && a.business_type !== typeFilter) return false;
+      if (q && !a.name.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [agencies, searchQuery, typeFilter]);
 
   const openCreate = () => {
     setEditingId(null);
@@ -97,6 +103,7 @@ export default function AgenciesClient() {
       phone: a.phone ?? '',
       email: a.email ?? '',
       website: a.website ?? '',
+      business_type: (a.business_type as AgencyBusinessType) || 'brokerage',
       is_verified: a.verified,
       is_active: a.active,
     });
@@ -118,6 +125,7 @@ export default function AgenciesClient() {
       phone: form.phone.trim() || null,
       email: form.email.trim() || null,
       website: form.website.trim() || null,
+      business_type: form.business_type,
       is_verified: form.is_verified,
       is_active: form.is_active,
     };
@@ -181,20 +189,32 @@ export default function AgenciesClient() {
 
       <Card className="border-gray-100 rounded-2xl">
         <CardContent className="p-4">
-          <div className="relative mb-4 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Tìm theo tên..."
-              className="pl-9"
-            />
+          <div className="flex flex-col sm:flex-row gap-3 mb-4">
+            <div className="relative max-w-sm flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Tìm theo tên..."
+                className="pl-9"
+              />
+            </div>
+            <Select value={typeFilter} onValueChange={(v) => v && setTypeFilter(v)}>
+              <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="Lĩnh vực" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả lĩnh vực</SelectItem>
+                {AGENCY_BUSINESS_TYPES.map((t) => (
+                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Doanh nghiệp</TableHead>
+                <TableHead>Lĩnh vực</TableHead>
                 <TableHead>Khu vực</TableHead>
                 <TableHead>Liên hệ</TableHead>
                 <TableHead className="text-center">Môi giới</TableHead>
@@ -204,9 +224,9 @@ export default function AgenciesClient() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={6} className="text-center text-gray-400 py-8">Đang tải...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center text-gray-400 py-8">Đang tải...</TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center text-gray-400 py-8">Chưa có doanh nghiệp nào.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center text-gray-400 py-8">Chưa có doanh nghiệp nào.</TableCell></TableRow>
               ) : (
                 filtered.map((a) => (
                   <TableRow key={a.id}>
@@ -224,6 +244,9 @@ export default function AgenciesClient() {
                         /doanh-nghiep/{a.slug}
                         <ExternalLink className="h-3 w-3" />
                       </a>
+                    </TableCell>
+                    <TableCell className="text-sm text-gray-600">
+                      {agencyBusinessTypeLabel(a.business_type)}
                     </TableCell>
                     <TableCell className="text-sm text-gray-600">
                       {districts.find((d) => d.id === a.district_id)?.name ?? '—'}
@@ -278,6 +301,26 @@ export default function AgenciesClient() {
                 placeholder="VD: Sàn GD BĐS Quảng Ngãi"
                 className="mt-1.5"
               />
+            </div>
+
+            <div>
+              <Label>Lĩnh vực *</Label>
+              <Select
+                value={form.business_type}
+                onValueChange={(v) => v && setForm((f) => ({ ...f, business_type: v as AgencyBusinessType }))}
+              >
+                <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {AGENCY_BUSINESS_TYPES.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {form.business_type !== 'brokerage' && (
+                <p className="text-xs text-gray-500 mt-1.5">
+                  Chỉ lĩnh vực &quot;Sàn giao dịch bất động sản&quot; mới gán được môi giới và tin đăng.
+                </p>
+              )}
             </div>
 
             <div>

@@ -1,10 +1,12 @@
 import { db } from '@/lib/db';
 import { apiPaginated, buildPaginationMeta } from '@/lib/api-response';
+import { isValidAgencyBusinessType } from '@/lib/agency-business-types';
 
 /**
- * GET /api/v2/agencies — danh bạ doanh nghiệp / sàn giao dịch BĐS.
+ * GET /api/v2/agencies — danh bạ doanh nghiệp: chủ đầu tư, nhà thầu, thiết kế, sàn giao
+ * dịch BĐS, nội thất, vật liệu xây dựng...
  *
- * Query: ?district_id= &q= &sort=listings|agents|newest &page= &per_page=
+ * Query: ?district_id= &business_type= &q= &sort=listings|agents|newest &page= &per_page=
  */
 
 const PER_PAGE_DEFAULT = 12;
@@ -22,10 +24,12 @@ export async function GET(request: Request) {
 
   const districtId = searchParams.get('district_id');
   const q = searchParams.get('q')?.trim();
+  const businessType = searchParams.get('business_type');
 
   const where = {
     is_active: true,
     ...(districtId && /^\d+$/.test(districtId) ? { district_id: BigInt(districtId) } : {}),
+    ...(businessType && isValidAgencyBusinessType(businessType) ? { business_type: businessType } : {}),
     ...(q ? { name: { contains: q, mode: 'insensitive' as const } } : {}),
   };
 
@@ -40,6 +44,7 @@ export async function GET(request: Request) {
       address: true,
       phone: true,
       website: true,
+      business_type: true,
       is_verified: true,
       created_at: true,
       districts: { select: { id: true, name: true } },
@@ -88,6 +93,7 @@ export async function GET(request: Request) {
     address: row.address,
     phone: row.phone,
     website: row.website,
+    business_type: row.business_type,
     verified: row.is_verified,
     agent_count: agentCount,
     total_listings: listingCount,

@@ -11,6 +11,7 @@ import { PropertyCard } from '@/components/property/PropertyCard';
 import {
   Building2, MapPin, Phone, Mail, Globe, ShieldCheck, Users, Home, ChevronLeft, Star,
 } from 'lucide-react';
+import { agencyBusinessTypeLabel } from '@/lib/agency-business-types';
 
 interface AgencyProfile {
   id: number;
@@ -22,6 +23,7 @@ interface AgencyProfile {
   phone: string | null;
   email: string | null;
   website: string | null;
+  business_type: string;
   verified: boolean;
   district: { id: number; name: string } | null;
   province: { id: number; name: string } | null;
@@ -94,6 +96,9 @@ export default function AgencyProfilePage({ params }: { params: Promise<{ slug: 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-2xl font-black text-gray-900">{agency.name}</h1>
+                <Badge variant="outline" className="text-[11px] font-medium text-gray-500 border-gray-200">
+                  {agencyBusinessTypeLabel(agency.business_type)}
+                </Badge>
                 {agency.verified && (
                   <Badge className="bg-primary-light/60 text-primary border-0 text-[11px] font-semibold gap-1">
                     <ShieldCheck className="h-3 w-3" />
@@ -137,16 +142,18 @@ export default function AgencyProfilePage({ params }: { params: Promise<{ slug: 
               </div>
             </div>
 
-            <div className="flex gap-3 shrink-0">
-              <div className="bg-gray-50 rounded-xl px-4 py-3 text-center min-w-[92px]">
-                <p className="text-2xl font-black text-primary leading-none">{agency.total_listings}</p>
-                <p className="text-[11px] font-bold text-gray-500 uppercase mt-1">Tin đăng</p>
+            {agency.business_type === 'brokerage' && (
+              <div className="flex gap-3 shrink-0">
+                <div className="bg-gray-50 rounded-xl px-4 py-3 text-center min-w-[92px]">
+                  <p className="text-2xl font-black text-primary leading-none">{agency.total_listings}</p>
+                  <p className="text-[11px] font-bold text-gray-500 uppercase mt-1">Tin đăng</p>
+                </div>
+                <div className="bg-gray-50 rounded-xl px-4 py-3 text-center min-w-[92px]">
+                  <p className="text-2xl font-black text-gray-900 leading-none">{agency.agent_count}</p>
+                  <p className="text-[11px] font-bold text-gray-500 uppercase mt-1">Môi giới</p>
+                </div>
               </div>
-              <div className="bg-gray-50 rounded-xl px-4 py-3 text-center min-w-[92px]">
-                <p className="text-2xl font-black text-gray-900 leading-none">{agency.agent_count}</p>
-                <p className="text-[11px] font-bold text-gray-500 uppercase mt-1">Môi giới</p>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
@@ -161,26 +168,30 @@ export default function AgencyProfilePage({ params }: { params: Promise<{ slug: 
           </Card>
         )}
 
-        <div className="flex gap-1 border-b border-gray-200 mb-5">
-          {([
-            { id: 'listings', label: `Tin đang đăng (${agency.properties.length})`, Icon: Home },
-            { id: 'agents', label: `Môi giới (${agency.agent_count})`, Icon: Users },
-          ] as const).map(({ id, label, Icon }) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setTab(id)}
-              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
-                tab === id ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-800'
-              }`}
-            >
-              <Icon className="h-4 w-4" />
-              {label}
-            </button>
-          ))}
-        </div>
+        {/* Chỉ sàn giao dịch mới có môi giới/tin đăng gắn kèm — chủ đầu tư, nhà thầu, đơn
+            vị thiết kế... trong danh bạ chỉ cần hồ sơ giới thiệu, không cần 2 tab này. */}
+        {agency.business_type === 'brokerage' && (
+          <>
+            <div className="flex gap-1 border-b border-gray-200 mb-5">
+              {([
+                { id: 'listings', label: `Tin đang đăng (${agency.properties.length})`, Icon: Home },
+                { id: 'agents', label: `Môi giới (${agency.agent_count})`, Icon: Users },
+              ] as const).map(({ id, label, Icon }) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setTab(id)}
+                  className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
+                    tab === id ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-800'
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {label}
+                </button>
+              ))}
+            </div>
 
-        {tab === 'listings' &&
+            {tab === 'listings' &&
           (agency.properties.length === 0 ? (
             <p className="text-center text-gray-500 py-16 bg-white rounded-2xl border border-gray-100">
               Doanh nghiệp này chưa có tin đăng nào đang hiển thị.
@@ -240,6 +251,8 @@ export default function AgencyProfilePage({ params }: { params: Promise<{ slug: 
               ))}
             </div>
           ))}
+          </>
+        )}
       </div>
     </div>
   );

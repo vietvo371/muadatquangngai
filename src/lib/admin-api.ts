@@ -465,6 +465,7 @@ export interface AdminAgency {
   phone: string | null;
   email: string | null;
   website: string | null;
+  business_type: string;
   verified: boolean;
   active: boolean;
   district_id: number | null;

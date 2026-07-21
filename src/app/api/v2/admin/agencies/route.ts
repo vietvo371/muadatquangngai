@@ -4,11 +4,12 @@ import { requireAdmin } from '@/lib/auth';
 import { apiSuccess } from '@/lib/api-response';
 import { FieldError, validationErrorResponse, isString, isBoolean, isInteger } from '@/lib/validation';
 import { slugify } from '@/lib/formatters';
+import { isValidAgencyBusinessType } from '@/lib/agency-business-types';
 
 function mapAgency(row: {
   id: bigint; name: string; slug: string; logo: string | null; description: string | null;
   address: string | null; phone: string | null; email: string | null; website: string | null;
-  is_verified: boolean; is_active: boolean; district_id: bigint | null; province_id: bigint | null;
+  business_type: string; is_verified: boolean; is_active: boolean; district_id: bigint | null; province_id: bigint | null;
   created_at: Date | null; updated_at: Date | null;
 }) {
   return {
@@ -21,6 +22,7 @@ function mapAgency(row: {
     phone: row.phone,
     email: row.email,
     website: row.website,
+    business_type: row.business_type,
     verified: row.is_verified,
     active: row.is_active,
     district_id: row.district_id !== null ? Number(row.district_id) : null,
@@ -64,6 +66,9 @@ export async function POST(request: Request) {
   if (body.district_id !== undefined && body.district_id !== null && !isInteger(body.district_id)) {
     errors.push(new FieldError('district_id', 'Trường xã/phường phải là số nguyên.'));
   }
+  if (body.business_type !== undefined && body.business_type !== null && !isValidAgencyBusinessType(body.business_type)) {
+    errors.push(new FieldError('business_type', 'Giá trị đã chọn trong trường lĩnh vực không hợp lệ.'));
+  }
   if (body.is_verified !== undefined && body.is_verified !== null && !isBoolean(body.is_verified)) {
     errors.push(new FieldError('is_verified', 'Trường đã xác minh phải là đúng hoặc sai.'));
   }
@@ -93,6 +98,7 @@ export async function POST(request: Request) {
       phone: isString(body.phone) ? body.phone : null,
       email: isString(body.email) ? body.email : null,
       website: isString(body.website) ? body.website : null,
+      business_type: isValidAgencyBusinessType(body.business_type) ? body.business_type : 'brokerage',
       is_verified: body.is_verified ?? false,
       is_active: body.is_active ?? true,
       created_at: now,
