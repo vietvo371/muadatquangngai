@@ -704,6 +704,10 @@ model agencies {
   business_type String    @default("brokerage") @db.VarChar(20)
   is_verified   Boolean   @default(false)
   is_active     Boolean   @default(true)
+  /// Đánh dấu doanh nghiệp demo (dữ liệu tự sinh, không phải khách hàng thật đăng ký) —
+  /// dùng để ẩn nút gọi trên UI công khai, tránh khách bấm gọi nhầm vào SĐT tự sinh có thể
+  /// trùng một người thật ngoài đời không liên quan gì tới nền tảng.
+  is_demo       Boolean   @default(false)
   created_at    DateTime? @db.Timestamp(0)
   updated_at    DateTime? @db.Timestamp(0)
 
@@ -741,6 +745,10 @@ model users {
   rating                                      Decimal                     @default(0) @db.Decimal(3, 2)
   review_count                                Int                         @default(0)
   license_number                              String?                     @db.VarChar(100)
+  /// Đánh dấu tài khoản demo (dữ liệu tự sinh cho seed/demo, không phải người dùng thật) —
+  /// dùng để ẩn nút gọi trên UI công khai. SĐT tự sinh đúng định dạng thật có thể trùng một
+  /// người Việt Nam thật ngoài đời không liên quan gì tới nền tảng.
+  is_demo                                     Boolean                     @default(false)
   agency_name                                 String?                     @db.VarChar(255)
   /// Khoá ngoại tới bảng agencies. Giữ song song agency_name (ô chữ tự do cũ) để dữ liệu
   /// đã nhập không mất; chỗ nào có agency_id thì ưu tiên dùng nó.

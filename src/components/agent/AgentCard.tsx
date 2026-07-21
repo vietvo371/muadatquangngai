@@ -22,6 +22,8 @@ export interface Agent {
   district?: { id: number; name: string } | null;
   verified?: boolean;
   slug?: string;
+  /** Hồ sơ demo (dữ liệu tự sinh) — ẩn nút gọi vì SĐT tự sinh có thể trùng người thật ngoài đời. */
+  is_demo?: boolean;
   /** Thẻ "khu vực hoạt động" tính từ tin đăng thật của môi giới — xem GET /api/v2/agents. */
   coverage_areas?: Array<{ label: string; href: string; count: number }>;
 }
@@ -61,7 +63,7 @@ export function AgentCard({ agent }: AgentCardProps) {
                 <span className="truncate">{agent.district?.name ?? 'Quảng Ngãi'}</span>
               </p>
 
-              {agent.phone && (
+              {agent.phone && !agent.is_demo && (
                 <p className="flex items-center gap-1.5 text-[13px] text-gray-500 mt-1">
                   <Phone className="h-3.5 w-3.5 shrink-0" />
                   <a href={`tel:${agent.phone}`} className="hover:text-primary">{agent.phone}</a>
@@ -69,7 +71,7 @@ export function AgentCard({ agent }: AgentCardProps) {
               )}
 
               <div className="flex gap-2 mt-3">
-                {agent.phone ? (
+                {agent.phone && !agent.is_demo ? (
                   <a href={`tel:${agent.phone}`} className="flex-1">
                     <Button size="sm" className="w-full h-8 text-[12px] font-bold bg-cta hover:bg-cta-dark">
                       <Phone className="h-3.5 w-3.5 mr-1" />

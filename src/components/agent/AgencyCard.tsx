@@ -18,6 +18,8 @@ export interface AgencyListItem {
   agent_count: number;
   total_listings: number;
   district?: { id: number; name: string } | null;
+  /** Hồ sơ demo (dữ liệu tự sinh) — ẩn nút gọi vì SĐT tự sinh có thể trùng người thật ngoài đời. */
+  is_demo?: boolean;
   coverage_areas?: Array<{ label: string; href: string; count: number }>;
 }
 
@@ -60,7 +62,7 @@ export function AgencyCard({ agency }: AgencyCardProps) {
                 <span className="truncate">{agency.address || agency.district?.name || 'Quảng Ngãi'}</span>
               </p>
 
-              {agency.phone && (
+              {agency.phone && !agency.is_demo && (
                 <p className="flex items-center gap-1.5 text-[13px] text-gray-500 mt-1">
                   <Phone className="h-3.5 w-3.5 shrink-0" />
                   <a href={`tel:${agency.phone}`} className="hover:text-primary">{agency.phone}</a>
@@ -68,7 +70,7 @@ export function AgencyCard({ agency }: AgencyCardProps) {
               )}
 
               <div className="flex gap-2 mt-3">
-                {agency.phone ? (
+                {agency.phone && !agency.is_demo ? (
                   <a href={`tel:${agency.phone}`} className="flex-1">
                     <Button size="sm" className="w-full h-8 text-[12px] font-bold bg-cta hover:bg-cta-dark">
                       <Phone className="h-3.5 w-3.5 mr-1" />

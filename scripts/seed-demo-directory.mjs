@@ -142,6 +142,9 @@ for (const a of plan.agencies) {
       province_id: province.id,
       is_active: true,
       is_verified: Math.random() < 0.3,
+      // Đánh dấu để UI công khai ẩn nút gọi — SĐT tự sinh đúng định dạng thật vẫn có thể
+      // trùng một người Việt Nam thật ngoài đời không liên quan gì tới nền tảng.
+      is_demo: true,
       created_at: now,
       updated_at: now,
     },
@@ -169,6 +172,7 @@ for (const a of plan.agents) {
       agency_id: a.agency ? createdAgencies.get(a.agency.name) : null,
       agency_name: a.agency?.name ?? null,
       rating: (Math.random() * 2 + 3).toFixed(2), // 3.00–5.00, giống khoảng của dữ liệu thật
+      is_demo: true,
       created_at: now,
       updated_at: now,
     },

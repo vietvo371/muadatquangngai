@@ -91,6 +91,7 @@ export async function GET(request: Request) {
           total_listings: true,
           agency_name: true,
           created_at: true,
+          is_demo: true,
           districts: { select: { id: true, name: true } },
           provinces: { select: { id: true, name: true } },
         },
@@ -181,6 +182,7 @@ export async function GET(request: Request) {
       province: r.provinces ? { id: Number(r.provinces.id), name: r.provinces.name } : null,
       verified: verifiedSet.has(key),
       joined_at: r.created_at,
+      is_demo: r.is_demo,
       coverage_areas: coverageByAgent.get(key) ?? [],
     };
   });
