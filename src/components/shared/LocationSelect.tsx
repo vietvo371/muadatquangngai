@@ -93,10 +93,11 @@ export function LocationSelect({
 
     const fetchDistricts = async () => {
       setIsLoadingDistricts(true);
-      setSelectedDistrict(undefined);
-      setSelectedWard(undefined);
+      // KHÔNG xoá xã/phường đang chọn ở đây. Việc xoá khi người dùng tự đổi tỉnh đã do
+      // handleSelect làm rồi. Nếu xoá ở đây, luồng đặt tự động từ bản đồ sẽ hỏng: bản đồ
+      // đặt tỉnh và xã cùng lúc, effect này chạy sau và xoá mất xã vừa đặt.
       setWards([]);
-      
+
       try {
         const response = await axios.get(`/api/v2/locations/districts/${selectedProvince}`);
         setDistricts(response.data.data || []);
@@ -118,8 +119,8 @@ export function LocationSelect({
 
     const fetchWards = async () => {
       setIsLoadingWards(true);
-      setSelectedWard(undefined);
-      
+      // Cùng lý do như trên — handleSelect đã xoá ward khi người dùng đổi xã/phường.
+
       try {
         const response = await axios.get(`/api/v2/locations/wards/${selectedDistrict}`);
         setWards(response.data.data || []);

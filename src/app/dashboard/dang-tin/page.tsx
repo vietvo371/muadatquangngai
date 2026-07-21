@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import { toast } from 'sonner';
 import api from '@/lib/axios';
 import { useRouter } from 'next/navigation';
@@ -37,6 +38,16 @@ import {
   DollarSign,
   Loader2
 } from 'lucide-react';
+
+// Bản đồ dùng Leaflet nên phải nạp phía client, không dựng sẵn trên server được.
+const MapPicker = dynamic(() => import('@/components/map/MapPicker').then((m) => m.MapPicker), {
+  ssr: false,
+  loading: () => (
+    <div className="h-[320px] rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-center text-sm text-gray-500">
+      Đang tải bản đồ...
+    </div>
+  ),
+});
 
 // Form data interface
 interface PropertyFormData {
@@ -359,6 +370,64 @@ export default function DangTinPage() {
     updateFormData({ features: newFeatures });
   };
 
+  const [isGeocoding, setIsGeocoding] = useState(false);
+  const [geocodeNote, setGeocodeNote] = useState<{ type: 'ok' | 'warn'; text: string } | null>(null);
+
+  /**
+   * Người dùng ghim một điểm trên bản đồ (spec: chọn địa chỉ bằng bản đồ thay vì gõ tay).
+   *
+   * Toạ độ luôn được lưu ngay. Địa chỉ và xã/phường chỉ điền khi tra ngược ra kết quả chắc
+   * chắn — không đoán bừa, vì gán sai xã sẽ khiến tin đăng lọt sai khu vực tìm kiếm và người
+   * đăng khó phát hiện.
+   */
+  const handleMapPick = async ({ lat, lng }: { lat: number; lng: number }) => {
+    updateFormData({ latitude: lat, longitude: lng });
+    setIsGeocoding(true);
+    setGeocodeNote(null);
+
+    try {
+      const res = await api.get(`/api/v2/geocode/reverse?lat=${lat}&lng=${lng}`);
+      const d = res.data?.data ?? {};
+
+      if (d.outside_coverage) {
+        setGeocodeNote({
+          type: 'warn',
+          text: `Vị trí bạn ghim nằm ở ${d.province_name ?? 'ngoài tỉnh'}, không thuộc khu vực trang này phục vụ. Vui lòng ghim lại trong Quảng Ngãi.`,
+        });
+        return;
+      }
+
+      const patch: Partial<PropertyFormData> = {};
+      // Chỉ điền địa chỉ khi ô đang trống — không đè lên thứ người dùng đã tự gõ.
+      if (d.address && !formData.street.trim()) patch.street = d.address;
+
+      if (d.matched && d.district_id) {
+        patch.province_id = d.province_id ?? formData.province_id;
+        patch.district_id = d.district_id;
+        patch.district_name = d.district_name;
+        patch.province_name = d.province_name;
+      }
+
+      if (Object.keys(patch).length > 0) updateFormData(patch);
+
+      setGeocodeNote(
+        d.matched
+          ? { type: 'ok', text: `Đã nhận diện: ${d.district_name}. Bạn có thể sửa lại nếu chưa đúng.` }
+          : {
+              type: 'warn',
+              text: 'Chưa xác định được xã/phường từ vị trí này — vui lòng chọn thủ công ở ô phía trên.',
+            }
+      );
+    } catch {
+      setGeocodeNote({
+        type: 'warn',
+        text: 'Không tra được địa chỉ từ vị trí này. Vị trí vẫn được lưu, bạn nhập địa chỉ thủ công nhé.',
+      });
+    } finally {
+      setIsGeocoding(false);
+    }
+  };
+
   const selectedPackage = packages.find((p) => p.id === formData.package_id) ?? null;
 
   const canProceed = () => {
@@ -634,8 +703,11 @@ export default function DangTinPage() {
                     province_id: location.province_id,
                     district_id: location.district_id,
                     ward_id: location.ward_id,
-                    latitude: location.latitude,
-                    longitude: location.longitude,
+                    // LocationSelect trả về toạ độ TÂM TỈNH. Nếu người dùng đã ghim chính xác
+                    // trên bản đồ thì giữ nguyên ghim đó — nếu không, chỉ cần đổi lại xã/phường
+                    // là vị trí chính xác bị đẩy về giữa tỉnh.
+                    latitude: formData.latitude ?? location.latitude,
+                    longitude: formData.longitude ?? location.longitude,
                     // Giữ lại tên để AI mô tả địa chỉ bằng chữ, không phải id.
                     province_name: location.province_name,
                     district_name: location.district_name,
@@ -651,6 +723,37 @@ export default function DangTinPage() {
                     placeholder="VD: 123 Đường Trần Phú..."
                     className="mt-2 h-12 bg-gray-50 border-gray-200 focus:ring-primary focus:border-primary"
                   />
+                </div>
+
+                {/* Chọn vị trí trên bản đồ — khách hàng muốn ghim thay vì gõ tay. */}
+                <div className="mt-5">
+                  <Label className="font-semibold text-gray-700">Ghim vị trí trên bản đồ</Label>
+                  <p className="text-[13px] text-gray-500 mt-1 mb-2">
+                    Chọn đúng vị trí giúp người mua tìm thấy bất động sản của bạn trên bản đồ.
+                  </p>
+                  <MapPicker
+                    value={
+                      formData.latitude != null && formData.longitude != null
+                        ? { lat: formData.latitude, lng: formData.longitude }
+                        : undefined
+                    }
+                    onChange={handleMapPick}
+                  />
+                  {isGeocoding && (
+                    <p className="text-[13px] text-gray-500 mt-2 flex items-center gap-1.5">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Đang tra địa chỉ từ vị trí đã ghim...
+                    </p>
+                  )}
+                  {geocodeNote && !isGeocoding && (
+                    <p
+                      className={`text-[13px] mt-2 ${
+                        geocodeNote.type === 'warn' ? 'text-red-600' : 'text-green-700'
+                      }`}
+                    >
+                      {geocodeNote.text}
+                    </p>
+                  )}
                 </div>
               </section>
             </div>
