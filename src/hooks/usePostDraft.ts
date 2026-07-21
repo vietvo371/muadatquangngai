@@ -106,9 +106,12 @@ export function useDraftAutosave<T>(
   enabled: boolean
 ) {
   // Giữ giá trị mới nhất trong ref để handler beforeunload luôn đọc được bản cuối cùng
-  // mà không phải gắn/gỡ listener sau mỗi lần gõ phím.
+  // mà không phải gắn/gỡ listener sau mỗi lần gõ phím. Cập nhật trong effect chứ không
+  // phải lúc render — ghi ref khi đang render là hành vi không an toàn trong React.
   const latest = useRef({ data, step });
-  latest.current = { data, step };
+  useEffect(() => {
+    latest.current = { data, step };
+  }, [data, step]);
 
   useEffect(() => {
     if (!enabled) return;
