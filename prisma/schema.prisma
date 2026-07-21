@@ -666,6 +666,9 @@ model transactions {
   reference_type String?   @db.VarChar(100)
   reference_id   BigInt?
   gateway_ref    String?   @db.VarChar(255)
+  // Khoá chống tạo giao dịch trùng khi người dùng bấm thanh toán nhiều lần (spec mục 8.3).
+  // Unique + nullable: Postgres cho phép nhiều NULL nên giao dịch cũ không bị ảnh hưởng.
+  idempotency_key String?  @unique(map: "transactions_idempotency_key_unique") @db.VarChar(64)
   note           String?
   created_at     DateTime? @db.Timestamp(0)
   updated_at     DateTime? @db.Timestamp(0)

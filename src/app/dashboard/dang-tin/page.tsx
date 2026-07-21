@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import api from '@/lib/axios';
 import { useRouter } from 'next/navigation';
@@ -84,7 +84,7 @@ interface PropertyFormData {
   contact_address: string;
 
   // Step 4: Package
-  package_id: string;
+  package_id: number | null;
 }
 
 // 3 bước theo spec mục 2. Trước đây tách làm 4 (cơ bản / ảnh / chi tiết / thanh toán),
@@ -96,12 +96,17 @@ const STEPS = [
 ];
 const LAST_STEP = STEPS.length;
 
-const PACKAGES = [
-  { id: 'normal', name: 'Tin Thường', price: 0, duration: 30, color: 'normal' as const, features: ['Hiển thị dưới các tin VIP', 'Tiếp cận người dùng cơ bản', 'Không có huy hiệu nổi bật'] },
-  { id: 'vip', name: 'Gói VIP', price: 50000, duration: 30, color: 'vip' as const, features: ['Hiển thị trên tin thường', 'Có huy hiệu VIP vàng', 'Màu sắc khung thẻ nổi bật'] },
-  { id: 'vip_plus', name: 'Gói VIP+', price: 100000, duration: 30, color: 'vip_plus' as const, isPopular: true, features: ['Hiển thị trên VIP và tin thường', 'Có huy hiệu VIP+ cam', 'Ảnh đại diện lớn hơn'] },
-  { id: 'diamond', name: 'Gói Diamond', price: 200000, duration: 30, color: 'diamond' as const, features: ['Luôn nằm trên cùng trang chủ', 'Huy hiệu Diamond đỏ độc quyền', 'Hỗ trợ đẩy tin 2 lần/ngày', 'Thiết kế thẻ to nhất'] },
-];
+// Gói đăng tin tải từ /api/v2/packages. Trước đây danh sách này hardcode giá 0/50k/100k/
+// 200k trong khi bảng packages thật là 0/150k/350k/800k — người dùng nhìn một đằng, hệ
+// thống tính tiền một nẻo.
+interface PackageOption {
+  id: number;
+  name: string;
+  type: 'normal' | 'vip' | 'vip_plus' | 'diamond';
+  price: number;
+  duration_days: number;
+  features: string[];
+}
 
 // Tiện ích được tải từ /api/v2/features theo nhóm BĐS. Trước đây danh sách này hardcode
 // id 1-8 kèm tên tự đặt, lệch hẳn với bảng features trong DB (id 1 ghi "Hồ bơi" nhưng
@@ -132,6 +137,27 @@ export default function DangTinPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   /** Nút AI nào đang chạy — dùng để hiện spinner đúng nút và khoá các nút còn lại. */
   const [aiLoading, setAiLoading] = useState<'title' | 'description' | 'both' | null>(null);
+
+  const [packages, setPackages] = useState<PackageOption[]>([]);
+  const [balance, setBalance] = useState<number>(0);
+  useEffect(() => {
+    api.get('/api/v2/packages').then((res) => {
+      const list: PackageOption[] = res.data?.data ?? [];
+      setPackages(list);
+      // Mặc định chọn gói rẻ nhất để người dùng luôn đăng được mà không phải chọn gì.
+      if (list.length > 0) {
+        setFormData((prev) => (prev.package_id ? prev : { ...prev, package_id: list[0].id }));
+      }
+    }).catch(() => setPackages([]));
+  }, []);
+
+  // Số dư ví để hiển thị ở màn thanh toán và cảnh báo sớm nếu không đủ.
+  useEffect(() => {
+    if (!authUser) return;
+    api.get('/api/v2/auth/me')
+      .then((res) => setBalance(Number(res.data?.data?.balance ?? 0)))
+      .catch(() => setBalance(Number((authUser as { balance?: number }).balance ?? 0)));
+  }, [authUser]);
   const [formData, setFormData] = useState<PropertyFormData>({
     type: 'sell',
     category_id: '',
@@ -156,7 +182,7 @@ export default function DangTinPage() {
     contact_phone: '',
     contact_email: '',
     contact_address: '',
-    package_id: 'normal',
+    package_id: null,
   });
 
   // Bản nháp (spec mục 13). Chỉ bật autosave sau khi người dùng đã xử lý xong bản nháp
@@ -333,6 +359,8 @@ export default function DangTinPage() {
     updateFormData({ features: newFeatures });
   };
 
+  const selectedPackage = packages.find((p) => p.id === formData.package_id) ?? null;
+
   const canProceed = () => {
     switch (currentStep) {
       // Bước 1 gộp toàn bộ thông tin BĐS nên kiểm luôn cả trường bắt buộc của spec
@@ -356,7 +384,9 @@ export default function DangTinPage() {
       case 2:
         return formData.images.length > 0;
       case 3:
-        return !!formData.package_id;
+        // Không cho bấm thanh toán khi số dư không đủ — thà chặn ở đây còn hơn để người
+        // dùng bấm rồi nhận lỗi 402 từ server.
+        return !!selectedPackage && (selectedPackage.price === 0 || balance >= selectedPackage.price);
       default:
         return false;
     }
@@ -378,6 +408,16 @@ export default function DangTinPage() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
+
+  /**
+   * Khoá chống trùng giữ nguyên qua các lần thử lại của CÙNG một lượt đăng, nên bấm nhiều
+   * lần hoặc thử lại sau lỗi mạng cũng chỉ trừ tiền một lần (spec mục 8.3). Chỉ đổi khoá
+   * khi đăng thành công, tức là bắt đầu một lượt đăng mới.
+   */
+  const idempotencyKeyRef = useRef<string>('');
+  if (!idempotencyKeyRef.current) {
+    idempotencyKeyRef.current = `post-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  }
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
@@ -434,6 +474,8 @@ export default function DangTinPage() {
         contact_phone: formData.contact_phone,
         contact_email: formData.contact_email || undefined,
         contact_address: formData.contact_address || undefined,
+        package_id: formData.package_id,
+        idempotency_key: idempotencyKeyRef.current,
         // Ảnh đã upload sẵn lên Cloudinary ở bước 2 — chỉ gửi URL để API ghi vào
         // property_media. Thiếu mảng này thì ảnh người dùng tải lên bị mất trắng.
         images: formData.images.map((img, i) => ({
@@ -455,6 +497,7 @@ export default function DangTinPage() {
       if (response.data?.success || response.status === 201) {
         // Đăng thành công thì bản nháp không còn ý nghĩa — xoá để lần sau vào form trống.
         draft.clear();
+        idempotencyKeyRef.current = ''; // lượt đăng sau dùng khoá mới
         toast.success('Đăng tin thành công!', {
           description: 'Tin của bạn đã được gửi và đang chờ phê duyệt.',
         });
@@ -1058,28 +1101,96 @@ export default function DangTinPage() {
           {currentStep === 3 && (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <h3 className="text-lg font-bold text-gray-900 mb-2 pb-2 border-b text-center">Chọn gói đăng tin</h3>
-              <p className="text-center text-gray-500 text-sm mb-2">Tin đăng sẽ được kiểm duyệt trong vòng 24h.</p>
-              <p className="text-center text-gray-400 text-[13px] mb-8">
-                Các gói trả phí đang được hoàn thiện — hiện tại tin đăng miễn phí với gói Tin Thường.
-              </p>
-              
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {PACKAGES.map((pkg) => (
-                  <PackageCard
-                    key={pkg.id}
-                    id={pkg.id}
-                    name={pkg.name}
-                    price={pkg.price}
-                    duration={pkg.duration}
-                    features={pkg.features}
-                    isPopular={pkg.isPopular}
-                    color={pkg.color}
-                    comingSoon={pkg.price > 0}
-                    selected={formData.package_id === pkg.id}
-                    onSelect={(id) => updateFormData({ package_id: id })}
-                  />
-                ))}
-              </div>
+              <p className="text-center text-gray-500 text-sm mb-8">Tin đăng sẽ được kiểm duyệt trong vòng 24h.</p>
+
+              {packages.length === 0 ? (
+                <p className="text-center text-sm text-gray-400 py-6">Đang tải gói đăng tin...</p>
+              ) : (
+                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {packages.map((pkg) => (
+                    <PackageCard
+                      key={pkg.id}
+                      id={String(pkg.id)}
+                      name={pkg.name}
+                      price={pkg.price}
+                      duration={pkg.duration_days}
+                      features={pkg.features}
+                      color={pkg.type}
+                      selected={formData.package_id === pkg.id}
+                      onSelect={(id) => updateFormData({ package_id: Number(id) })}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Bảng kê thanh toán (spec mục 8.2) */}
+              {selectedPackage && (
+                <div className="mt-8 rounded-2xl border border-gray-200 overflow-hidden">
+                  <div className="bg-gray-50 px-5 py-3 border-b border-gray-200">
+                    <h4 className="font-bold text-gray-900">Thông tin thanh toán</h4>
+                  </div>
+                  <div className="p-5 space-y-2.5 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Gói đã chọn</span>
+                      <span className="font-semibold text-gray-900">{selectedPackage.name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Đơn giá</span>
+                      <span className="font-medium text-gray-800">
+                        {selectedPackage.price === 0 ? 'Miễn phí' : `${selectedPackage.price.toLocaleString('vi-VN')} đ`}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Thời gian hiển thị</span>
+                      <span className="font-medium text-gray-800">{selectedPackage.duration_days} ngày</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Ngày dự kiến hết hạn</span>
+                      <span className="font-medium text-gray-800">
+                        {new Date(Date.now() + selectedPackage.duration_days * 86400000).toLocaleDateString('vi-VN')}
+                      </span>
+                    </div>
+
+                    <div className="border-t border-gray-100 pt-3 mt-3 flex justify-between items-baseline">
+                      <span className="font-semibold text-gray-900">Tổng thanh toán</span>
+                      <span className="text-xl font-extrabold text-cta">
+                        {selectedPackage.price === 0 ? 'Miễn phí' : `${selectedPackage.price.toLocaleString('vi-VN')} đ`}
+                      </span>
+                    </div>
+
+                    {selectedPackage.price > 0 && (
+                      <>
+                        <div className="flex justify-between pt-1">
+                          <span className="text-gray-500">Phương thức</span>
+                          <span className="font-medium text-gray-800">Trừ vào số dư tài khoản</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Số dư hiện có</span>
+                          <span className={`font-semibold ${balance < selectedPackage.price ? 'text-red-600' : 'text-green-600'}`}>
+                            {balance.toLocaleString('vi-VN')} đ
+                          </span>
+                        </div>
+                        {balance < selectedPackage.price && (
+                          <div className="mt-3 rounded-lg bg-red-50 border border-red-200 px-3.5 py-3 flex flex-col sm:flex-row sm:items-center gap-2.5">
+                            <p className="text-[13px] text-red-700 flex-1">
+                              Số dư không đủ, còn thiếu{' '}
+                              <strong>{(selectedPackage.price - balance).toLocaleString('vi-VN')} đ</strong>.
+                            </p>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => router.push('/dashboard/nap-tien')}
+                              className="h-8 shrink-0 border-red-300 text-red-700 hover:bg-red-100"
+                            >
+                              Nạp tiền
+                            </Button>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
