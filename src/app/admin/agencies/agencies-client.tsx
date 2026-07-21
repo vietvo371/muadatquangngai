@@ -200,7 +200,12 @@ export default function AgenciesClient() {
               />
             </div>
             <Select value={typeFilter} onValueChange={(v) => v && setTypeFilter(v)}>
-              <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="Lĩnh vực" /></SelectTrigger>
+              <SelectTrigger className="w-full sm:w-56">
+                {/* SelectValue mặc định hiện thẳng giá trị thô ("developer") — phải tự tra nhãn. */}
+                <SelectValue placeholder="Lĩnh vực">
+                  {(v: string) => (v === 'all' || !v ? 'Tất cả lĩnh vực' : agencyBusinessTypeLabel(v))}
+                </SelectValue>
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tất cả lĩnh vực</SelectItem>
                 {AGENCY_BUSINESS_TYPES.map((t) => (
@@ -309,7 +314,9 @@ export default function AgenciesClient() {
                 value={form.business_type}
                 onValueChange={(v) => v && setForm((f) => ({ ...f, business_type: v as AgencyBusinessType }))}
               >
-                <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1.5">
+                  <SelectValue>{(v: string) => agencyBusinessTypeLabel(v)}</SelectValue>
+                </SelectTrigger>
                 <SelectContent>
                   {AGENCY_BUSINESS_TYPES.map((t) => (
                     <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
@@ -340,7 +347,11 @@ export default function AgenciesClient() {
                   value={form.district_id || undefined}
                   onValueChange={(v) => setForm((f) => ({ ...f, district_id: v ?? '' }))}
                 >
-                  <SelectTrigger className="mt-1.5"><SelectValue placeholder="Chọn xã/phường" /></SelectTrigger>
+                  <SelectTrigger className="mt-1.5">
+                    <SelectValue placeholder="Chọn xã/phường">
+                      {(v: string) => (!v ? 'Chọn xã/phường' : districts.find((d) => String(d.id) === v)?.name ?? v)}
+                    </SelectValue>
+                  </SelectTrigger>
                   <SelectContent className="max-h-64">
                     {districts.map((d) => (
                       <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>

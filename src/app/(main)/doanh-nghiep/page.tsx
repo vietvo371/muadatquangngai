@@ -11,6 +11,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Search, Building2, MapPin, Phone, ShieldCheck, Users, ChevronRight, Globe } from 'lucide-react';
 import { AGENCY_BUSINESS_TYPES, agencyBusinessTypeLabel } from '@/lib/agency-business-types';
 
+const SORT_LABELS: Record<string, string> = {
+  listings: 'Tin đang đăng nhiều nhất',
+  agents: 'Nhiều môi giới nhất',
+  newest: 'Mới tham gia nhất',
+};
+
 interface Agency {
   id: number;
   name: string;
@@ -98,7 +104,11 @@ export default function AgenciesPage() {
 
             <Select value={typeFilter} onValueChange={(v) => v && setTypeFilter(v)}>
               <SelectTrigger className="w-full sm:w-56 h-11 bg-white border-gray-200 rounded-xl font-medium">
-                <SelectValue placeholder="Lĩnh vực" />
+                {/* SelectValue của Base UI mặc định hiện thẳng giá trị thô ("developer") thay
+                    vì tra nhãn — phải tự truyền hàm render để hiện đúng tiếng Việt. */}
+                <SelectValue placeholder="Lĩnh vực">
+                  {(v: string) => (v === 'all' || !v ? 'Tất cả lĩnh vực' : agencyBusinessTypeLabel(v))}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tất cả lĩnh vực</SelectItem>
@@ -110,7 +120,9 @@ export default function AgenciesPage() {
 
             <Select value={districtFilter} onValueChange={(v) => v && setDistrictFilter(v)}>
               <SelectTrigger className="w-full sm:w-52 h-11 bg-white border-gray-200 rounded-xl font-medium">
-                <SelectValue placeholder="Khu vực" />
+                <SelectValue placeholder="Khu vực">
+                  {(v: string) => (v === 'all' || !v ? 'Tất cả khu vực' : districts.find((d) => String(d.id) === v)?.name ?? v)}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent className="max-h-72">
                 <SelectItem value="all">Tất cả khu vực</SelectItem>
@@ -122,7 +134,9 @@ export default function AgenciesPage() {
 
             <Select value={sortBy} onValueChange={(v) => v && setSortBy(v)}>
               <SelectTrigger className="w-full sm:w-52 h-11 bg-white border-gray-200 rounded-xl font-medium">
-                <SelectValue placeholder="Sắp xếp" />
+                <SelectValue placeholder="Sắp xếp">
+                  {(v: string) => SORT_LABELS[v] ?? v}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="listings">Tin đang đăng nhiều nhất</SelectItem>
