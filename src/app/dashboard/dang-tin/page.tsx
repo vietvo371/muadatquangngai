@@ -48,6 +48,10 @@ interface PropertyFormData {
   province_id?: number;
   district_id?: number;
   ward_id?: number;
+  // Tên khu vực — chỉ dùng để dựng câu (AI, địa chỉ hiển thị), không gửi lên khi tạo tin.
+  province_name?: string;
+  district_name?: string;
+  ward_name?: string;
   latitude?: number;
   longitude?: number;
   street: string;
@@ -126,6 +130,8 @@ export default function DangTinPage() {
       .catch(() => { /* giữ mặc định */ });
   }, []);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  /** Nút AI nào đang chạy — dùng để hiện spinner đúng nút và khoá các nút còn lại. */
+  const [aiLoading, setAiLoading] = useState<'title' | 'description' | 'both' | null>(null);
   const [formData, setFormData] = useState<PropertyFormData>({
     type: 'sell',
     category_id: '',
@@ -269,6 +275,57 @@ export default function DangTinPage() {
     });
   };
 
+  /**
+   * Gọi AI viết tiêu đề/mô tả (spec mục 4.6). Spec yêu cầu rõ: "Không tự động ghi đè nội
+   * dung đã nhập mà không có xác nhận" — nên nếu ô đã có chữ thì hỏi trước.
+   */
+  const generateContent = async (mode: 'title' | 'description' | 'both') => {
+    const willOverwrite =
+      (mode !== 'description' && formData.title.trim()) ||
+      (mode !== 'title' && formData.description.trim());
+    if (willOverwrite && !window.confirm('Nội dung hiện tại sẽ được thay bằng nội dung AI vừa tạo. Bạn có chắc không?')) {
+      return;
+    }
+
+    setAiLoading(mode);
+    try {
+      const res = await api.post('/api/v2/ai/generate-listing', {
+        mode,
+        category_id: formData.category_id,
+        street: formData.street,
+        district_name: formData.district_name,
+        province_name: formData.province_name,
+        price: formData.price,
+        price_unit: formData.price_unit,
+        area: formData.area,
+        bedrooms: formData.bedrooms,
+        bathrooms: formData.bathrooms,
+        toilets: formData.toilets,
+        floors: formData.floors,
+        direction: formData.direction,
+        balcony_direction: formData.balcony_direction,
+        road_width: formData.road_width,
+        facade: formData.facade,
+        legal: formData.legal,
+        furniture: formData.furniture,
+        // Gửi TÊN tiện ích thay vì id để AI hiểu được nội dung.
+        feature_names: features.filter((f) => formData.features.includes(f.id)).map((f) => f.name),
+      });
+      const data = res.data?.data;
+      if (!data?.title && !data?.description) throw new Error('Không nhận được nội dung');
+      updateFormData({
+        ...(data.title ? { title: data.title } : {}),
+        ...(data.description ? { description: data.description } : {}),
+      });
+      toast.success('Đã tạo nội dung. Bạn có thể chỉnh sửa lại tuỳ ý.');
+    } catch (err) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(msg || 'Không tạo được nội dung. Vui lòng thử lại.');
+    } finally {
+      setAiLoading(null);
+    }
+  };
+
   const toggleFeature = (featureId: number) => {
     const newFeatures = formData.features.includes(featureId)
       ? formData.features.filter(id => id !== featureId)
@@ -326,9 +383,13 @@ export default function DangTinPage() {
     setIsSubmitting(true);
     try {
       // Build address from available data
+      // Ghép địa chỉ từ tên khu vực thật do LocationSelect trả về. Trước đây phần sau dấu
+      // phẩy bị hardcode "Quảng Ngãi" nên tin nào cũng ra địa chỉ giống nhau.
       const address = [
         formData.street,
-        formData.district_id ? 'Quảng Ngãi' : '',
+        formData.ward_name,
+        formData.district_name,
+        formData.province_name,
       ].filter(Boolean).join(', ');
 
       // Chỉ gửi trường thuộc nhóm BĐS đang chọn — spec yêu cầu không lưu phòng ngủ /
@@ -532,6 +593,10 @@ export default function DangTinPage() {
                     ward_id: location.ward_id,
                     latitude: location.latitude,
                     longitude: location.longitude,
+                    // Giữ lại tên để AI mô tả địa chỉ bằng chữ, không phải id.
+                    province_name: location.province_name,
+                    district_name: location.district_name,
+                    ward_name: location.ward_name,
                   })}
                   required
                 />
@@ -901,7 +966,59 @@ export default function DangTinPage() {
               {/* Nội dung tin đăng — đặt cuối cùng (spec mục 4.6) để nút AI ở đợt sau
                   có sẵn toàn bộ dữ liệu người dùng vừa nhập làm đầu vào. */}
               <section>
-                <h3 className="text-lg font-bold text-gray-900 mb-5 pb-2 border-b">Nội dung tin đăng</h3>
+                <h3 className="text-lg font-bold text-gray-900 mb-3 pb-2 border-b">Nội dung tin đăng</h3>
+
+                {/* Trợ lý AI (spec mục 4.6) — sinh nội dung từ đúng dữ liệu đã nhập ở trên.
+                    Không tự ghi đè nội dung có sẵn mà hỏi xác nhận trước. */}
+                <div className="mb-6 rounded-xl border border-primary/20 bg-primary-light/40 p-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-gray-800">Để AI viết giúp bạn</p>
+                      <p className="text-[13px] text-gray-500 mt-0.5">
+                        AI dựa trên thông tin bạn vừa nhập ở trên, không tự thêm thông tin khác.
+                      </p>
+                    </div>
+                    <div className="flex gap-2 shrink-0">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={aiLoading !== null || !formData.category_id}
+                        onClick={() => generateContent('title')}
+                        className="h-9"
+                      >
+                        {aiLoading === 'title' ? (
+                          <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Đang viết</>
+                        ) : 'Tạo tiêu đề'}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={aiLoading !== null || !formData.category_id}
+                        onClick={() => generateContent('description')}
+                        className="h-9"
+                      >
+                        {aiLoading === 'description' ? (
+                          <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Đang viết</>
+                        ) : 'Viết mô tả'}
+                      </Button>
+                      <Button
+                        type="button"
+                        disabled={aiLoading !== null || !formData.category_id}
+                        onClick={() => generateContent('both')}
+                        className="h-9 bg-primary hover:bg-primary/90 text-white"
+                      >
+                        {aiLoading === 'both' ? (
+                          <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Đang viết</>
+                        ) : 'Tạo cả hai'}
+                      </Button>
+                    </div>
+                  </div>
+                  {!formData.category_id && (
+                    <p className="text-[13px] text-amber-700 mt-2.5">
+                      Chọn danh mục bất động sản ở trên trước khi dùng AI.
+                    </p>
+                  )}
+                </div>
 
                 <div className="mb-6">
                   <Label className="font-semibold text-gray-700">Tiêu đề tin đăng <span className="text-red-500">*</span></Label>
