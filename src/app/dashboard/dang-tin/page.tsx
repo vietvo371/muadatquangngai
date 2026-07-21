@@ -14,6 +14,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { LocationSelect } from '@/components/shared/LocationSelect';
 import { ImageUploader } from '@/components/shared/ImageUploader';
 import { useAuthStore } from '@/stores/authStore';
+import { usePostDraft, useDraftAutosave } from '@/hooks/usePostDraft';
 import { PostStepper } from '@/components/dashboard/PostStepper';
 import { PackageCard } from '@/components/dashboard/PackageCard';
 import {
@@ -81,12 +82,14 @@ interface PropertyFormData {
   package_id: string;
 }
 
+// 3 bước theo spec mục 2. Trước đây tách làm 4 (cơ bản / ảnh / chi tiết / thanh toán),
+// giờ gộp toàn bộ thông tin BĐS vào bước 1.
 const STEPS = [
-  { title: 'Cơ bản', description: 'Phân loại & Vị trí' },
-  { title: 'Hình ảnh', description: 'Tải lên tối đa 10 ảnh' },
-  { title: 'Chi tiết', description: 'Giá & Thông số' },
-  { title: 'Thanh toán', description: 'Chọn gói đăng tin' },
+  { title: 'Thông tin BĐS', description: 'Vị trí, giá, thông số' },
+  { title: 'Hình ảnh & Video', description: 'Tải lên tối đa 10 ảnh' },
+  { title: 'Gói đăng tin', description: 'Chọn gói & hoàn tất' },
 ];
+const LAST_STEP = STEPS.length;
 
 const PACKAGES = [
   { id: 'normal', name: 'Tin Thường', price: 0, duration: 30, color: 'normal' as const, features: ['Hiển thị dưới các tin VIP', 'Tiếp cận người dùng cơ bản', 'Không có huy hiệu nổi bật'] },
@@ -131,6 +134,46 @@ export default function DangTinPage() {
     contact_address: '',
     package_id: 'normal',
   });
+
+  // Bản nháp (spec mục 13). Chỉ bật autosave sau khi người dùng đã xử lý xong bản nháp
+  // cũ (tiếp tục hoặc bỏ), nếu không form rỗng lúc mới mở sẽ ghi đè ngay lên nháp cũ.
+  const draft = usePostDraft<PropertyFormData>();
+  const [draftHandled, setDraftHandled] = useState(false);
+
+  // Chỉ lưu khi người dùng đã nhập gì đó thật sự. Không tính các ô liên hệ vì chúng được
+  // điền sẵn từ tài khoản — nếu tính, form vừa mở đã bị coi là "có nội dung" và lần sau
+  // vào lại sẽ hiện thông báo khôi phục một bản nháp trống rỗng.
+  const hasContent = !!(
+    formData.category_id ||
+    formData.title ||
+    formData.description ||
+    formData.street ||
+    formData.price > 0 ||
+    formData.area > 0 ||
+    formData.images.length > 0
+  );
+
+  useDraftAutosave(formData, currentStep, draft.saveNow, draftHandled && hasContent && !isSubmitting);
+
+  const resumeDraft = () => {
+    if (!draft.found) return;
+    setFormData(draft.found.data);
+    setCurrentStep(draft.found.step || 1);
+    draft.dismiss();
+    setDraftHandled(true);
+    toast.success('Đã khôi phục bản nháp gần nhất.');
+  };
+
+  const discardDraft = () => {
+    draft.clear();
+    setDraftHandled(true);
+  };
+
+  // Đọc xong mà không có nháp thì cho autosave chạy ngay. Phải đợi `checked` chứ không
+  // chỉ dựa vào `found`, vì lượt render đầu `found` luôn null.
+  useEffect(() => {
+    if (draft.checked && !draft.found) setDraftHandled(true);
+  }, [draft.checked, draft.found]);
 
   // Điền sẵn thông tin liên hệ từ tài khoản, nhưng chỉ khi người dùng chưa tự nhập —
   // tránh ghi đè thứ họ vừa sửa nếu store cập nhật lại sau đó.
@@ -217,22 +260,27 @@ export default function DangTinPage() {
 
   const canProceed = () => {
     switch (currentStep) {
+      // Bước 1 gộp toàn bộ thông tin BĐS nên kiểm luôn cả trường bắt buộc của spec
+      // mục 10.1. Mô tả tối thiểu 50 ký tự khớp đúng validate của API, nếu để thấp hơn
+      // thì người dùng đi hết các bước rồi mới bị server từ chối ở bước cuối.
       case 1:
-        // Mô tả tối thiểu 50 ký tự — khớp đúng validate của POST /api/v2/my/properties,
-        // nếu để 20 thì user đi hết 4 bước rồi mới bị server từ chối ở bước cuối.
-        return formData.type && formData.category_id && formData.title.length >= 10 && formData.description.length >= 50 && formData.province_id && formData.district_id;
+        return !!(
+          formData.type &&
+          formData.category_id &&
+          formData.province_id &&
+          formData.district_id &&
+          // "Thoả thuận" không bắt buộc nhập số tiền (spec mục 4.2).
+          (formData.price_unit === 'negotiable' || formData.price > 0) &&
+          formData.area > 0 &&
+          formData.contact_name.trim() &&
+          isValidPhone(formData.contact_phone) &&
+          (!formData.contact_email || isValidEmail(formData.contact_email)) &&
+          formData.title.length >= 10 &&
+          formData.description.length >= 50
+        );
       case 2:
         return formData.images.length > 0;
       case 3:
-        // "Thoả thuận" không bắt buộc nhập số tiền (spec mục 4.2).
-        return (
-          (formData.price_unit === 'negotiable' || formData.price > 0) &&
-          formData.area > 0 &&
-          !!formData.contact_name.trim() &&
-          isValidPhone(formData.contact_phone) &&
-          (!formData.contact_email || isValidEmail(formData.contact_email))
-        );
-      case 4:
         return !!formData.package_id;
       default:
         return false;
@@ -240,8 +288,11 @@ export default function DangTinPage() {
   };
 
   const nextStep = () => {
-    if (canProceed() && currentStep < 4) {
-      setCurrentStep(prev => prev + 1);
+    if (canProceed() && currentStep < LAST_STEP) {
+      const next = currentStep + 1;
+      setCurrentStep(next);
+      // Spec: lưu nháp tại thời điểm chuyển bước, không đợi hết debounce.
+      if (draftHandled) draft.saveNow(formData, next);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
@@ -317,6 +368,8 @@ export default function DangTinPage() {
       const response = await api.post('/api/v2/my/properties', payload);
 
       if (response.data?.success || response.status === 201) {
+        // Đăng thành công thì bản nháp không còn ý nghĩa — xoá để lần sau vào form trống.
+        draft.clear();
         toast.success('Đăng tin thành công!', {
           description: 'Tin của bạn đã được gửi và đang chờ phê duyệt.',
         });
@@ -351,6 +404,27 @@ export default function DangTinPage() {
         <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900">Đăng tin bất động sản</h1>
         <p className="text-gray-500 mt-2 text-sm sm:text-base">Điền đầy đủ thông tin để thu hút khách hàng tốt nhất</p>
       </div>
+
+      {/* Thông báo có bản nháp chưa hoàn thành (spec mục 13) — không tự khôi phục mà
+          để người dùng chọn, tránh bất ngờ khi họ muốn đăng một tin hoàn toàn mới. */}
+      {draft.found && !draftHandled && (
+        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3.5 flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-amber-900">Bạn có một tin đăng chưa hoàn thành</p>
+            <p className="text-[13px] text-amber-700 mt-0.5">
+              Lưu lúc {new Date(draft.found.savedAt).toLocaleString('vi-VN')} — ở bước {draft.found.step}/{LAST_STEP}.
+            </p>
+          </div>
+          <div className="flex gap-2 shrink-0">
+            <Button type="button" onClick={resumeDraft} className="h-9 bg-primary hover:bg-primary/90 text-white">
+              Tiếp tục
+            </Button>
+            <Button type="button" variant="outline" onClick={discardDraft} className="h-9">
+              Bỏ và tạo mới
+            </Button>
+          </div>
+        </div>
+      )}
 
       <PostStepper currentStep={currentStep} steps={STEPS} />
 
@@ -418,36 +492,6 @@ export default function DangTinPage() {
                   </Select>
                 </div>
 
-                <div className="mb-6">
-                  <Label className="font-semibold text-gray-700">Tiêu đề tin đăng <span className="text-red-500">*</span></Label>
-                  <Input
-                    value={formData.title}
-                    onChange={(e) => updateFormData({ title: e.target.value })}
-                    placeholder="VD: Căn hộ chung cư mini cho thuê 35m2 đầy đủ nội thất..."
-                    className="mt-2 h-12 bg-gray-50 border-gray-200 focus:ring-primary focus:border-primary"
-                  />
-                  <div className="flex justify-between mt-2">
-                    <p className="text-xs text-gray-500">Tối thiểu 10 ký tự</p>
-                    <p className="text-xs font-medium text-gray-500">{formData.title.length}/99</p>
-                  </div>
-                </div>
-
-                <div>
-                  <Label className="font-semibold text-gray-700">Mô tả chi tiết <span className="text-red-500">*</span></Label>
-                  <Textarea
-                    value={formData.description}
-                    onChange={(e) => updateFormData({ description: e.target.value })}
-                    placeholder="Giới thiệu chi tiết về diện tích, tiện ích, vị trí, tình trạng pháp lý..."
-                    rows={7}
-                    className="mt-2 bg-gray-50 border-gray-200 focus:ring-primary focus:border-primary resize-none"
-                  />
-                  <div className="flex justify-between items-center mt-1.5">
-                    <p className="text-xs text-gray-500">Tối thiểu 50 ký tự</p>
-                    <p className={`text-xs font-medium ${formData.description.length < 50 ? 'text-gray-400' : 'text-green-600'}`}>
-                      {formData.description.length}/50
-                    </p>
-                  </div>
-                </div>
               </section>
 
               <section>
@@ -502,8 +546,10 @@ export default function DangTinPage() {
             </div>
           )}
 
-          {/* Step 3: Details */}
-          {currentStep === 3 && (
+          {/* Bước 1 (phần 2): Giá, thông số, tiện ích, liên hệ, nội dung tin đăng.
+              Spec gộp toàn bộ thông tin BĐS vào 1 bước, thứ tự theo mục 4.1→4.6 —
+              tiêu đề/mô tả đặt cuối vì AI cần dữ liệu các mục trên để sinh nội dung. */}
+          {currentStep === 1 && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <section>
                 <h3 className="text-lg font-bold text-gray-900 mb-5 pb-2 border-b">Mức giá & Diện tích</h3>
@@ -813,11 +859,48 @@ export default function DangTinPage() {
                   )}
                 </section>
               )}
+
+              {/* Nội dung tin đăng — đặt cuối cùng (spec mục 4.6) để nút AI ở đợt sau
+                  có sẵn toàn bộ dữ liệu người dùng vừa nhập làm đầu vào. */}
+              <section>
+                <h3 className="text-lg font-bold text-gray-900 mb-5 pb-2 border-b">Nội dung tin đăng</h3>
+
+                <div className="mb-6">
+                  <Label className="font-semibold text-gray-700">Tiêu đề tin đăng <span className="text-red-500">*</span></Label>
+                  <Input
+                    value={formData.title}
+                    onChange={(e) => updateFormData({ title: e.target.value })}
+                    placeholder="VD: Nhà riêng 3 tầng mặt tiền đường Hùng Vương, sổ hồng riêng"
+                    className="mt-2 h-12 bg-gray-50 border-gray-200 focus:ring-primary focus:border-primary"
+                  />
+                  <div className="flex justify-between mt-2">
+                    <p className="text-xs text-gray-500">Tối thiểu 10 ký tự</p>
+                    <p className="text-xs font-medium text-gray-500">{formData.title.length}/99</p>
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="font-semibold text-gray-700">Mô tả chi tiết <span className="text-red-500">*</span></Label>
+                  <Textarea
+                    value={formData.description}
+                    onChange={(e) => updateFormData({ description: e.target.value })}
+                    placeholder="Giới thiệu chi tiết về diện tích, tiện ích, vị trí, tình trạng pháp lý..."
+                    rows={7}
+                    className="mt-2 bg-gray-50 border-gray-200 focus:ring-primary focus:border-primary resize-none"
+                  />
+                  <div className="flex justify-between items-center mt-1.5">
+                    <p className="text-xs text-gray-500">Tối thiểu 50 ký tự</p>
+                    <p className={`text-xs font-medium ${formData.description.length < 50 ? 'text-gray-400' : 'text-green-600'}`}>
+                      {formData.description.length}/50
+                    </p>
+                  </div>
+                </div>
+              </section>
             </div>
           )}
 
-          {/* Step 4: Packages */}
-          {currentStep === 4 && (
+          {/* Bước 3: Gói đăng tin */}
+          {currentStep === 3 && (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <h3 className="text-lg font-bold text-gray-900 mb-2 pb-2 border-b text-center">Chọn gói đăng tin</h3>
               <p className="text-center text-gray-500 text-sm mb-2">Tin đăng sẽ được kiểm duyệt trong vòng 24h.</p>
@@ -859,7 +942,7 @@ export default function DangTinPage() {
           Quay lại
         </Button>
 
-        {currentStep < 4 ? (
+        {currentStep < LAST_STEP ? (
           <Button
             onClick={nextStep}
             disabled={!canProceed()}
