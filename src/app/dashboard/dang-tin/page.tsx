@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { LocationSelect } from '@/components/shared/LocationSelect';
 import { ImageUploader } from '@/components/shared/ImageUploader';
+import { useAuthStore } from '@/stores/authStore';
 import { PostStepper } from '@/components/dashboard/PostStepper';
 import { PackageCard } from '@/components/dashboard/PackageCard';
 import {
@@ -24,6 +25,8 @@ import {
   LEGAL_OPTIONS,
   FURNITURE_OPTIONS,
   PRICE_UNIT_OPTIONS,
+  isValidPhone,
+  isValidEmail,
 } from '@/lib/property-form-config';
 import { 
   ArrowLeft, 
@@ -68,6 +71,12 @@ interface PropertyFormData {
   legal?: string;
   features: number[];
 
+  // Thông tin liên hệ — mặc định lấy từ tài khoản, cho phép sửa (spec mục 4.5)
+  contact_name: string;
+  contact_phone: string;
+  contact_email: string;
+  contact_address: string;
+
   // Step 4: Package
   package_id: string;
 }
@@ -95,6 +104,7 @@ export default function DangTinPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [apiCategories, setApiCategories] = useState<Array<{id: number; name: string; type: string}>>([]);
   const [features, setFeatures] = useState<Array<{ id: number; name: string }>>([]);
+  const authUser = useAuthStore((s) => s.user);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<PropertyFormData>({
     type: 'sell',
@@ -115,8 +125,25 @@ export default function DangTinPage() {
     furniture: 'none',
     legal: '',
     features: [],
+    contact_name: '',
+    contact_phone: '',
+    contact_email: '',
+    contact_address: '',
     package_id: 'normal',
   });
+
+  // Điền sẵn thông tin liên hệ từ tài khoản, nhưng chỉ khi người dùng chưa tự nhập —
+  // tránh ghi đè thứ họ vừa sửa nếu store cập nhật lại sau đó.
+  useEffect(() => {
+    if (!authUser) return;
+    setFormData((prev) => ({
+      ...prev,
+      contact_name: prev.contact_name || authUser.name || '',
+      contact_phone: prev.contact_phone || authUser.phone || '',
+      contact_email: prev.contact_email || authUser.email || '',
+      contact_address: prev.contact_address || authUser.address || '',
+    }));
+  }, [authUser]);
 
   // Fetch categories from API on mount
   useEffect(() => {
@@ -197,7 +224,14 @@ export default function DangTinPage() {
       case 2:
         return formData.images.length > 0;
       case 3:
-        return formData.price > 0 && formData.area > 0;
+        // "Thoả thuận" không bắt buộc nhập số tiền (spec mục 4.2).
+        return (
+          (formData.price_unit === 'negotiable' || formData.price > 0) &&
+          formData.area > 0 &&
+          !!formData.contact_name.trim() &&
+          isValidPhone(formData.contact_phone) &&
+          (!formData.contact_email || isValidEmail(formData.contact_email))
+        );
       case 4:
         return !!formData.package_id;
       default:
@@ -266,6 +300,10 @@ export default function DangTinPage() {
           isFieldVisible(group, 'utilities') && formData.features.length > 0
             ? formData.features
             : undefined,
+        contact_name: formData.contact_name || undefined,
+        contact_phone: formData.contact_phone,
+        contact_email: formData.contact_email || undefined,
+        contact_address: formData.contact_address || undefined,
         // Ảnh đã upload sẵn lên Cloudinary ở bước 2 — chỉ gửi URL để API ghi vào
         // property_media. Thiếu mảng này thì ảnh người dùng tải lên bị mất trắng.
         images: formData.images.map((img, i) => ({
@@ -700,6 +738,55 @@ export default function DangTinPage() {
                     </Select>
                   </div>
                 )}
+              </section>
+
+              {/* Thông tin liên hệ (spec mục 4.5) — điền sẵn từ tài khoản, cho sửa. */}
+              <section>
+                <h3 className="text-lg font-bold text-gray-900 mb-5 pb-2 border-b">Thông tin liên hệ</h3>
+                <div className="grid md:grid-cols-2 gap-5">
+                  <div>
+                    <Label className="font-semibold text-gray-700">Họ và tên <span className="text-red-500">*</span></Label>
+                    <Input
+                      value={formData.contact_name}
+                      onChange={(e) => updateFormData({ contact_name: e.target.value })}
+                      placeholder="Tên người liên hệ"
+                      className="mt-2 h-11 bg-gray-50"
+                    />
+                  </div>
+                  <div>
+                    <Label className="font-semibold text-gray-700">Số điện thoại <span className="text-red-500">*</span></Label>
+                    <Input
+                      value={formData.contact_phone}
+                      onChange={(e) => updateFormData({ contact_phone: e.target.value })}
+                      placeholder="VD: 0901234567"
+                      className="mt-2 h-11 bg-gray-50"
+                    />
+                    {formData.contact_phone && !isValidPhone(formData.contact_phone) && (
+                      <p className="text-xs text-red-500 mt-1.5">Vui lòng nhập đúng định dạng số điện thoại.</p>
+                    )}
+                  </div>
+                  <div>
+                    <Label className="font-semibold text-gray-700">Email</Label>
+                    <Input
+                      value={formData.contact_email}
+                      onChange={(e) => updateFormData({ contact_email: e.target.value })}
+                      placeholder="Không bắt buộc"
+                      className="mt-2 h-11 bg-gray-50"
+                    />
+                    {formData.contact_email && !isValidEmail(formData.contact_email) && (
+                      <p className="text-xs text-red-500 mt-1.5">Vui lòng nhập đúng định dạng email.</p>
+                    )}
+                  </div>
+                  <div>
+                    <Label className="font-semibold text-gray-700">Địa chỉ liên hệ</Label>
+                    <Input
+                      value={formData.contact_address}
+                      onChange={(e) => updateFormData({ contact_address: e.target.value })}
+                      placeholder="Không bắt buộc"
+                      className="mt-2 h-11 bg-gray-50"
+                    />
+                  </div>
+                </div>
               </section>
 
               {isFieldVisible(group, 'utilities') && (

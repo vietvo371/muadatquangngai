@@ -48,6 +48,10 @@ export interface PropertyRow {
   facade: unknown;
   furniture: string;
   legal: string | null;
+  contact_name: string | null;
+  contact_phone: string | null;
+  contact_email: string | null;
+  contact_address: string | null;
   thumbnail: string | null;
   latitude: unknown;
   longitude: unknown;
@@ -180,6 +184,12 @@ export function mapPropertyResource(
     facade: toFloatOrNull(property.facade),
     furniture: property.furniture,
     legal: property.legal,
+
+    // Liên hệ riêng của tin — fallback về thông tin chủ tin cho các tin đăng cũ chưa có.
+    contact_name: property.contact_name,
+    contact_phone: property.contact_phone,
+    contact_email: property.contact_email,
+    contact_address: property.contact_address,
 
     address: fullAddress(property.street, ward, property.districts, property.provinces),
     thumbnail: property.thumbnail,

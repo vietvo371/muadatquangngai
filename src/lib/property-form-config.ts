@@ -147,6 +147,19 @@ export const PRICE_UNIT_OPTIONS: readonly SelectOption[] = [
   { value: 'negotiable', label: 'Thoả thuận' },
 ];
 
+// ---------------------------------------------------------------------------
+// Validate dùng chung client + server (spec mục 10.2)
+// ---------------------------------------------------------------------------
+
+/** SĐT Việt Nam: bắt đầu bằng 0, tổng 10-11 số. Bỏ qua khoảng trắng và dấu chấm. */
+export function isValidPhone(phone: string): boolean {
+  return /^0\d{9,10}$/.test(phone.replace(/[\s.]/g, ''));
+}
+
+export function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 function labelFrom(options: readonly SelectOption[], value?: string | null): string {
   if (!value) return 'Đang cập nhật';
   return options.find((o) => o.value === value)?.label ?? value;

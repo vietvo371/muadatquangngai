@@ -13,6 +13,8 @@ import {
   VALID_FURNITURE,
   VALID_LEGAL,
   VALID_PRICE_UNITS,
+  isValidPhone,
+  isValidEmail,
 } from '@/lib/property-form-config';
 
 const PROPERTY_INCLUDE = {
@@ -140,6 +142,20 @@ export async function POST(request: Request) {
   }
   errors.push(...(await validateFeatureIds(body.feature_ids)));
 
+  // Thông tin liên hệ (spec mục 4.5): SĐT bắt buộc, email không bắt buộc nhưng nếu có
+  // thì phải đúng định dạng. Mặc định form lấy từ tài khoản nhưng cho người đăng sửa.
+  const contactPhone = isString(body.contact_phone) ? body.contact_phone.trim() : undefined;
+  if (!contactPhone) {
+    errors.push(new FieldError('contact_phone', 'Vui lòng nhập số điện thoại liên hệ.'));
+  } else if (!isValidPhone(contactPhone)) {
+    errors.push(new FieldError('contact_phone', 'Vui lòng nhập đúng định dạng số điện thoại.'));
+  }
+
+  const contactEmail = isString(body.contact_email) ? body.contact_email.trim() : '';
+  if (contactEmail && !isValidEmail(contactEmail)) {
+    errors.push(new FieldError('contact_email', 'Vui lòng nhập đúng định dạng email.'));
+  }
+
   // Ảnh: client upload thẳng lên Cloudinary rồi gửi kèm URL. Chỉ nhận URL (không nhận
   // file) nên chỉ cần validate kiểu và độ dài khớp cột VarChar(500).
   const rawImages = body.images;
@@ -227,6 +243,10 @@ export async function POST(request: Request) {
       depth: body.depth != null ? String(body.depth) : null,
       meta_title: body.meta_title ?? null,
       meta_description: body.meta_description ?? null,
+      contact_name: isString(body.contact_name) ? body.contact_name.trim() : user.name,
+      contact_phone: contactPhone!,
+      contact_email: contactEmail || null,
+      contact_address: isString(body.contact_address) ? body.contact_address.trim() : null,
       thumbnail: primaryImage?.thumbnail ?? primaryImage?.url ?? null,
       published_at: now,
       created_at: now,
