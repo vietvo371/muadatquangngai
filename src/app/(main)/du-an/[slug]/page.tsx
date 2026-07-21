@@ -45,9 +45,9 @@ const mockProject = {
   developer: 'Công ty Cổ phần Đầu tư Xây dựng Thương mại Trần Gia Hân',
   status: 'selling',
   type: DEFAULT_PROJECT_TYPE,
-  address: 'Khu Nam Sông Trà Khúc, Phường Lê Hồng Phong, TP. Quảng Ngãi',
+  address: 'Khu Nam Sông Trà Khúc, Phường Lê Hồng Phong, Quảng Ngãi',
   province: 'Quảng Ngãi',
-  district: 'TP Quảng Ngãi',
+  district: 'Quảng Ngãi',
   ward: 'Phường Lê Hồng Phong',
   totalArea: '2.6 ha',
   totalUnits: 55,
@@ -65,12 +65,12 @@ const mockProject = {
     '/images/namsongtrakhuc/phoi-canh-nha-pho-thuong-mai.png',
     '/images/namsongtrakhuc/mat-bang-dinh-vi.jpg',
   ],
-  overview: `De Palace River là khu nhà phố thương mại cao cấp tọa lạc tại Khu Nam Sông Trà Khúc, Phường Lê Hồng Phong, TP. Quảng Ngãi — vị trí đắc địa bậc nhất với tầm nhìn ôm trọn sông Trà Khúc thơ mộng.
+  overview: `De Palace River là khu nhà phố thương mại cao cấp tọa lạc tại Khu Nam Sông Trà Khúc, Phường Lê Hồng Phong, Quảng Ngãi — vị trí đắc địa bậc nhất với tầm nhìn ôm trọn sông Trà Khúc thơ mộng.
 
 Dự án được phát triển bởi Công ty Cổ phần Đầu tư Xây dựng Thương mại Trần Gia Hân. Với tổng quy mô 2,6 ha, De Palace River gồm 3 block, cung cấp 55 căn nhà phố thương mại thiết kế hoàn thiện mặt ngoài chuẩn phong cách Châu Âu sang trọng, tinh tế. Dự kiến bàn giao vào tháng 06/2028.
 
 **Vị trí:**
-- Khu Nam Sông Trà Khúc, Phường Lê Hồng Phong, TP. Quảng Ngãi
+- Khu Nam Sông Trà Khúc, Phường Lê Hồng Phong, Quảng Ngãi
 - Mặt tiền ven sông Trà Khúc, tầm nhìn panorama
 - Kết nối dễ dàng đến trung tâm thành phố và các tuyến đường chính
 
@@ -100,7 +100,7 @@ Dự án được phát triển bởi Công ty Cổ phần Đầu tư Xây dựn
     },
     {
       q: 'Địa chỉ dự án De Palace River ở đâu?',
-      a: 'Dự án tọa lạc tại Khu Nam Sông Trà Khúc, Phường Lê Hồng Phong, TP. Quảng Ngãi.',
+      a: 'Dự án tọa lạc tại Khu Nam Sông Trà Khúc, Phường Lê Hồng Phong, Quảng Ngãi.',
     },
     {
       q: 'Chủ đầu tư dự án De Palace River là ai?',
@@ -114,22 +114,22 @@ Dự án được phát triển bởi Công ty Cổ phần Đầu tư Xây dựn
   mapUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3849.012!2d108.7859137!3d15.1319266!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3169ad3732456f77%3A0xce93b603f79b6e4e!2sDe+Palace+River+-+Nam+S%C3%B4ng+Tr%C3%A0!5e0!3m2!1svi!2svn!4v1700000000000!5m2!1svi!2svn',
   nearbyPlaces: {
     school: [
-      { name: 'Trường Tiểu học Lê Hồng Phong', address: 'P. Lê Hồng Phong, TP Quảng Ngãi', dist: '0,8 km', time: '2 phút' },
-      { name: 'THCS Lê Hồng Phong', address: 'P. Nghĩa Lộ, TP Quảng Ngãi', dist: '1,2 km', time: '3 phút' },
-      { name: 'THPT Lê Trung Đình', address: 'P. Nguyễn Nghiêm, TP Quảng Ngãi', dist: '1,5 km', time: '3 phút' },
-      { name: 'Trường Mầm non Hướng Dương', address: 'P. Lê Hồng Phong, TP Quảng Ngãi', dist: '0,5 km', time: '1 phút' },
+      { name: 'Trường Tiểu học Lê Hồng Phong', address: 'P. Lê Hồng Phong, Quảng Ngãi', dist: '0,8 km', time: '2 phút' },
+      { name: 'THCS Lê Hồng Phong', address: 'P. Nghĩa Lộ, Quảng Ngãi', dist: '1,2 km', time: '3 phút' },
+      { name: 'THPT Lê Trung Đình', address: 'P. Nguyễn Nghiêm, Quảng Ngãi', dist: '1,5 km', time: '3 phút' },
+      { name: 'Trường Mầm non Hướng Dương', address: 'P. Lê Hồng Phong, Quảng Ngãi', dist: '0,5 km', time: '1 phút' },
     ],
     supermarket: [
-      { name: 'Co.opmart Quảng Ngãi', address: 'Đường Nguyễn Du, TP Quảng Ngãi', dist: '2,0 km', time: '4 phút' },
-      { name: 'Siêu thị Go! Quảng Ngãi', address: 'Đường Lê Lợi, TP Quảng Ngãi', dist: '2,5 km', time: '5 phút' },
+      { name: 'Co.opmart Quảng Ngãi', address: 'Đường Nguyễn Du, Quảng Ngãi', dist: '2,0 km', time: '4 phút' },
+      { name: 'Siêu thị Go! Quảng Ngãi', address: 'Đường Lê Lợi, Quảng Ngãi', dist: '2,5 km', time: '5 phút' },
     ],
     park: [
-      { name: 'Công viên Thiên Bút', address: 'P. Lê Hồng Phong, TP Quảng Ngãi', dist: '1,8 km', time: '4 phút' },
-      { name: 'Quảng trường Nguyễn Tự Tân', address: 'TP Quảng Ngãi', dist: '2,2 km', time: '5 phút' },
+      { name: 'Công viên Thiên Bút', address: 'P. Lê Hồng Phong, Quảng Ngãi', dist: '1,8 km', time: '4 phút' },
+      { name: 'Quảng trường Nguyễn Tự Tân', address: 'Quảng Ngãi', dist: '2,2 km', time: '5 phút' },
     ],
     hospital: [
-      { name: 'Bệnh viện Đa khoa Quảng Ngãi', address: 'Đường Hùng Vương, TP Quảng Ngãi', dist: '2,1 km', time: '4 phút' },
-      { name: 'Bệnh viện Y học cổ truyền QN', address: 'TP Quảng Ngãi', dist: '3,0 km', time: '6 phút' },
+      { name: 'Bệnh viện Đa khoa Quảng Ngãi', address: 'Đường Hùng Vương, Quảng Ngãi', dist: '2,1 km', time: '4 phút' },
+      { name: 'Bệnh viện Y học cổ truyền QN', address: 'Quảng Ngãi', dist: '3,0 km', time: '6 phút' },
     ],
   },
   keywords: [
@@ -145,7 +145,7 @@ Dự án được phát triển bởi Công ty Cổ phần Đầu tư Xây dựn
       title: 'Bán nhà phố thương mại De Palace River mặt tiền ven sông',
       price: '6,5 tỷ',
       area: '120m²',
-      address: 'TP Quảng Ngãi, Quảng Ngãi',
+      address: 'Quảng Ngãi, Quảng Ngãi',
       postedAt: 'Đăng hôm nay',
       image: '/images/namsongtrakhuc/phoi-canh-nha-pho-thuong-mai.png',
       href: '/mua-ban/ban-shophouse-de-palace-river',
@@ -155,7 +155,7 @@ Dự án được phát triển bởi Công ty Cổ phần Đầu tư Xây dựn
       title: 'Bán nhà phố góc De Palace River view sông',
       price: '7,2 tỷ',
       area: '150m²',
-      address: 'TP Quảng Ngãi, Quảng Ngãi',
+      address: 'Quảng Ngãi, Quảng Ngãi',
       postedAt: 'Hôm qua',
       image: '/images/namsongtrakhuc/noi-khu-san-vuon.png',
       href: '/mua-ban/ban-shophouse-goc-de-palace-river',
@@ -165,7 +165,7 @@ Dự án được phát triển bởi Công ty Cổ phần Đầu tư Xây dựn
       title: 'Bán nhà phố mặt tiền sông De Palace River',
       price: '8,5 tỷ',
       area: '180m²',
-      address: 'TP Quảng Ngãi, Quảng Ngãi',
+      address: 'Quảng Ngãi, Quảng Ngãi',
       postedAt: '2 ngày trước',
       image: '/images/namsongtrakhuc/phoi-canh-duong-ven-song.png',
       href: '/mua-ban/ban-shophouse-mat-tien-song-de-palace-river',
@@ -308,9 +308,12 @@ const mapApiProjectDetail = (apiProject: any) => {
     ];
   }
 
-  const districtName = apiProject.location?.district?.name || apiProject.district || 'TP Quảng Ngãi';
+  // Không bịa địa chỉ dự phòng. Trước đây thiếu dữ liệu là điền đại "Quảng Ngãi" và
+  // "Phường Trương Quang Trọng" — vừa là đơn vị đã bị xoá sau sáp nhập 2025, vừa khiến dự án
+  // hiện sai vị trí mà người xem không biết đó là dữ liệu bịa.
+  const districtName = apiProject.location?.district?.name || apiProject.district || '';
   const provinceName = apiProject.location?.province?.name || apiProject.province || 'Quảng Ngãi';
-  const wardName = apiProject.location?.ward?.name || apiProject.ward || 'Phường Trương Quang Trọng';
+  const wardName = apiProject.location?.ward?.name || apiProject.ward || '';
 
   const priceFrom = apiProject.price?.from || apiProject.price_from || 3000000000;
   const priceTo = apiProject.price?.to || apiProject.price_to || 8000000000;
@@ -340,24 +343,10 @@ const mapApiProjectDetail = (apiProject: any) => {
     },
   ];
 
-  const nearbyPlaces = apiProject.nearby_places || {
-    school: [
-      { name: `Trường Tiểu học ${districtName}`, address: `${districtName}, Quảng Ngãi`, dist: '0,8 km', time: '2 phút' },
-      { name: `Trường THCS Lê Hồng Phong`, address: `${districtName}, Quảng Ngãi`, dist: '1,2 km', time: '3 phút' },
-      { name: `Trường Mầm non quốc tế`, address: `${districtName}, Quảng Ngãi`, dist: '0,5 km', time: '1 phút' },
-    ],
-    supermarket: [
-      { name: 'Co.opmart Quảng Ngãi', address: 'Đường Nguyễn Du, TP Quảng Ngãi', dist: '2,0 km', time: '4 phút' },
-      { name: 'Siêu thị Go! Quảng Ngãi', address: 'Đường Lê Lợi, TP Quảng Ngãi', dist: '2,5 km', time: '5 phút' },
-    ],
-    park: [
-      { name: 'Công viên Ba Tơ', address: 'TP Quảng Ngãi', dist: '1,5 km', time: '3 phút' },
-      { name: 'Quảng trường đường Phạm Văn Đồng', address: 'TP Quảng Ngãi', dist: '2,2 km', time: '5 phút' },
-    ],
-    hospital: [
-      { name: 'Bệnh viện Đa khoa Tỉnh Quảng Ngãi', address: 'Đường Hùng Vương, TP Quảng Ngãi', dist: '2,1 km', time: '4 phút' },
-    ],
-  };
+  // Chỉ hiện tiện ích lân cận khi dự án thật sự có dữ liệu. Trước đây thiếu dữ liệu là bịa
+  // ra "Trường Tiểu học <tên xã>" cách "0,8 km — 2 phút" và mấy địa điểm ở "Quảng Ngãi"
+  // (đơn vị đã bị xoá sau sáp nhập). Người mua nhà đọc những con số đó như thông tin thật.
+  const nearbyPlaces = apiProject.nearby_places || { school: [], supermarket: [], park: [], hospital: [] };
 
   return {
     id: apiProject.id.toString(),
@@ -489,7 +478,9 @@ function NearbyTab({ project }: { project: NearbyProject }) {
         </div>
 
         <p className="px-4 py-2 text-xs text-gray-500 bg-gray-50 border-b border-gray-100">
-          Có {places.length} {nearbyTabs.find(t => t.key === cat)?.label.toLowerCase()} trong vòng 5 km
+          {places.length > 0
+            ? `Có ${places.length} ${nearbyTabs.find((t) => t.key === cat)?.label.toLowerCase()} trong vòng 5 km`
+            : 'Chưa có thông tin tiện ích lân cận cho dự án này.'}
         </p>
 
         <div className="divide-y divide-gray-50">
@@ -1297,7 +1288,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
                     ['Chủ đầu tư', projectData.developer],
                     ['Loại hình', getProjectTypeLabel(projectData.type)],
                     ['Tỉnh / TP', projectData.province],
-                    ['Quận / Huyện', projectData.district],
+                    // Sau sáp nhập 2025 tỉnh chỉ còn cấp Xã/Phường/Đặc khu — nhãn cũ
+                    // "Quận / Huyện" đi kèm giá trị "Xã Bình Sơn" đọc lên thành vô nghĩa.
+                    ['Xã / Phường', projectData.district],
                     ['Tổng diện tích', projectData.totalArea],
                     [isLandLikeProjectType(projectData.type) ? 'Số lô đất' : 'Số lượng', `${projectData.totalUnits} ${projectData.unitWord}`],
                     ['Pháp lý', projectData.legal],

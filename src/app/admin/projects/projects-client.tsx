@@ -60,6 +60,7 @@ import {
 } from 'lucide-react';
 import { formatPrice } from '@/lib/formatters';
 import { projectApi, type Project } from '@/lib/admin-api';
+import api from '@/lib/axios';
 import { DEFAULT_PROJECT_TYPE, getProjectTypeLabel } from '@/lib/project-type';
 
 // Dynamic client URL from env
@@ -164,6 +165,7 @@ export default function ProjectsClient() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [districtFilter, setDistrictFilter] = useState('all');
+  const [districtOptions, setDistrictOptions] = useState<Array<{ id: number; name: string }>>([]);
   const [sortBy, setSortBy] = useState('newest');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -178,6 +180,24 @@ export default function ProjectsClient() {
   const openCreateDialog = () => {
     router.push('/admin/projects/create');
   };
+
+  // Nạp danh sách xã/phường thật cho ô lọc. Không hardcode id tỉnh — lấy tỉnh đầu tiên
+  // giống RegionSelect, để nếu sau này phục vụ thêm tỉnh khác thì không phải sửa lại.
+  useEffect(() => {
+    const loadDistricts = async () => {
+      try {
+        const provRes = await api.get('/api/v2/locations/provinces');
+        const province = provRes.data?.data?.[0];
+        if (!province) return;
+        const distRes = await api.get(`/api/v2/locations/districts/${province.id}`);
+        setDistrictOptions(distRes.data?.data ?? []);
+      } catch {
+        // Lọc theo khu vực không dùng được thì các bộ lọc còn lại vẫn chạy bình thường.
+        setDistrictOptions([]);
+      }
+    };
+    loadDistricts();
+  }, []);
 
   const loadProjects = useCallback(async () => {
     try {
@@ -451,20 +471,17 @@ export default function ProjectsClient() {
             </SelectContent>
           </Select>
 
-          {/* Select Quận/Huyện */}
+          {/* Xã/Phường/Đặc khu — nạp từ DB. Trước đây hardcode 8 huyện/thị xã kiểu cũ, mà
+              các đơn vị đó đã bị xoá sau sáp nhập 2025 nên lọc theo chúng không ra dự án nào. */}
           <Select value={districtFilter} onValueChange={(val) => { setDistrictFilter(val || 'all'); setPage(1); }}>
-            <SelectTrigger className="w-full sm:w-[145px] h-9.5 text-xs font-bold text-gray-700 rounded-xl border-gray-200 bg-white">
-              <SelectValue placeholder="Quận/Huyện" />
+            <SelectTrigger className="w-full sm:w-[165px] h-9.5 text-xs font-bold text-gray-700 rounded-xl border-gray-200 bg-white">
+              <SelectValue placeholder="Xã/Phường/Đặc khu" />
             </SelectTrigger>
-            <SelectContent className="rounded-xl">
-              <SelectItem value="all">Tất cả Quận/Huyện</SelectItem>
-              <SelectItem value="TP Quảng Ngãi">TP. Quảng Ngãi</SelectItem>
-              <SelectItem value="Sơn Tịnh">Huyện Sơn Tịnh</SelectItem>
-              <SelectItem value="Bình Sơn">Huyện Bình Sơn</SelectItem>
-              <SelectItem value="Tư Nghĩa">Huyện Tư Nghĩa</SelectItem>
-              <SelectItem value="Mộ Đức">Huyện Mộ Đức</SelectItem>
-              <SelectItem value="Nghĩa Hành">Huyện Nghĩa Hành</SelectItem>
-              <SelectItem value="Đức Phổ">Thị xã Đức Phổ</SelectItem>
+            <SelectContent className="rounded-xl max-h-72">
+              <SelectItem value="all">Tất cả Xã/Phường</SelectItem>
+              {districtOptions.map((d) => (
+                <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
 

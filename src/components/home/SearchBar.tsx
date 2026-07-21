@@ -20,7 +20,7 @@ const categories = [
 const placeholderExamples = [
   'Bán nhà Vệ Giang...',
   'Đất nền Nghĩa Hành...',
-  'Căn hộ trung tâm TP Quảng Ngãi...',
+  'Căn hộ trung tâm Quảng Ngãi...',
   'Nhà mặt tiền Quang Trung...',
   'Cho thuê phòng trọ Lê Lợi...',
   'Biệt thự ven sông Trà Khúc...',
@@ -30,7 +30,7 @@ const placeholderExamples = [
 const suggestions = [
   { label: 'Nhà đất bán Quảng Ngãi', type: 'trending' },
   { label: 'Đất nền Nghĩa Hành', type: 'trending' },
-  { label: 'Cho thuê nhà TP Quảng Ngãi', type: 'trending' },
+  { label: 'Cho thuê nhà Quảng Ngãi', type: 'trending' },
   { label: 'Căn hộ chung cư Quảng Ngãi', type: 'trending' },
   { label: 'Bán nhà Vệ Giang', type: 'recent' },
   { label: 'Đất KDC Vạn Tường', type: 'recent' },

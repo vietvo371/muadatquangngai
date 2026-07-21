@@ -31,7 +31,7 @@ const agents = [
     total_listings: 45,
     total_sold: 120,
     experience_years: 10,
-    areas: ['TP Quảng Ngãi'],
+    areas: ['Phường Cẩm Thành'],
     company: 'Sàn GD BĐS Quảng Ngãi',
     verified: true,
   },
@@ -45,7 +45,7 @@ const agents = [
     total_listings: 68,
     total_sold: 180,
     experience_years: 7,
-    areas: ['TP Quảng Ngãi', 'Lý Sơn'],
+    areas: ['Phường Cẩm Thành', 'Đặc khu Lý Sơn'],
     company: 'Hải Phát Land',
     verified: true,
   },
@@ -59,7 +59,7 @@ const agents = [
     total_listings: 32,
     total_sold: 65,
     experience_years: 4,
-    areas: ['Lý Sơn', 'Bình Sơn'],
+    areas: ['Đặc khu Lý Sơn', 'Xã Bình Sơn'],
     company: 'Lý Sơn Real',
     verified: false,
   },
@@ -73,7 +73,7 @@ const agents = [
     total_listings: 55,
     total_sold: 98,
     experience_years: 8,
-    areas: ['TP Quảng Ngãi'],
+    areas: ['Phường Cẩm Thành'],
     company: 'Đất Xanh Miền Trung',
     verified: true,
   },
@@ -87,7 +87,7 @@ const agents = [
     total_listings: 25,
     total_sold: 40,
     experience_years: 3,
-    areas: ['Mộ Đức', 'Nghĩa Hành'],
+    areas: ['Xã Mộ Đức', 'Xã Nghĩa Hành'],
     company: 'Tự do',
     verified: false,
   },
@@ -101,7 +101,7 @@ const agents = [
     total_listings: 110,
     total_sold: 250,
     experience_years: 12,
-    areas: ['Bình Sơn', 'Sơn Tịnh'],
+    areas: ['Xã Bình Sơn', 'Xã Sơn Tịnh'],
     company: 'VSIP Quảng Ngãi',
     verified: true,
   }
@@ -223,12 +223,14 @@ export default function AgentsListPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tất cả khu vực</SelectItem>
-                  <SelectItem value="TP Quảng Ngãi">TP Quảng Ngãi</SelectItem>
-                  <SelectItem value="Lý Sơn">Lý Sơn</SelectItem>
-                  <SelectItem value="Mộ Đức">Mộ Đức</SelectItem>
-                  <SelectItem value="Bình Sơn">Bình Sơn</SelectItem>
-                  <SelectItem value="Sơn Tịnh">Sơn Tịnh</SelectItem>
-                  <SelectItem value="Nghĩa Hành">Nghĩa Hành</SelectItem>
+                  {/* Tên đơn vị theo cơ cấu sau sáp nhập 2025. Giá trị phải khớp đúng chuỗi
+                      trong mảng areas của từng môi giới, nếu không lọc sẽ không ra ai. */}
+                  <SelectItem value="Phường Cẩm Thành">Phường Cẩm Thành</SelectItem>
+                  <SelectItem value="Đặc khu Lý Sơn">Đặc khu Lý Sơn</SelectItem>
+                  <SelectItem value="Xã Mộ Đức">Xã Mộ Đức</SelectItem>
+                  <SelectItem value="Xã Bình Sơn">Xã Bình Sơn</SelectItem>
+                  <SelectItem value="Xã Sơn Tịnh">Xã Sơn Tịnh</SelectItem>
+                  <SelectItem value="Xã Nghĩa Hành">Xã Nghĩa Hành</SelectItem>
                 </SelectContent>
               </Select>
 

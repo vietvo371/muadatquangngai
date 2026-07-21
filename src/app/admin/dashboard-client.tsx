@@ -25,6 +25,11 @@ import {
 } from '@/lib/admin-api';
 import Link from 'next/link';
 
+// Đậm dần theo thứ hạng, đủ 5 mức cho top 5 + 1 mức nhạt cho nhóm "Khu vực khác".
+const AREA_BAR_SHADES = ['bg-primary', 'bg-primary/80', 'bg-primary/60', 'bg-primary/45', 'bg-primary/30', 'bg-primary/20'];
+
+interface AreaStat { name: string; count: number; percent: number; }
+
 // Mock data fallbacks
 const MOCK_STATS = [
   { label: 'Doanh thu gói VIP', value: '18,500,000 đ', change: '+15% tháng này', icon: Coins, color: 'text-emerald-600 bg-emerald-50' },
@@ -35,7 +40,7 @@ const MOCK_STATS = [
 
 const MOCK_RECENT_PROPERTIES = [
   { title: 'Đất nền dự án Sun River City Quảng Ngãi', status: 'pending', time: '5 phút trước' },
-  { title: 'Nhà riêng 3 tầng mặt tiền Lê Lợi, TP. Quảng Ngãi', status: 'active', time: '12 phút trước' },
+  { title: 'Nhà riêng 3 tầng mặt tiền Lê Lợi, Quảng Ngãi', status: 'active', time: '12 phút trước' },
   { title: 'Căn hộ chung cư Phú Mỹ Hưng Nghĩa Chánh', status: 'active', time: '35 phút trước' },
 ];
 
@@ -122,6 +127,9 @@ export default function DashboardClient() {
   const [recentVerifications, setRecentVerifications] = useState<Verification[]>(MOCK_RECENT_VERIFICATIONS);
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>(MOCK_RECENT_TRANSACTIONS);
   const [loading, setLoading] = useState(true);
+  // Phân bố tin đăng theo xã/phường — số thật từ DB. Trước đây khối này hardcode
+  // 45/20/15/12/8% kèm tên huyện/thị xã đã bị xoá sau sáp nhập 2025.
+  const [areaStats, setAreaStats] = useState<AreaStat[]>([]);
 
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -175,7 +183,15 @@ export default function DashboardClient() {
           setStats(apiStats);
         }
 
-        // 3. Fetch recent properties
+        // 3. Phân bố tin đăng theo khu vực
+        try {
+          const areaRes = await dashboardApi.areaStats();
+          setAreaStats(areaRes?.data?.areas ?? []);
+        } catch (e) {
+          console.warn('Lỗi khi lấy phân bố khu vực:', e);
+        }
+
+        // 4. Fetch recent properties
         try {
           const propertiesRes = await propertyAdminApi.list({ page: 1 });
           if (propertiesRes && propertiesRes.data && propertiesRes.data.length > 0) {
@@ -394,27 +410,30 @@ export default function DashboardClient() {
           <CardContent className="p-5 space-y-4">
             <div>
               <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Địa bàn tin đăng sôi động nhất</h2>
-              <p className="text-[10px] text-gray-400 mt-0.5 font-medium">Tỷ lệ tin đăng phân bổ theo các quận huyện tại Quảng Ngãi</p>
+              <p className="text-[10px] text-gray-400 mt-0.5 font-medium">Tỷ lệ tin đăng phân bổ theo xã/phường tại Quảng Ngãi</p>
             </div>
             
             <div className="space-y-3 pt-2">
-              {[
-                { name: 'Thành phố Quảng Ngãi', value: 45, color: 'bg-primary', label: '45%' },
-                { name: 'Huyện Bình Sơn (Khu kinh tế Dung Quất)', value: 20, color: 'bg-primary/80', label: '20%' },
-                { name: 'Huyện Sơn Tịnh', value: 15, color: 'bg-primary/60', label: '15%' },
-                { name: 'Thị xã Đức Phổ', value: 12, color: 'bg-primary/45', label: '12%' },
-                { name: 'Các khu vực khác (Mộ Đức, Nghĩa Hành...)', value: 8, color: 'bg-primary/30', label: '8%' },
-              ].map((item, idx) => (
-                <div key={idx} className="space-y-1">
-                  <div className="flex items-center justify-between text-xs font-semibold">
-                    <span className="text-gray-700">{item.name}</span>
-                    <span className="text-gray-900">{item.label}</span>
+              {areaStats.length === 0 ? (
+                <p className="text-xs text-gray-400 py-2">Chưa có tin đăng nào để thống kê.</p>
+              ) : (
+                areaStats.map((item, idx) => (
+                  <div key={item.name} className="space-y-1">
+                    <div className="flex items-center justify-between text-xs font-semibold">
+                      <span className="text-gray-700">{item.name}</span>
+                      <span className="text-gray-900">
+                        {item.percent}% <span className="text-gray-400 font-medium">({item.count} tin)</span>
+                      </span>
+                    </div>
+                    <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${AREA_BAR_SHADES[idx] ?? 'bg-primary/30'}`}
+                        style={{ width: `${item.percent}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                    <div className={`h-full ${item.color} rounded-full`} style={{ width: `${item.value}%` }} />
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </CardContent>
         </Card>

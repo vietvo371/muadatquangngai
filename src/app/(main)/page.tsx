@@ -42,26 +42,26 @@ const featuredProjects = [
 
 const locations = [
   {
-    name: 'TP Quảng Ngãi',
+    name: 'Trung tâm Quảng Ngãi',
     count: '100 tin đăng',
     image: '/images/image_data/thi_tran_9b705.jpg',
     href: '/mua-ban?location=quang-ngai',
     large: true,
   },
   {
-    name: 'Lý Sơn',
+    name: 'Đặc khu Lý Sơn',
     count: '55 tin đăng',
     image: '/images/image_data/shutterstock2065827521lyson-1701400873758.jpg',
     href: '/mua-ban?location=ly-son',
   },
   {
-    name: 'Mộ Đức',
+    name: 'Xã Mộ Đức',
     count: '11 tin đăng',
     image: '/images/image_data/74229_youtub_e_2024_06_24_21_09_still5771_15574131.jpg',
     href: '/mua-ban?location=mo-duc',
   },
   {
-    name: 'Bình Sơn',
+    name: 'Xã Bình Sơn',
     count: '99 tin đăng',
     image: '/images/image_data/du-lich-binh-son-quang-ngai-phan-van-travel-1.webp',
     href: '/mua-ban?location=binh-son',
@@ -332,7 +332,7 @@ export default function HomePage() {
             className="grid grid-cols-2 md:grid-cols-4 gap-3"
             style={{ gridTemplateRows: 'repeat(2, 210px)' }}
           >
-            {/* TP Quảng Ngãi — large */}
+            {/* Trung tâm Quảng Ngãi — ô lớn */}
             <Link
               href={locations[0].href}
               className="relative col-span-2 row-span-2 rounded-2xl overflow-hidden group shadow-md hover:shadow-xl transition-shadow"

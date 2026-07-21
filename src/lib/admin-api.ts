@@ -443,6 +443,15 @@ export const dashboardApi = {
     }>('/api/v2/admin/dashboard');
     return data;
   },
+
+  /** Tỷ lệ tin đăng theo xã/phường — endpoint riêng để không đổi shape của /admin/dashboard. */
+  areaStats: async () => {
+    const { data } = await api.get<{
+      success: boolean;
+      data: { total: number; areas: Array<{ name: string; count: number; percent: number }> };
+    }>('/api/v2/admin/dashboard/areas');
+    return data;
+  },
 };
 
 // Properties Admin Api

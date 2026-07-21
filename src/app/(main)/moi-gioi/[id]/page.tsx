@@ -34,7 +34,7 @@ const agent = {
   phone: '0901234567',
   email: 'nguyenvana@email.com',
   address: 'Đà Nẵng',
-  areas: ['TP Quảng Ngãi', 'Lý Sơn'],
+  areas: ['Phường Cẩm Thành', 'Đặc khu Lý Sơn'],
   company: 'Sàn GD BĐS Quảng Ngãi',
   rating: 4.8,
   total_reviews: 156,

@@ -58,7 +58,7 @@ const INITIAL_REPORTS = [
     status: 'pending',
     reporter: { id: 1, name: 'Lê Thanh Bình' },
     reported_user: { id: 2, name: 'Nguyễn Quốc Bảo (Môi giới)' },
-    reported_property: { id: 101, title: 'Đất nền trung tâm TP Quảng Ngãi sát Co.opmart' },
+    reported_property: { id: 101, title: 'Đất nền trung tâm Quảng Ngãi sát Co.opmart' },
     created_at: '2026-05-20T10:30:00Z',
   },
   {
