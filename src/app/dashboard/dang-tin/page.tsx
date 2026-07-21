@@ -15,6 +15,16 @@ import { LocationSelect } from '@/components/shared/LocationSelect';
 import { ImageUploader } from '@/components/shared/ImageUploader';
 import { PostStepper } from '@/components/dashboard/PostStepper';
 import { PackageCard } from '@/components/dashboard/PackageCard';
+import {
+  getPropertyGroup,
+  isFieldVisible,
+  directionLabel,
+  stripFieldsNotInGroup,
+  DIRECTION_OPTIONS,
+  LEGAL_OPTIONS,
+  FURNITURE_OPTIONS,
+  PRICE_UNIT_OPTIONS,
+} from '@/lib/property-form-config';
 import { 
   ArrowLeft, 
   ArrowRight, 
@@ -43,12 +53,17 @@ interface PropertyFormData {
   
   // Step 3: Details & Pricing
   price: number;
-  price_unit: 'total' | 'per_m2' | 'per_month';
+  price_unit: 'total' | 'per_m2' | 'per_month' | 'negotiable';
   price_negotiable: boolean;
   area: number;
   bedrooms?: number;
   bathrooms?: number;
+  toilets?: number;
+  floors?: number;
   direction?: string;
+  balcony_direction?: string;
+  road_width?: number;
+  facade?: number;
   furniture?: string;
   legal?: string;
   features: number[];
@@ -71,33 +86,15 @@ const PACKAGES = [
   { id: 'diamond', name: 'Gói Diamond', price: 200000, duration: 30, color: 'diamond' as const, features: ['Luôn nằm trên cùng trang chủ', 'Huy hiệu Diamond đỏ độc quyền', 'Hỗ trợ đẩy tin 2 lần/ngày', 'Thiết kế thẻ to nhất'] },
 ];
 
-// Direction mapping: Vietnamese full names → API slug format
-const DIRECTION_MAP: Record<string, string> = {
-  'Đông': 'dong',
-  'Tây': 'tay',
-  'Nam': 'nam',
-  'Bắc': 'bac',
-  'Đông Bắc': 'dong_bac',
-  'Đông Nam': 'dong_nam',
-  'Tây Bắc': 'tay_bac',
-  'Tây Nam': 'tay_nam',
-};
-
-const featuresList = [
-  { id: 1, name: 'Hồ bơi' },
-  { id: 2, name: 'Gym' },
-  { id: 3, name: 'Bảo vệ 24/7' },
-  { id: 4, name: 'Camera' },
-  { id: 5, name: 'Thang máy' },
-  { id: 6, name: 'Điều hòa' },
-  { id: 7, name: 'Nội thất đầy đủ' },
-  { id: 8, name: 'Chỗ để xe' },
-];
+// Tiện ích được tải từ /api/v2/features theo nhóm BĐS. Trước đây danh sách này hardcode
+// id 1-8 kèm tên tự đặt, lệch hẳn với bảng features trong DB (id 1 ghi "Hồ bơi" nhưng
+// thực tế là "Có sân vườn") nên tiện ích lưu xuống sai so với thứ người dùng bấm chọn.
 
 export default function DangTinPage() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [apiCategories, setApiCategories] = useState<Array<{id: number; name: string; type: string}>>([]);
+  const [features, setFeatures] = useState<Array<{ id: number; name: string }>>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<PropertyFormData>({
     type: 'sell',
@@ -136,8 +133,52 @@ export default function DangTinPage() {
     loadCategories();
   }, []);
 
+  // Nhóm BĐS suy ra từ danh mục — quyết định trường nào hiển thị (spec mục 11).
+  const group = getPropertyGroup(formData.category_id);
+
+  // Tải tiện ích đúng nhóm mỗi khi đổi danh mục.
+  useEffect(() => {
+    const loadFeatures = async () => {
+      try {
+        const res = await api.get(`/api/v2/features?group=${group}`);
+        setFeatures(res.data?.data || []);
+      } catch {
+        setFeatures([]);
+      }
+    };
+    loadFeatures();
+  }, [group]);
+
   const updateFormData = (updates: Partial<PropertyFormData>) => {
     setFormData((prev) => ({ ...prev, ...updates }));
+  };
+
+  /**
+   * Đổi danh mục có thể đổi luôn nhóm BĐS. Spec yêu cầu dữ liệu của trường không còn
+   * phù hợp phải bị xoá, không được gửi lên backend — vd. chuyển từ nhà riêng sang đất
+   * nền thì số phòng ngủ / số tầng / nội thất đã nhập phải biến mất.
+   */
+  const handleCategoryChange = (categoryId: string) => {
+    const nextGroup = getPropertyGroup(categoryId);
+    setFormData((prev) => {
+      const cleaned = stripFieldsNotInGroup(nextGroup, { ...prev, category_id: categoryId });
+      return {
+        ...cleaned,
+        category_id: categoryId,
+        // stripFieldsNotInGroup xoá hẳn key; đưa về giá trị rỗng để input vẫn controlled.
+        bedrooms: isFieldVisible(nextGroup, 'bedrooms') ? prev.bedrooms : undefined,
+        bathrooms: isFieldVisible(nextGroup, 'bathrooms') ? prev.bathrooms : undefined,
+        toilets: isFieldVisible(nextGroup, 'toilets') ? prev.toilets : undefined,
+        floors: isFieldVisible(nextGroup, 'floors') ? prev.floors : undefined,
+        direction: isFieldVisible(nextGroup, 'direction') ? prev.direction : '',
+        balcony_direction: isFieldVisible(nextGroup, 'balcony_direction') ? prev.balcony_direction : '',
+        road_width: isFieldVisible(nextGroup, 'road_width') ? prev.road_width : undefined,
+        facade: isFieldVisible(nextGroup, 'facade') ? prev.facade : undefined,
+        legal: isFieldVisible(nextGroup, 'legal') ? prev.legal : '',
+        furniture: isFieldVisible(nextGroup, 'furniture') ? prev.furniture : 'none',
+        features: isFieldVisible(nextGroup, 'utilities') ? prev.features : [],
+      } as PropertyFormData;
+    });
   };
 
   const toggleFeature = (featureId: number) => {
@@ -187,6 +228,23 @@ export default function DangTinPage() {
         formData.district_id ? 'Quảng Ngãi' : '',
       ].filter(Boolean).join(', ');
 
+      // Chỉ gửi trường thuộc nhóm BĐS đang chọn — spec yêu cầu không lưu phòng ngủ /
+      // số tầng / nội thất cho danh mục đất. Lọc ở cả client lẫn server cho chắc.
+      const groupFields = stripFieldsNotInGroup(group, {
+        bedrooms: formData.bedrooms || 0,
+        bathrooms: formData.bathrooms || 0,
+        toilets: formData.toilets,
+        floors: formData.floors || undefined,
+        direction: formData.direction || undefined,
+        balcony_direction: formData.balcony_direction || undefined,
+        road_width: formData.road_width,
+        facade: formData.facade,
+        furniture: formData.furniture || 'none',
+        legal: formData.legal || undefined,
+        utilities: undefined, // chỉ là cờ hiển thị, gửi qua feature_ids bên dưới
+      });
+      delete groupFields.utilities;
+
       const payload = {
         title: formData.title,
         description: formData.description,
@@ -194,13 +252,9 @@ export default function DangTinPage() {
         category_id: parseInt(formData.category_id, 10),
         price: formData.price,
         price_unit: formData.price_unit,
-        price_negotiable: formData.price_negotiable,
+        price_negotiable: formData.price_negotiable || formData.price_unit === 'negotiable',
         area: formData.area,
-        bedrooms: formData.bedrooms || 0,
-        bathrooms: formData.bathrooms || 0,
-        direction: DIRECTION_MAP[formData.direction || ''] || formData.direction || undefined,
-        furniture: formData.furniture || 'none',
-        legal: formData.legal || undefined,
+        ...groupFields,
         province_id: formData.province_id,
         district_id: formData.district_id,
         ward_id: formData.ward_id || undefined,
@@ -208,7 +262,10 @@ export default function DangTinPage() {
         longitude: formData.longitude ?? undefined,
         street: formData.street || undefined,
         address: address || formData.street || 'Việt Nam',
-        feature_ids: formData.features.length > 0 ? formData.features : undefined,
+        feature_ids:
+          isFieldVisible(group, 'utilities') && formData.features.length > 0
+            ? formData.features
+            : undefined,
         // Ảnh đã upload sẵn lên Cloudinary ở bước 2 — chỉ gửi URL để API ghi vào
         // property_media. Thiếu mảng này thì ảnh người dùng tải lên bị mất trắng.
         images: formData.images.map((img, i) => ({
@@ -302,7 +359,7 @@ export default function DangTinPage() {
                   <Label className="font-semibold text-gray-700">Danh mục <span className="text-red-500">*</span></Label>
                   <Select
                     value={formData.category_id}
-                    onValueChange={(value) => updateFormData({ category_id: value || '' })}
+                    onValueChange={(value) => handleCategoryChange(value || '')}
                   >
                     <SelectTrigger className="mt-2 h-12 bg-gray-50 border-gray-200 focus:ring-primary focus:border-primary">
                       <SelectValue placeholder="-- Chọn phân khúc --" />
@@ -432,9 +489,9 @@ export default function DangTinPage() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="total">Tổng giá</SelectItem>
-                          <SelectItem value="per_m2">/ m²</SelectItem>
-                          <SelectItem value="per_month">/ tháng</SelectItem>
+                          {PRICE_UNIT_OPTIONS.map(o => (
+                            <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -467,110 +524,208 @@ export default function DangTinPage() {
                 </div>
               </section>
 
+              {/* Thông tin chi tiết — trường hiển thị phụ thuộc nhóm BĐS (spec mục 11.2).
+                  Nhóm đất không có phòng ngủ/phòng tắm/số tầng/hướng ban công/nội thất. */}
               <section>
                 <h3 className="text-lg font-bold text-gray-900 mb-5 pb-2 border-b">Thông tin chi tiết</h3>
-                
+
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-5 mb-6">
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">Phòng ngủ</Label>
-                    <Select
-                      value={String(formData.bedrooms || 0)}
-                      onValueChange={(value) => updateFormData({ bedrooms: parseInt(value || '0') })}
-                    >
-                      <SelectTrigger className="mt-2 h-11 bg-gray-50">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="0">Không có</SelectItem>
-                        {[1,2,3,4,5,6].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">Phòng tắm</Label>
-                    <Select
-                      value={String(formData.bathrooms || 0)}
-                      onValueChange={(value) => updateFormData({ bathrooms: parseInt(value || '0') })}
-                    >
-                      <SelectTrigger className="mt-2 h-11 bg-gray-50">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="0">Không có</SelectItem>
-                        {[1,2,3,4,5].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">Hướng nhà</Label>
-                    <Select
-                      value={formData.direction || ''}
-                      onValueChange={(value) => updateFormData({ direction: value || '' })}
-                    >
-                      <SelectTrigger className="mt-2 h-11 bg-gray-50">
-                        <SelectValue placeholder="Tùy chọn" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {['Đông', 'Tây', 'Nam', 'Bắc', 'Đông Bắc', 'Đông Nam', 'Tây Bắc', 'Tây Nam'].map(dir => (
-                          <SelectItem key={dir} value={dir}>{dir}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">Pháp lý</Label>
-                    <Select
-                      value={formData.legal || ''}
-                      onValueChange={(value) => updateFormData({ legal: value || '' })}
-                    >
-                      <SelectTrigger className="mt-2 h-11 bg-gray-50">
-                        <SelectValue placeholder="Tùy chọn" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="so_do">Sổ đỏ</SelectItem>
-                        <SelectItem value="so_hong">Sổ hồng</SelectItem>
-                        <SelectItem value="contract">Hợp đồng mua bán</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="mb-6">
-                  <Label className="font-semibold text-gray-700">Tình trạng nội thất</Label>
-                  <Select
-                    value={formData.furniture || 'none'}
-                    onValueChange={(value) => updateFormData({ furniture: value || '' })}
-                  >
-                    <SelectTrigger className="mt-2 h-11 bg-gray-50 w-full md:w-1/2">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Không nội thất (Nhà trống)</SelectItem>
-                      <SelectItem value="basic">Nội thất cơ bản (Liền tường)</SelectItem>
-                      <SelectItem value="full">Nội thất đầy đủ (Full option)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </section>
-
-              <section>
-                <h3 className="text-lg font-bold text-gray-900 mb-5 pb-2 border-b">Tiện ích kèm theo</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-y-4 gap-x-2">
-                  {featuresList.map((feature) => (
-                    <div key={feature.id} className="flex items-center gap-2.5">
-                      <Checkbox
-                        id={`feature-${feature.id}`}
-                        checked={formData.features.includes(feature.id)}
-                        onCheckedChange={() => toggleFeature(feature.id)}
-                        className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                      />
-                      <Label htmlFor={`feature-${feature.id}`} className="cursor-pointer text-[14px] text-gray-700">
-                        {feature.name}
-                      </Label>
+                  {isFieldVisible(group, 'bedrooms') && (
+                    <div>
+                      <Label className="text-sm font-medium text-gray-600">Phòng ngủ</Label>
+                      <Select
+                        value={String(formData.bedrooms ?? 0)}
+                        onValueChange={(value) => updateFormData({ bedrooms: parseInt(value || '0') })}
+                      >
+                        <SelectTrigger className="mt-2 h-11 bg-gray-50"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0">Không có</SelectItem>
+                          {[1,2,3,4,5,6,7,8,9,10].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
                     </div>
-                  ))}
+                  )}
+
+                  {isFieldVisible(group, 'bathrooms') && (
+                    <div>
+                      <Label className="text-sm font-medium text-gray-600">Phòng tắm</Label>
+                      <Select
+                        value={String(formData.bathrooms ?? 0)}
+                        onValueChange={(value) => updateFormData({ bathrooms: parseInt(value || '0') })}
+                      >
+                        <SelectTrigger className="mt-2 h-11 bg-gray-50"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0">Không có</SelectItem>
+                          {[1,2,3,4,5,6,7,8].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {isFieldVisible(group, 'toilets') && (
+                    <div>
+                      <Label className="text-sm font-medium text-gray-600">Nhà vệ sinh</Label>
+                      <Select
+                        value={String(formData.toilets ?? 0)}
+                        onValueChange={(value) => updateFormData({ toilets: parseInt(value || '0') })}
+                      >
+                        <SelectTrigger className="mt-2 h-11 bg-gray-50"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0">Không có</SelectItem>
+                          {[1,2,3,4,5,6,7,8].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {isFieldVisible(group, 'floors') && (
+                    <div>
+                      <Label className="text-sm font-medium text-gray-600">Số tầng</Label>
+                      <Select
+                        value={String(formData.floors ?? 0)}
+                        onValueChange={(value) => updateFormData({ floors: parseInt(value || '0') })}
+                      >
+                        <SelectTrigger className="mt-2 h-11 bg-gray-50"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0">Không xác định</SelectItem>
+                          {[1,2,3,4,5,6,7,8,9,10].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {isFieldVisible(group, 'direction') && (
+                    <div>
+                      <Label className="text-sm font-medium text-gray-600">{directionLabel(group)}</Label>
+                      <Select
+                        value={formData.direction || ''}
+                        onValueChange={(value) => updateFormData({ direction: value || '' })}
+                      >
+                        <SelectTrigger className="mt-2 h-11 bg-gray-50">
+                          <SelectValue placeholder="Tùy chọn">
+                            {(v: string) => DIRECTION_OPTIONS.find(o => o.value === v)?.label ?? 'Tùy chọn'}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {DIRECTION_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {isFieldVisible(group, 'balcony_direction') && (
+                    <div>
+                      <Label className="text-sm font-medium text-gray-600">Hướng ban công</Label>
+                      <Select
+                        value={formData.balcony_direction || ''}
+                        onValueChange={(value) => updateFormData({ balcony_direction: value || '' })}
+                      >
+                        <SelectTrigger className="mt-2 h-11 bg-gray-50">
+                          <SelectValue placeholder="Tùy chọn">
+                            {(v: string) => DIRECTION_OPTIONS.find(o => o.value === v)?.label ?? 'Tùy chọn'}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {DIRECTION_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {isFieldVisible(group, 'road_width') && (
+                    <div>
+                      <Label className="text-sm font-medium text-gray-600">Đường vào (m)</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.1"
+                        value={formData.road_width ?? ''}
+                        onChange={(e) => updateFormData({ road_width: e.target.value === '' ? undefined : parseFloat(e.target.value) })}
+                        placeholder="VD: 5"
+                        className="mt-2 h-11 bg-gray-50"
+                      />
+                    </div>
+                  )}
+
+                  {isFieldVisible(group, 'facade') && (
+                    <div>
+                      <Label className="text-sm font-medium text-gray-600">Mặt tiền (m)</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.1"
+                        value={formData.facade ?? ''}
+                        onChange={(e) => updateFormData({ facade: e.target.value === '' ? undefined : parseFloat(e.target.value) })}
+                        placeholder="VD: 4.5"
+                        className="mt-2 h-11 bg-gray-50"
+                      />
+                    </div>
+                  )}
+
+                  {isFieldVisible(group, 'legal') && (
+                    <div>
+                      <Label className="text-sm font-medium text-gray-600">Pháp lý</Label>
+                      <Select
+                        value={formData.legal || ''}
+                        onValueChange={(value) => updateFormData({ legal: value || '' })}
+                      >
+                        <SelectTrigger className="mt-2 h-11 bg-gray-50">
+                          <SelectValue placeholder="Tùy chọn">
+                            {(v: string) => LEGAL_OPTIONS.find(o => o.value === v)?.label ?? 'Tùy chọn'}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {LEGAL_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                 </div>
+
+                {isFieldVisible(group, 'furniture') && (
+                  <div className="mb-6">
+                    <Label className="font-semibold text-gray-700">Tình trạng nội thất</Label>
+                    <Select
+                      value={formData.furniture || 'none'}
+                      onValueChange={(value) => updateFormData({ furniture: value || '' })}
+                    >
+                      <SelectTrigger className="mt-2 h-11 bg-gray-50 w-full md:w-1/2">
+                        <SelectValue>
+                          {(v: string) => FURNITURE_OPTIONS.find(o => o.value === v)?.label ?? 'Chọn tình trạng'}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {FURNITURE_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </section>
+
+              {isFieldVisible(group, 'utilities') && (
+                <section>
+                  <h3 className="text-lg font-bold text-gray-900 mb-5 pb-2 border-b">Tiện ích kèm theo</h3>
+                  {features.length === 0 ? (
+                    <p className="text-sm text-gray-400">Đang tải tiện ích...</p>
+                  ) : (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-y-4 gap-x-2">
+                      {features.map((feature) => (
+                        <div key={feature.id} className="flex items-center gap-2.5">
+                          <Checkbox
+                            id={`feature-${feature.id}`}
+                            checked={formData.features.includes(feature.id)}
+                            onCheckedChange={() => toggleFeature(feature.id)}
+                            className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                          />
+                          <Label htmlFor={`feature-${feature.id}`} className="cursor-pointer text-[14px] text-gray-700">
+                            {feature.name}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              )}
             </div>
           )}
 

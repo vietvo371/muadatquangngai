@@ -40,8 +40,12 @@ export interface PropertyRow {
   floors: number | null;
   bedrooms: number | null;
   bathrooms: number | null;
+  toilets: number | null;
   parking: boolean;
   direction: string | null;
+  balcony_direction: string | null;
+  road_width: unknown;
+  facade: unknown;
   furniture: string;
   legal: string | null;
   thumbnail: string | null;
@@ -168,8 +172,12 @@ export function mapPropertyResource(
     floors: property.floors,
     bedrooms: property.bedrooms,
     bathrooms: property.bathrooms,
+    toilets: property.toilets,
     parking: property.parking,
     direction: property.direction,
+    balcony_direction: property.balcony_direction,
+    road_width: toFloatOrNull(property.road_width),
+    facade: toFloatOrNull(property.facade),
     furniture: property.furniture,
     legal: property.legal,
 

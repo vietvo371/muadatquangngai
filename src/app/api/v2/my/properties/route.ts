@@ -6,6 +6,14 @@ import { mapPropertyResource, type WardRow } from '@/lib/api-resources/property-
 import { validateFeatureIds } from '@/lib/api-resources/property-validation';
 import { FieldError, validationErrorResponse, isNumeric, isInteger, isBoolean, inList, isString } from '@/lib/validation';
 import { slugify } from '@/lib/formatters';
+import {
+  getPropertyGroup,
+  isFieldVisible,
+  VALID_DIRECTIONS,
+  VALID_FURNITURE,
+  VALID_LEGAL,
+  VALID_PRICE_UNITS,
+} from '@/lib/property-form-config';
 
 const PROPERTY_INCLUDE = {
   provinces: { select: { id: true, name: true, slug: true } },
@@ -17,10 +25,12 @@ const PROPERTY_INCLUDE = {
   },
 } as const;
 
-const DIRECTIONS = ['dong', 'tay', 'nam', 'bac', 'dong_bac', 'dong_nam', 'tay_bac', 'tay_nam'] as const;
-const FURNITURE = ['none', 'basic', 'full'] as const;
-const LEGAL = ['so_do', 'so_hong', 'contract', 'other'] as const;
-const PRICE_UNIT = ['total', 'per_m2', 'per_month'] as const;
+// Danh sách giá trị hợp lệ lấy từ property-form-config để client và server không lệch
+// nhau — chỗ nào form cho chọn thì API phải nhận, và ngược lại.
+const DIRECTIONS = VALID_DIRECTIONS;
+const FURNITURE = VALID_FURNITURE;
+const LEGAL = VALID_LEGAL;
+const PRICE_UNIT = VALID_PRICE_UNITS;
 
 /** Str::random(6) — khớp charset alnum trộn hoa/thường của Laravel. */
 function randomSuffix(length: number): string {
@@ -173,6 +183,12 @@ export async function POST(request: Request) {
   const now = new Date();
   const slug = `${slugify(title!)}-${randomSuffix(6)}`;
 
+  // Chốt chặn cuối: kể cả client gửi thừa (hoặc gọi API trực tiếp), trường không thuộc
+  // nhóm BĐS của danh mục vẫn không được ghi xuống DB — spec mục 11 yêu cầu rõ điều này.
+  const group = getPropertyGroup(Number(categoryId));
+  const forGroup = <T,>(field: Parameters<typeof isFieldVisible>[1], value: T): T | null =>
+    isFieldVisible(group, field) ? value : null;
+
   const created = await db.properties.create({
     data: {
       uuid: crypto.randomUUID(),
@@ -189,14 +205,15 @@ export async function POST(request: Request) {
       area: String(area),
       area_floor: body.area_floor != null ? String(body.area_floor) : null,
       area_land: body.area_land != null ? String(body.area_land) : null,
-      floors: body.floors ?? null,
-      bedrooms: body.bedrooms ?? null,
-      bathrooms: body.bathrooms ?? null,
+      floors: forGroup('floors', body.floors ?? null),
+      bedrooms: forGroup('bedrooms', body.bedrooms ?? null),
+      bathrooms: forGroup('bathrooms', body.bathrooms ?? null),
+      toilets: forGroup('toilets', body.toilets ?? null),
       parking: Boolean(body.parking ?? false),
-      direction: body.direction ?? null,
-      balcony_direction: body.balcony_direction ?? null,
-      furniture: body.furniture ?? 'none',
-      legal: body.legal ?? null,
+      direction: forGroup('direction', body.direction ?? null),
+      balcony_direction: forGroup('balcony_direction', body.balcony_direction ?? null),
+      furniture: forGroup('furniture', body.furniture ?? 'none') ?? 'none',
+      legal: forGroup('legal', body.legal ?? null),
       legal_note: body.legal_note ?? null,
       province_id: BigInt(provinceId),
       district_id: BigInt(districtId),
@@ -205,8 +222,8 @@ export async function POST(request: Request) {
       address: address!,
       latitude: body.latitude != null ? String(body.latitude) : null,
       longitude: body.longitude != null ? String(body.longitude) : null,
-      road_width: body.road_width != null ? String(body.road_width) : null,
-      facade: body.facade != null ? String(body.facade) : null,
+      road_width: forGroup('road_width', body.road_width != null ? String(body.road_width) : null),
+      facade: forGroup('facade', body.facade != null ? String(body.facade) : null),
       depth: body.depth != null ? String(body.depth) : null,
       meta_title: body.meta_title ?? null,
       meta_description: body.meta_description ?? null,
@@ -233,7 +250,9 @@ export async function POST(request: Request) {
     include: PROPERTY_INCLUDE,
   });
 
-  const featureIds: number[] = Array.isArray(body.feature_ids) ? body.feature_ids : [];
+  // Nhóm đất không có mục tiện ích — bỏ qua kể cả khi client cố gửi lên.
+  const featureIds: number[] =
+    isFieldVisible(group, 'utilities') && Array.isArray(body.feature_ids) ? body.feature_ids : [];
   if (featureIds.length > 0) {
     await db.property_features.createMany({
       data: featureIds.map((fid) => ({ property_id: created.id, feature_id: BigInt(fid) })),

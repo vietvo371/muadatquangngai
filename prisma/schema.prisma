@@ -433,6 +433,8 @@ model properties {
   floors            Int?                      @db.SmallInt
   bedrooms          Int?                      @db.SmallInt
   bathrooms         Int?                      @db.SmallInt
+  // Số nhà vệ sinh — tách riêng khỏi bathrooms, chỉ dùng cho nhóm kho/nhà xưởng.
+  toilets           Int?                      @db.SmallInt
   parking           Boolean                   @default(false)
   direction         String?                   @db.VarChar(20)
   balcony_direction String?                   @db.VarChar(20)
@@ -450,6 +452,12 @@ model properties {
   depth             Decimal?                  @db.Decimal(5, 2)
   meta_title        String?                   @db.VarChar(255)
   meta_description  String?                   @db.VarChar(500)
+  // Liên hệ riêng của từng tin — mặc định lấy từ tài khoản nhưng cho người đăng sửa,
+  // vì người bán có thể muốn để số môi giới hoặc người nhà thay vì số tài khoản.
+  contact_name      String?                   @db.VarChar(255)
+  contact_phone     String?                   @db.VarChar(20)
+  contact_email     String?                   @db.VarChar(255)
+  contact_address   String?                   @db.VarChar(500)
   view_count        Int                       @default(0)
   contact_count     Int                       @default(0)
   save_count        Int                       @default(0)
