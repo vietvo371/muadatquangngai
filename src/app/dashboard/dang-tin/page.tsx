@@ -17,6 +17,7 @@ import { ImageUploader, VideoUploader } from '@/components/shared/ImageUploader'
 import { useAuthStore } from '@/stores/authStore';
 import { usePostDraft, useDraftAutosave } from '@/hooks/usePostDraft';
 import { PostStepper } from '@/components/dashboard/PostStepper';
+import { FORMER_UNITS } from '@/lib/former-admin-units';
 import { PackageCard } from '@/components/dashboard/PackageCard';
 import {
   getPropertyGroup,
@@ -428,6 +429,8 @@ export default function DangTinPage() {
     }
   };
 
+  const formerUnits = formData.district_id ? (FORMER_UNITS[formData.district_id] ?? []) : [];
+
   const selectedPackage = packages.find((p) => p.id === formData.package_id) ?? null;
 
   const canProceed = () => {
@@ -724,6 +727,14 @@ export default function DangTinPage() {
                     className="mt-2 h-12 bg-gray-50 border-gray-200 focus:ring-primary focus:border-primary"
                   />
                 </div>
+
+                {/* Nhắc tên đơn vị hành chính trước sáp nhập 2025 — nhiều người bán vẫn quen
+                    gọi theo tên cũ nên khó nhận ra xã/phường mới có phải khu của mình không. */}
+                {formerUnits.length > 0 && (
+                  <p className="mt-2 text-[13px] text-gray-500">
+                    Trước sáp nhập: {formerUnits.join(', ')}
+                  </p>
+                )}
 
                 {/* Chọn vị trí trên bản đồ — khách hàng muốn ghim thay vì gõ tay. */}
                 <div className="mt-5">
