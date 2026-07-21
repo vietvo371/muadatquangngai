@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { LocationSelect } from '@/components/shared/LocationSelect';
-import { ImageUploader } from '@/components/shared/ImageUploader';
+import { ImageUploader, VideoUploader } from '@/components/shared/ImageUploader';
 import { useAuthStore } from '@/stores/authStore';
 import { usePostDraft, useDraftAutosave } from '@/hooks/usePostDraft';
 import { PostStepper } from '@/components/dashboard/PostStepper';
@@ -54,6 +54,7 @@ interface PropertyFormData {
   
   // Step 2: Media
   images: Array<{ url: string; thumbnail?: string; name: string; size: number; isPrimary?: boolean }>;
+  videos: Array<{ url: string; thumbnail?: string; name: string; size: number }>;
   
   // Step 3: Details & Pricing
   price: number;
@@ -86,7 +87,7 @@ interface PropertyFormData {
 // giờ gộp toàn bộ thông tin BĐS vào bước 1.
 const STEPS = [
   { title: 'Thông tin BĐS', description: 'Vị trí, giá, thông số' },
-  { title: 'Hình ảnh & Video', description: 'Tải lên tối đa 10 ảnh' },
+  { title: 'Hình ảnh & Video', description: 'Ảnh thật của bất động sản' },
   { title: 'Gói đăng tin', description: 'Chọn gói & hoàn tất' },
 ];
 const LAST_STEP = STEPS.length;
@@ -108,6 +109,22 @@ export default function DangTinPage() {
   const [apiCategories, setApiCategories] = useState<Array<{id: number; name: string; type: string}>>([]);
   const [features, setFeatures] = useState<Array<{ id: number; name: string }>>([]);
   const authUser = useAuthStore((s) => s.user);
+
+  // Giới hạn media/nội dung do quản trị viên cấu hình (spec mục 7.1). Có giá trị mặc định
+  // để form vẫn dùng được nếu API lỗi.
+  const [limits, setLimits] = useState({
+    images_limit: 10,
+    image_max_size_mb: 10,
+    video_limit: 2,
+    video_max_size_mb: 100,
+    description_min: 50,
+  });
+  useEffect(() => {
+    api
+      .get('/api/v2/settings/property')
+      .then((res) => res.data?.data && setLimits((prev) => ({ ...prev, ...res.data.data })))
+      .catch(() => { /* giữ mặc định */ });
+  }, []);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<PropertyFormData>({
     type: 'sell',
@@ -118,6 +135,7 @@ export default function DangTinPage() {
     latitude: undefined,
     longitude: undefined,
     images: [],
+    videos: [],
     price: 0,
     price_unit: 'total',
     price_negotiable: false,
@@ -276,7 +294,7 @@ export default function DangTinPage() {
           isValidPhone(formData.contact_phone) &&
           (!formData.contact_email || isValidEmail(formData.contact_email)) &&
           formData.title.length >= 10 &&
-          formData.description.length >= 50
+          formData.description.length >= limits.description_min
         );
       case 2:
         return formData.images.length > 0;
@@ -361,6 +379,12 @@ export default function DangTinPage() {
           url: img.url,
           thumbnail: img.thumbnail,
           is_primary: img.isPrimary ?? i === 0,
+          sort_order: i,
+        })),
+        // Video lưu chung bảng property_media, phân biệt bằng cột type.
+        videos: formData.videos.map((v, i) => ({
+          url: v.url,
+          thumbnail: v.thumbnail,
           sort_order: i,
         })),
       };
@@ -531,7 +555,7 @@ export default function DangTinPage() {
               
               <div className="bg-[#e8f4fb]/50 border border-[#1075b1]/15 rounded-xl p-4 mb-6">
                 <ul className="text-[13px] text-[#1075b1] space-y-1.5 list-disc list-inside">
-                  <li>Tải lên tối thiểu <strong>1 ảnh</strong>, tối đa <strong>10 ảnh</strong>.</li>
+                  <li>Tải lên tối thiểu <strong>1 ảnh</strong>, tối đa <strong>{limits.images_limit} ảnh</strong>.</li>
                   <li>Kéo thả ảnh để thay đổi thứ tự. Ảnh đầu tiên sẽ là ảnh bìa.</li>
                   <li>Hạn chế ảnh có chứa logo, watermark của các nền tảng khác.</li>
                 </ul>
@@ -540,9 +564,23 @@ export default function DangTinPage() {
               <ImageUploader
                 files={formData.images}
                 onChange={(images) => updateFormData({ images })}
-                maxFiles={10}
-                maxSize={10}
+                maxFiles={limits.images_limit}
+                maxSize={limits.image_max_size_mb}
               />
+
+              {/* Video (spec mục 7.2) — không bắt buộc, chọn tải lên hoặc dán link YouTube. */}
+              <div className="pt-2">
+                <h4 className="text-base font-bold text-gray-900 mb-1">Video giới thiệu</h4>
+                <p className="text-[13px] text-gray-500 mb-3">
+                  Không bắt buộc. Tin có video thường được xem lâu hơn.
+                </p>
+                <VideoUploader
+                  videos={formData.videos}
+                  onChange={(videos) => updateFormData({ videos })}
+                  maxVideos={limits.video_limit}
+                  maxSize={limits.video_max_size_mb}
+                />
+              </div>
             </div>
           )}
 
@@ -889,9 +927,9 @@ export default function DangTinPage() {
                     className="mt-2 bg-gray-50 border-gray-200 focus:ring-primary focus:border-primary resize-none"
                   />
                   <div className="flex justify-between items-center mt-1.5">
-                    <p className="text-xs text-gray-500">Tối thiểu 50 ký tự</p>
-                    <p className={`text-xs font-medium ${formData.description.length < 50 ? 'text-gray-400' : 'text-green-600'}`}>
-                      {formData.description.length}/50
+                    <p className="text-xs text-gray-500">Tối thiểu {limits.description_min} ký tự</p>
+                    <p className={`text-xs font-medium ${formData.description.length < limits.description_min ? 'text-gray-400' : 'text-green-600'}`}>
+                      {formData.description.length}/{limits.description_min}
                     </p>
                   </div>
                 </div>

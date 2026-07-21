@@ -192,6 +192,29 @@ export async function POST(request: Request) {
     }
   }
 
+  // Video (spec mục 7.2) — lưu chung property_media, phân biệt bằng cột type. Chỉ nhận
+  // URL: video tải lên đã đi thẳng Cloudinary, còn lại là link YouTube.
+  const rawVideos = body.videos;
+  let videos: Array<{ url: string; thumbnail: string | null; sort_order: number }> = [];
+  if (Array.isArray(rawVideos)) {
+    if (rawVideos.length > 5) {
+      errors.push(new FieldError('videos', 'Trường video không được nhiều hơn 5 video.'));
+    } else {
+      for (let i = 0; i < rawVideos.length; i++) {
+        const url = rawVideos[i] && isString(rawVideos[i].url) ? rawVideos[i].url : undefined;
+        if (!url) errors.push(new FieldError(`videos.${i}.url`, 'Trường đường dẫn video không được để trống.'));
+        else if (url.length > 500) errors.push(new FieldError(`videos.${i}.url`, 'Trường đường dẫn video không được lớn hơn 500 ký tự.'));
+      }
+      if (errors.length === 0) {
+        videos = rawVideos.map((v: Record<string, unknown>, i: number) => ({
+          url: v.url as string,
+          thumbnail: isString(v.thumbnail) && v.thumbnail.length <= 500 ? v.thumbnail : null,
+          sort_order: isInteger(v.sort_order) ? (v.sort_order as number) : i,
+        }));
+      }
+    }
+  }
+
   if (errors.length > 0) return validationErrorResponse(errors);
 
   const primaryImage = images.find((img) => img.is_primary) ?? images[0];
@@ -253,17 +276,29 @@ export async function POST(request: Request) {
       updated_at: now,
       // Nested create — property + ảnh ghi chung một transaction ngầm của Prisma,
       // không sinh tin mồ côi không ảnh nếu bước ghi ảnh lỗi.
-      ...(images.length > 0 && {
+      ...((images.length > 0 || videos.length > 0) && {
         property_media: {
-          create: images.map((img) => ({
-            type: 'image',
-            url: img.url,
-            thumbnail: img.thumbnail,
-            is_primary: img.is_primary,
-            sort_order: img.sort_order,
-            created_at: now,
-            updated_at: now,
-          })),
+          create: [
+            ...images.map((img) => ({
+              type: 'image',
+              url: img.url,
+              thumbnail: img.thumbnail,
+              is_primary: img.is_primary,
+              sort_order: img.sort_order,
+              created_at: now,
+              updated_at: now,
+            })),
+            // Video xếp sau ảnh trong cùng danh sách media; ảnh bìa luôn là ảnh.
+            ...videos.map((v) => ({
+              type: 'video',
+              url: v.url,
+              thumbnail: v.thumbnail,
+              is_primary: false,
+              sort_order: images.length + v.sort_order,
+              created_at: now,
+              updated_at: now,
+            })),
+          ],
         },
       }),
     },
