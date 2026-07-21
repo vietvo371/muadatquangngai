@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Star, Phone, MapPin, Building, ChevronRight, ShieldCheck } from 'lucide-react';
+import { Star, Phone, MapPin, Building, ShieldCheck, MessageSquare } from 'lucide-react';
 
 /**
  * Khớp phản hồi GET /api/v2/agents. Nhiều trường cho phép rỗng vì DB không bắt buộc —
@@ -22,6 +22,8 @@ export interface Agent {
   district?: { id: number; name: string } | null;
   verified?: boolean;
   slug?: string;
+  /** Thẻ "khu vực hoạt động" tính từ tin đăng thật của môi giới — xem GET /api/v2/agents. */
+  coverage_areas?: Array<{ label: string; href: string; count: number }>;
 }
 
 interface AgentCardProps {
@@ -30,97 +32,107 @@ interface AgentCardProps {
 
 export function AgentCard({ agent }: AgentCardProps) {
   const agentUrl = agent.slug ? `/moi-gioi/${agent.slug}` : `/moi-gioi/${agent.id}`;
+  const coverageAreas = agent.coverage_areas ?? [];
 
   return (
-    <Card className="overflow-hidden hover:shadow-md transition-all duration-300 rounded-2xl border-gray-100 bg-white group">
-      <CardContent className="p-0">
-        <div className="p-5">
-          <div className="flex items-start gap-4 mb-4">
+    <Card className="overflow-hidden hover:shadow-md transition-shadow duration-300 rounded-2xl border-gray-100 bg-white">
+      <CardContent className="p-5">
+        <div className="flex flex-col sm:flex-row gap-5">
+          {/* Cột trái: ảnh + tên + liên hệ — giữ cố định để danh sách xếp thẳng hàng dễ quét mắt */}
+          <div className="flex sm:flex-col sm:w-[160px] shrink-0 gap-4 sm:gap-3">
             <Link href={agentUrl} className="shrink-0 relative">
-              <Avatar className="h-[60px] w-[60px] border-2 border-white shadow-sm">
+              <Avatar className="h-16 w-16 sm:h-20 sm:w-20 border-2 border-white shadow-sm">
                 <AvatarImage src={agent.avatar || undefined} className="object-cover" />
-                <AvatarFallback className="bg-primary-light text-primary font-bold text-lg">
+                <AvatarFallback className="bg-primary-light text-primary font-bold text-xl">
                   {agent.name.charAt(0)}
                 </AvatarFallback>
               </Avatar>
-              <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow-sm border border-gray-100">
-                <Badge className="bg-yellow-500 hover:bg-yellow-500 text-white border-0 h-5 w-5 p-0 flex items-center justify-center rounded-full">
-                  <Star className="h-3 w-3 fill-white" />
-                </Badge>
-              </div>
             </Link>
-            
-            <div className="flex-1 min-w-0">
+
+            <div className="min-w-0 flex-1 sm:flex-none">
               <Link href={agentUrl}>
-                <h3 className="font-bold text-gray-900 text-[16px] truncate group-hover:text-primary transition-colors leading-tight">
+                <h3 className="font-bold text-gray-900 text-[15px] hover:text-primary transition-colors leading-tight line-clamp-2">
                   {agent.name}
                 </h3>
               </Link>
-              
-              <div className="flex items-center gap-2 mt-1 mb-1 text-[13px]">
-                <div className="flex items-center gap-1 font-bold text-gray-900">
-                  <Star className="h-3.5 w-3.5 fill-yellow-500 text-yellow-500" />
-                  {agent.rating || 5.0} <span className="font-medium text-gray-400">({agent.review_count || 0})</span>
-                </div>
-                {agent.verified && (
-                  <>
-                    <div className="w-1 h-1 rounded-full bg-gray-300"></div>
-                    {/* Chỉ hiện khi hồ sơ đã được duyệt trong bảng verifications — không gắn
-                        nhãn "chuyên nghiệp" cho mọi người như trước. */}
-                    <div className="flex items-center gap-1 font-medium text-primary">
-                      <ShieldCheck className="h-3.5 w-3.5" />
-                      Đã xác minh
-                    </div>
-                  </>
-                )}
+
+              <p className="flex items-center gap-1.5 text-[13px] text-gray-500 mt-1.5">
+                <MapPin className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">{agent.district?.name ?? 'Quảng Ngãi'}</span>
+              </p>
+
+              {agent.phone && (
+                <p className="flex items-center gap-1.5 text-[13px] text-gray-500 mt-1">
+                  <Phone className="h-3.5 w-3.5 shrink-0" />
+                  <a href={`tel:${agent.phone}`} className="hover:text-primary">{agent.phone}</a>
+                </p>
+              )}
+
+              <div className="flex gap-2 mt-3">
+                {agent.phone ? (
+                  <a href={`tel:${agent.phone}`} className="flex-1">
+                    <Button size="sm" className="w-full h-8 text-[12px] font-bold bg-cta hover:bg-cta-dark">
+                      <Phone className="h-3.5 w-3.5 mr-1" />
+                      Gọi ngay
+                    </Button>
+                  </a>
+                ) : null}
+                <Link href={agentUrl} className="flex-1">
+                  <Button size="sm" variant="outline" className="w-full h-8 text-[12px] font-bold border-primary text-primary hover:bg-primary-light">
+                    <MessageSquare className="h-3.5 w-3.5 mr-1" />
+                    Xem hồ sơ
+                  </Button>
+                </Link>
               </div>
-              
-              {agent.company && (
-                <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500 truncate">
-                  <Building className="h-3.5 w-3.5 shrink-0" />
-                  <span className="truncate">{agent.company}</span>
-                </div>
+            </div>
+          </div>
+
+          {/* Cột phải: đánh giá/công ty + khu vực hoạt động */}
+          <div className="min-w-0 flex-1 border-t sm:border-t-0 sm:border-l border-gray-100 pt-4 sm:pt-0 sm:pl-5">
+            <div className="flex items-center gap-2 flex-wrap text-[13px]">
+              <div className="flex items-center gap-1 font-bold text-gray-900">
+                <Star className="h-3.5 w-3.5 fill-yellow-500 text-yellow-500" />
+                {agent.rating || 5.0} <span className="font-medium text-gray-400">({agent.review_count || 0} đánh giá)</span>
+              </div>
+              <div className="flex items-center gap-1 font-bold text-primary">
+                {agent.total_listings || 0} tin đang đăng
+              </div>
+              {agent.verified && (
+                <Badge className="bg-primary-light/60 text-primary border-0 text-[11px] font-semibold gap-1">
+                  <ShieldCheck className="h-3 w-3" />
+                  Đã xác minh
+                </Badge>
               )}
             </div>
-          </div>
 
-          <div className="space-y-3">
-            <div className="bg-gray-50 rounded-xl p-3 flex justify-between items-center">
-              <div>
-                <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Tin đang bán</p>
-                <p className="font-extrabold text-primary text-lg leading-none">{agent.total_listings || 0}</p>
+            {agent.company && (
+              <div className="flex items-center gap-1.5 text-[13px] font-medium text-gray-500 mt-2">
+                <Building className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">{agent.company}</span>
               </div>
-              <div className="text-right">
-                <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Khu vực</p>
-                <p className="font-bold text-gray-900 text-sm leading-none flex items-center justify-end gap-1">
-                  <MapPin className="h-3 w-3 text-gray-400" />
-                  {agent.district?.name ?? 'Quảng Ngãi'}
+            )}
+
+            {coverageAreas.length > 0 && (
+              <div className="mt-3">
+                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">
+                  Khu vực hoạt động
                 </p>
+                <ul className="space-y-1">
+                  {coverageAreas.map((area) => (
+                    <li key={area.href}>
+                      <Link
+                        href={area.href}
+                        className="text-[13px] text-gray-600 hover:text-primary hover:underline flex items-start gap-1.5"
+                      >
+                        <span className="mt-1.5 h-1 w-1 rounded-full bg-cta shrink-0" />
+                        {area.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
               </div>
-            </div>
+            )}
           </div>
-        </div>
-
-        <div className="grid grid-cols-2 border-t border-gray-100 divide-x divide-gray-100">
-          {agent.phone ? (
-            <a href={`tel:${agent.phone}`} className="flex w-full">
-              <Button variant="ghost" className="h-12 w-full rounded-none text-primary hover:text-primary hover:bg-primary-light/10 font-bold text-[13px]">
-                <Phone className="h-4 w-4 mr-1.5" />
-                Gọi ngay
-              </Button>
-            </a>
-          ) : (
-            <Button variant="ghost" disabled className="h-12 rounded-none font-bold text-[13px] text-gray-400">
-              <Phone className="h-4 w-4 mr-1.5" />
-              Chưa có SĐT
-            </Button>
-          )}
-          <Link href={agentUrl} className="flex w-full">
-            <Button variant="ghost" className="h-12 w-full rounded-none text-gray-600 hover:text-gray-900 font-bold bg-white text-[13px]">
-              Xem hồ sơ
-              <ChevronRight className="h-4 w-4 ml-0.5" />
-            </Button>
-          </Link>
         </div>
       </CardContent>
     </Card>

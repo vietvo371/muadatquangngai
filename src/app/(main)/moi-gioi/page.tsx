@@ -186,15 +186,16 @@ export default function AgentsListPage() {
             </div>
           </div>
 
-          {/* Agents Grid */}
+          {/* Danh sách dạng dòng — mỗi môi giới một dòng đủ rộng để hiện được thẻ khu vực
+              hoạt động bên cạnh thông tin liên hệ, thay vì lưới thẻ nhỏ trước đây. */}
           {loading ? (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="h-64 rounded-2xl bg-gray-100 animate-pulse" />
+            <div className="space-y-4">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="h-40 rounded-2xl bg-gray-100 animate-pulse" />
               ))}
             </div>
           ) : (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+            <div className="space-y-4">
               {filteredAgents.map((agent) => (
                 <AgentCard key={agent.id} agent={agent} />
               ))}

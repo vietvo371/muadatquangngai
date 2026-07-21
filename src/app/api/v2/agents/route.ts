@@ -122,6 +122,47 @@ export async function GET(request: Request) {
   const activeBy = activeByAll;
   const verifiedSet = new Set(verified.map((v) => v.user_id.toString()));
 
+  // Thẻ "khu vực hoạt động" (kiểu "Bán nhà riêng ở Xã Bình Sơn") — tính từ tin đăng THẬT
+  // của chính môi giới đó, không phải bịa. group theo (loại giao dịch, danh mục, xã/phường)
+  // rồi lấy 3 tổ hợp nhiều tin nhất mỗi người.
+  const coverageGroups = ids.length
+    ? await db.properties.groupBy({
+        by: ['user_id', 'type', 'category_id', 'district_id'],
+        where: { user_id: { in: ids }, status: 'active' },
+        _count: { _all: true },
+      })
+    : [];
+  const categoryIds = [...new Set(coverageGroups.map((g) => g.category_id))];
+  const coverageDistrictIds = [...new Set(coverageGroups.map((g) => g.district_id))];
+  const [coverageCategories, coverageDistricts] = await Promise.all([
+    categoryIds.length ? db.categories.findMany({ where: { id: { in: categoryIds } }, select: { id: true, name: true } }) : [],
+    coverageDistrictIds.length
+      ? db.districts.findMany({ where: { id: { in: coverageDistrictIds } }, select: { id: true, name: true } })
+      : [],
+  ]);
+  const categoryNameById = new Map(coverageCategories.map((c) => [c.id.toString(), c.name]));
+  const districtNameById = new Map(coverageDistricts.map((d) => [d.id.toString(), d.name]));
+
+  const coverageByAgent = new Map<string, Array<{ label: string; href: string; count: number }>>();
+  for (const g of coverageGroups) {
+    const key = g.user_id.toString();
+    const categoryName = categoryNameById.get(g.category_id.toString());
+    const districtName = districtNameById.get(g.district_id.toString());
+    if (!categoryName || !districtName) continue;
+    const verb = g.type === 'sell' ? 'Bán' : 'Cho thuê';
+    const list = coverageByAgent.get(key) ?? [];
+    list.push({
+      label: `${verb} ${categoryName.toLowerCase()} ở ${districtName}`,
+      href: `/${g.type === 'sell' ? 'mua-ban' : 'cho-thue'}?category=${g.category_id}&khu_vuc=${g.district_id}`,
+      count: g._count._all,
+    });
+    coverageByAgent.set(key, list);
+  }
+  for (const list of coverageByAgent.values()) {
+    list.sort((a, b) => b.count - a.count);
+    list.length = Math.min(list.length, 3);
+  }
+
   const data = rows.map((r) => {
     const key = r.id.toString();
     return {
@@ -140,6 +181,7 @@ export async function GET(request: Request) {
       province: r.provinces ? { id: Number(r.provinces.id), name: r.provinces.name } : null,
       verified: verifiedSet.has(key),
       joined_at: r.created_at,
+      coverage_areas: coverageByAgent.get(key) ?? [],
     };
   });
 
