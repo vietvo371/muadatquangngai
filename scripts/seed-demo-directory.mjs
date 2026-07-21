@@ -197,7 +197,7 @@ for (const a of plan.agents) {
         status: 'active',
         title,
         // Đủ dài để qua validate mô tả tối thiểu 50 ký tự của form đăng tin thật.
-        description: `Tin đăng demo dùng để xem thử giao diện danh bạ, không phải bất động sản có thật. Diện tích ${area}m², khu vực demo. Dữ liệu này chỉ tồn tại trên máy phát triển, không đưa lên production.`,
+        description: `Tin đăng demo dùng để minh hoạ giao diện danh bạ, không phải bất động sản có thật. Diện tích ${area}m², khu vực demo.`,
         price: String(price),
         price_unit: PRICE_UNIT_BY_TYPE[type],
         area: String(area),
