@@ -454,6 +454,54 @@ export const dashboardApi = {
   },
 };
 
+/** Khớp phản hồi GET/POST/PUT /api/v2/admin/agencies. */
+export interface AdminAgency {
+  id: number;
+  name: string;
+  slug: string;
+  logo: string | null;
+  description: string | null;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  verified: boolean;
+  active: boolean;
+  district_id: number | null;
+  province_id: number | null;
+  agent_count: number;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export const agencyAdminApi = {
+  list: async () => {
+    const { data } = await api.get<{ success: boolean; data: AdminAgency[] }>('/api/v2/admin/agencies');
+    return data;
+  },
+
+  create: async (payload: Partial<AdminAgency>) => {
+    const { data } = await api.post<{ success: boolean; data: AdminAgency; message: string }>(
+      '/api/v2/admin/agencies',
+      payload
+    );
+    return data;
+  },
+
+  update: async (id: number, payload: Partial<AdminAgency>) => {
+    const { data } = await api.put<{ success: boolean; data: AdminAgency; message: string }>(
+      `/api/v2/admin/agencies/${id}`,
+      payload
+    );
+    return data;
+  },
+
+  delete: async (id: number) => {
+    const { data } = await api.delete<{ success: boolean; message: string }>(`/api/v2/admin/agencies/${id}`);
+    return data;
+  },
+};
+
 // Properties Admin Api
 export const propertyAdminApi = {
   list: async (params?: {

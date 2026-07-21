@@ -106,6 +106,7 @@ model districts {
 
   @@index([province_id], map: "districts_province_id_index")
   @@index([slug], map: "districts_slug_index")
+  agencies    agencies[]
 }
 
 model failed_jobs {
@@ -554,6 +555,7 @@ model provinces {
 
   @@index([region], map: "provinces_region_index")
   @@index([slug], map: "provinces_slug_index")
+  agencies   agencies[]
 }
 
 model reports {
@@ -679,6 +681,36 @@ model transactions {
   @@index([user_id], map: "transactions_user_id_index")
 }
 
+/// Doanh nghiệp / sàn giao dịch BĐS — danh bạ công khai tại /doanh-nghiep.
+///
+/// Trước đây tên công ty chỉ là ô chữ tự do `users.agency_name`, nên hai môi giới cùng
+/// công ty gõ lệch một dấu là thành hai công ty khác nhau, và không thể có logo, trang
+/// riêng hay đếm tin theo công ty. Cột cũ vẫn giữ để không mất dữ liệu đã nhập.
+model agencies {
+  id          BigInt     @id @default(autoincrement())
+  name        String     @db.VarChar(255)
+  slug        String     @unique(map: "agencies_slug_unique") @db.VarChar(255)
+  logo        String?    @db.VarChar(500)
+  description String?
+  address     String?    @db.VarChar(500)
+  province_id BigInt?
+  district_id BigInt?
+  phone       String?    @db.VarChar(20)
+  email       String?    @db.VarChar(255)
+  website     String?    @db.VarChar(255)
+  is_verified Boolean    @default(false)
+  is_active   Boolean    @default(true)
+  created_at  DateTime?  @db.Timestamp(0)
+  updated_at  DateTime?  @db.Timestamp(0)
+
+  provinces provinces? @relation(fields: [province_id], references: [id], onUpdate: NoAction, map: "agencies_province_id_foreign")
+  districts districts? @relation(fields: [district_id], references: [id], onUpdate: NoAction, map: "agencies_district_id_foreign")
+  users     users[]
+
+  @@index([district_id], map: "idx_agencies_district")
+  @@index([is_active, is_verified], map: "idx_agencies_listing")
+}
+
 model users {
   id                                          BigInt                      @id @default(autoincrement())
   name                                        String                      @db.VarChar(255)
@@ -706,6 +738,9 @@ model users {
   review_count                                Int                         @default(0)
   license_number                              String?                     @db.VarChar(100)
   agency_name                                 String?                     @db.VarChar(255)
+  /// Khoá ngoại tới bảng agencies. Giữ song song agency_name (ô chữ tự do cũ) để dữ liệu
+  /// đã nhập không mất; chỗ nào có agency_id thì ưu tiên dùng nó.
+  agency_id                                   BigInt?
   website                                     String?                     @db.VarChar(500)
   facebook                                    String?                     @db.VarChar(500)
   zalo                                        String?                     @db.VarChar(50)
@@ -729,6 +764,7 @@ model users {
   saved_properties                            saved_properties[]
   subscriptions                               subscriptions[]
   transactions                                transactions[]
+  agencies                                    agencies?                   @relation(fields: [agency_id], references: [id], onUpdate: NoAction, map: "users_agency_id_foreign")
   districts                                   districts?                  @relation(fields: [district_id], references: [id], onUpdate: NoAction, map: "users_district_id_foreign")
   provinces                                   provinces?                  @relation(fields: [province_id], references: [id], onUpdate: NoAction, map: "users_province_id_foreign")
   verifications_verifications_admin_idTousers verifications[]             @relation("verifications_admin_idTousers")

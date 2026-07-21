@@ -49,6 +49,7 @@ const adminNavItems = [
   { href: '/admin', label: 'Dashboard', icon: BarChart3, exact: true },
   { href: '/admin/properties', label: 'Quản lý tin', icon: Building2 },
   { href: '/admin/users', label: 'Quản lý users', icon: Users },
+  { href: '/admin/agencies', label: 'Doanh nghiệp', icon: Building2 },
   { href: '/admin/verifications', label: 'Xác thực', icon: ShieldCheck },
   { href: '/admin/categories', label: 'Danh mục', icon: Package },
   { href: '/admin/packages', label: 'Gói VIP', icon: Star },
