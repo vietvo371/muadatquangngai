@@ -75,8 +75,10 @@ export function MapPicker({
     if (!containerRef.current || mapRef.current) return;
 
     const map = L.map(containerRef.current).setView(value ? [value.lat, value.lng] : QUANG_NGAI, value ? 16 : 12);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    // CartoDB Voyager — cùng loại tile với trang /ban-do, miễn phí không cần API key, nhìn
+    // hiện đại hơn hẳn tile OSM thô (màu sắc rõ ràng, tên đường dễ đọc).
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
       maxZoom: 19,
     }).addTo(map);
 
