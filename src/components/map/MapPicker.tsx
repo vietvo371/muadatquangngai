@@ -7,6 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader2, LocateFixed, Search } from 'lucide-react';
 
+interface SearchResult {
+  lat: number;
+  lng: number;
+  display_name: string;
+  in_coverage: boolean;
+}
+
 interface MapPickerProps {
   value?: { lat: number; lng: number };
   onChange?: (value: { lat: number; lng: number }) => void;
@@ -57,6 +64,9 @@ export function MapPicker({
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [showResults, setShowResults] = useState(false);
+  const searchBoxRef = useRef<HTMLDivElement>(null);
 
   /** Đặt lại vị trí ghim, tạo mới nếu chưa có. Không đụng tới khung nhìn của bản đồ. */
   const placeMarker = (map: maplibregl.Map, lat: number, lng: number) => {
@@ -127,6 +137,25 @@ export function MapPicker({
     map.setZoom(14);
   }, [center?.[0], center?.[1]]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Đóng dropdown khi bấm ra ngoài hoặc nhấn Esc.
+  useEffect(() => {
+    const onPointerDown = (e: PointerEvent) => {
+      if (searchBoxRef.current && !searchBoxRef.current.contains(e.target as Node)) {
+        setShowResults(false);
+      }
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowResults(false);
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, []);
+
+  /** Tra cứu và hiện danh sách gợi ý — KHÔNG tự ghim, để người dùng chọn đúng địa chỉ mình cần. */
   const handleSearch = async () => {
     const q = searchQuery.trim();
     if (!q || isSearching) return;
@@ -136,23 +165,33 @@ export function MapPicker({
     try {
       const res = await fetch(`/api/v2/geocode/search?q=${encodeURIComponent(q)}`);
       const json = await res.json();
-      const hit = json?.data?.[0];
-      if (!hit) {
+      const results: SearchResult[] = json?.data ?? [];
+      if (results.length === 0) {
         setSearchError('Không tìm thấy địa điểm này. Thử tên đường hoặc tên xã/phường.');
+        setSearchResults([]);
+        setShowResults(false);
         return;
       }
-      const map = mapRef.current;
-      if (map) {
-        placeMarker(map, hit.lat, hit.lng);
-        map.setCenter([hit.lng, hit.lat]);
-        map.setZoom(17);
-      }
-      onChangeRef.current?.({ lat: hit.lat, lng: hit.lng });
+      setSearchResults(results);
+      setShowResults(true);
     } catch {
       setSearchError('Không tìm kiếm được, vui lòng thử lại.');
     } finally {
       setIsSearching(false);
     }
+  };
+
+  /** Người dùng chọn một địa chỉ trong danh sách gợi ý — lúc này mới thật sự ghim. */
+  const handleSelectResult = (hit: SearchResult) => {
+    const map = mapRef.current;
+    if (map) {
+      placeMarker(map, hit.lat, hit.lng);
+      map.setCenter([hit.lng, hit.lat]);
+      map.setZoom(17);
+    }
+    onChangeRef.current?.({ lat: hit.lat, lng: hit.lng });
+    setSearchQuery(hit.display_name);
+    setShowResults(false);
   };
 
   const handleLocateMe = () => {
@@ -177,11 +216,12 @@ export function MapPicker({
 
   return (
     <div className={`space-y-2 ${className}`}>
-      <div className="flex gap-2">
+      <div ref={searchBoxRef} className="relative flex gap-2">
         <Input
           placeholder="Tìm theo tên đường, xã/phường..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
+          onFocus={() => searchResults.length > 0 && setShowResults(true)}
           // Enter trong ô này phải tìm kiếm, không được submit cả form đăng tin.
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
@@ -199,6 +239,26 @@ export function MapPicker({
         <Button type="button" variant="outline" onClick={handleLocateMe} disabled={disabled} title="Vị trí của tôi">
           <LocateFixed className="h-4 w-4" />
         </Button>
+
+        {/* Danh sách gợi ý — backend trả tối đa 5 kết quả, kết quả trong Quảng Ngãi xếp trước. */}
+        {showResults && searchResults.length > 0 && (
+          <ul className="absolute left-0 right-0 top-full z-10 mt-1 max-h-64 overflow-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+            {searchResults.map((r, i) => (
+              <li key={`${r.lat},${r.lng},${i}`}>
+                <button
+                  type="button"
+                  onClick={() => handleSelectResult(r)}
+                  className="block w-full px-3 py-2 text-left text-[13px] text-gray-700 hover:bg-primary-light hover:text-primary"
+                >
+                  {r.display_name}
+                  {!r.in_coverage && (
+                    <span className="ml-1.5 text-[11px] text-gray-400">(ngoài Quảng Ngãi)</span>
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {searchError && <p className="text-[13px] text-red-600">{searchError}</p>}

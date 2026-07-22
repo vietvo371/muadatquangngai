@@ -374,6 +374,11 @@ export default function DangTinPage() {
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [geocodeNote, setGeocodeNote] = useState<{ type: 'ok' | 'warn'; text: string } | null>(null);
 
+  // Đánh dấu ô "Địa chỉ cụ thể" đang chứa giá trị TỰ ĐIỀN (từ ghim bản đồ), khác với giá trị
+  // người dùng tự gõ. Chỉ khi đang tự điền mới cho phép lần ghim tiếp theo ghi đè tiếp — nếu
+  // người dùng đã tự sửa tay, coi như họ "chốt" giá trị đó, không tự động đổi nữa.
+  const streetAutoFilledRef = useRef(false);
+
   /**
    * Người dùng ghim một điểm trên bản đồ (spec: chọn địa chỉ bằng bản đồ thay vì gõ tay).
    *
@@ -399,8 +404,13 @@ export default function DangTinPage() {
       }
 
       const patch: Partial<PropertyFormData> = {};
-      // Chỉ điền địa chỉ khi ô đang trống — không đè lên thứ người dùng đã tự gõ.
-      if (d.address && !formData.street.trim()) patch.street = d.address;
+      // Điền địa chỉ khi ô đang trống, HOẶC khi giá trị hiện có cũng là do tự điền từ lần ghim
+      // trước (người dùng đang chỉnh lại ghim, không phải đã gõ tay) — không đè lên chữ người
+      // dùng tự gõ.
+      if (d.address && (!formData.street.trim() || streetAutoFilledRef.current)) {
+        patch.street = d.address;
+        streetAutoFilledRef.current = true;
+      }
 
       if (d.matched && d.district_id) {
         patch.province_id = d.province_id ?? formData.province_id;
@@ -722,7 +732,11 @@ export default function DangTinPage() {
                   <Label className="font-semibold text-gray-700">Địa chỉ cụ thể (Số nhà, đường)</Label>
                   <Input
                     value={formData.street}
-                    onChange={(e) => updateFormData({ street: e.target.value })}
+                    onChange={(e) => {
+                      // Người dùng tự gõ — từ giờ không tự động ghi đè ô này khi ghim lại nữa.
+                      streetAutoFilledRef.current = false;
+                      updateFormData({ street: e.target.value });
+                    }}
                     placeholder="VD: 123 Đường Trần Phú..."
                     className="mt-2 h-12 bg-gray-50 border-gray-200 focus:ring-primary focus:border-primary"
                   />
