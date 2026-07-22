@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader2, LocateFixed, Search } from 'lucide-react';
@@ -17,21 +16,25 @@ interface MapPickerProps {
   disabled?: boolean;
 }
 
-const QUANG_NGAI: [number, number] = [15.1212, 108.7922];
+const QUANG_NGAI = { lat: 15.1212, lng: 108.7922 };
 
-/**
- * Leaflet không tự nạp được ảnh ghim khi đóng gói qua bundler (đường dẫn ảnh trong CSS trỏ
- * tương đối vào node_modules). Tự dựng ghim bằng SVG inline để không phụ thuộc file ảnh.
- */
-const PIN_ICON = L.divIcon({
-  className: '',
-  html: `<svg width="30" height="42" viewBox="0 0 30 42" xmlns="http://www.w3.org/2000/svg">
-    <path d="M15 0C6.7 0 0 6.7 0 15c0 11 15 27 15 27s15-16 15-27c0-8.3-6.7-15-15-15z" fill="#e03131"/>
-    <circle cx="15" cy="15" r="5.5" fill="#fff"/>
-  </svg>`,
-  iconSize: [30, 42],
-  iconAnchor: [15, 42],
-});
+/** Ghim đỏ giống hệt trước — SVG inline qua data URI thay vì icon mặc định của Google. */
+const PIN_ICON = {
+  url:
+    'data:image/svg+xml;charset=UTF-8,' +
+    encodeURIComponent(
+      `<svg width="30" height="42" viewBox="0 0 30 42" xmlns="http://www.w3.org/2000/svg">
+        <path d="M15 0C6.7 0 0 6.7 0 15c0 11 15 27 15 27s15-16 15-27c0-8.3-6.7-15-15-15z" fill="#e03131"/>
+        <circle cx="15" cy="15" r="5.5" fill="#fff"/>
+      </svg>`
+    ),
+  scaledSize: { width: 30, height: 42 } as google.maps.Size,
+  anchor: { x: 15, y: 42 } as google.maps.Point,
+};
+
+// setOptions() chỉ có tác dụng ở lần gọi đầu — các MapPicker khác trên trang gọi lại cũng
+// không sao vì importLibrary() tự cache, không tải lại script.
+setOptions({ key: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '', v: 'weekly' });
 
 export function MapPicker({
   value,
@@ -42,28 +45,29 @@ export function MapPicker({
   disabled = false,
 }: MapPickerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<L.Map | null>(null);
-  const markerRef = useRef<L.Marker | null>(null);
+  const mapRef = useRef<google.maps.Map | null>(null);
+  const markerRef = useRef<google.maps.Marker | null>(null);
 
   // onChange đi qua ref để hiệu ứng khởi tạo bản đồ không phụ thuộc vào nó. Nếu đưa thẳng
   // onChange vào deps, mỗi lần cha render lại là bản đồ bị dựng lại từ đầu.
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
 
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
 
   /** Đặt lại vị trí ghim, tạo mới nếu chưa có. Không đụng tới khung nhìn của bản đồ. */
-  const placeMarker = (map: L.Map, lat: number, lng: number) => {
+  const placeMarker = (map: google.maps.Map, lat: number, lng: number) => {
     if (markerRef.current) {
-      markerRef.current.setLatLng([lat, lng]);
+      markerRef.current.setPosition({ lat, lng });
       return;
     }
-    const marker = L.marker([lat, lng], { icon: PIN_ICON, draggable: true }).addTo(map);
-    marker.on('dragend', (e) => {
-      const p = (e.target as L.Marker).getLatLng();
-      onChangeRef.current?.({ lat: p.lat, lng: p.lng });
+    const marker = new google.maps.Marker({ position: { lat, lng }, map, icon: PIN_ICON, draggable: true });
+    marker.addListener('dragend', () => {
+      const p = marker.getPosition();
+      if (p) onChangeRef.current?.({ lat: p.lat(), lng: p.lng() });
     });
     markerRef.current = marker;
   };
@@ -73,25 +77,32 @@ export function MapPicker({
   // đang xem, nhìn như bản đồ bị giật về chỗ cũ.
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
+    let cancelled = false;
 
-    const map = L.map(containerRef.current).setView(value ? [value.lat, value.lng] : QUANG_NGAI, value ? 16 : 12);
-    // CartoDB Voyager — cùng loại tile với trang /ban-do, miễn phí không cần API key, nhìn
-    // hiện đại hơn hẳn tile OSM thô (màu sắc rõ ràng, tên đường dễ đọc).
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-      maxZoom: 19,
-    }).addTo(map);
+    importLibrary('maps')
+      .then(({ Map }) => {
+        if (cancelled || !containerRef.current || mapRef.current) return;
 
-    map.on('click', (e: L.LeafletMouseEvent) => {
-      placeMarker(map, e.latlng.lat, e.latlng.lng);
-      onChangeRef.current?.({ lat: e.latlng.lat, lng: e.latlng.lng });
-    });
+        const map = new Map(containerRef.current, {
+          center: value ?? QUANG_NGAI,
+          zoom: value ? 16 : 12,
+          streetViewControl: false,
+          fullscreenControl: false,
+        });
 
-    if (value) placeMarker(map, value.lat, value.lng);
-    mapRef.current = map;
+        map.addListener('click', (e: google.maps.MapMouseEvent) => {
+          if (!e.latLng) return;
+          placeMarker(map, e.latLng.lat(), e.latLng.lng());
+          onChangeRef.current?.({ lat: e.latLng.lat(), lng: e.latLng.lng() });
+        });
+
+        if (value) placeMarker(map, value.lat, value.lng);
+        mapRef.current = map;
+      })
+      .catch(() => setLoadError('Không tải được Google Maps. Kiểm tra lại API key.'));
 
     return () => {
-      map.remove();
+      cancelled = true;
       mapRef.current = null;
       markerRef.current = null;
     };
@@ -103,14 +114,16 @@ export function MapPicker({
     const map = mapRef.current;
     if (!map || !value) return;
     placeMarker(map, value.lat, value.lng);
-    map.setView([value.lat, value.lng], Math.max(map.getZoom(), 16));
+    map.setZoom(Math.max(map.getZoom() ?? 12, 16));
+    map.setCenter(value);
   }, [value?.lat, value?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Chưa ghim điểm nào mà cha đổi vùng trung tâm (chọn xã/phường trước) thì dời khung nhìn.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !center || value) return;
-    map.setView(center, 14);
+    map.setCenter({ lat: center[0], lng: center[1] });
+    map.setZoom(14);
   }, [center?.[0], center?.[1]]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSearch = async () => {
@@ -130,7 +143,8 @@ export function MapPicker({
       const map = mapRef.current;
       if (map) {
         placeMarker(map, hit.lat, hit.lng);
-        map.setView([hit.lat, hit.lng], 17);
+        map.setCenter({ lat: hit.lat, lng: hit.lng });
+        map.setZoom(17);
       }
       onChangeRef.current?.({ lat: hit.lat, lng: hit.lng });
     } catch {
@@ -151,7 +165,8 @@ export function MapPicker({
         const map = mapRef.current;
         if (map) {
           placeMarker(map, latitude, longitude);
-          map.setView([latitude, longitude], 17);
+          map.setCenter({ lat: latitude, lng: longitude });
+          map.setZoom(17);
         }
         onChangeRef.current?.({ lat: latitude, lng: longitude });
       },
@@ -186,11 +201,12 @@ export function MapPicker({
       </div>
 
       {searchError && <p className="text-[13px] text-red-600">{searchError}</p>}
+      {loadError && <p className="text-[13px] text-red-600">{loadError}</p>}
 
       <div
         ref={containerRef}
         style={{ height }}
-        className="rounded-lg overflow-hidden border border-gray-200 z-0"
+        className="rounded-lg overflow-hidden border border-gray-200 z-0 bg-gray-100"
       />
 
       <p className="text-[13px] text-gray-500">
