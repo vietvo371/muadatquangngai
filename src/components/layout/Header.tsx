@@ -10,28 +10,16 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useAuthStore } from '@/stores/authStore';
 import { SELL_CATEGORIES, RENT_CATEGORIES, PROJECT_CATEGORIES, type CategoryMenuItem } from '@/lib/category-menu';
 
-/**
- * `submenu` dựng link lọc theo danh mục (`?category=<id>`), còn `pageLinks` là các mục trỏ
- * thẳng tới một trang riêng — hai loại khác nhau nên tách trường thay vì nhồi chung.
- */
 const mainNavLinks: Array<{
   href: string;
   label: string;
   submenu?: CategoryMenuItem[];
-  pageLinks?: Array<{ href: string; label: string }>;
 }> = [
   { href: '/mua-ban', label: 'Nhà đất bán', submenu: SELL_CATEGORIES },
   { href: '/cho-thue', label: 'Nhà đất cho thuê', submenu: RENT_CATEGORIES },
   { href: '/du-an', label: 'Dự án', submenu: PROJECT_CATEGORIES },
-  // Danh bạ gom môi giới và doanh nghiệp vào một mục cho khỏi chật thanh điều hướng.
-  {
-    href: '/moi-gioi',
-    label: 'Danh bạ',
-    pageLinks: [
-      { href: '/moi-gioi', label: 'Nhà môi giới' },
-      { href: '/doanh-nghiep', label: 'Doanh nghiệp' },
-    ],
-  },
+  // /moi-gioi tự có 2 tab Cá nhân/Công ty rồi — bấm thẳng vào trang, không cần dropdown.
+  { href: '/moi-gioi', label: 'Danh bạ' },
   { href: '/tin-tuc', label: 'Tin tức' },
 ];
 
@@ -68,7 +56,7 @@ export function Header() {
                 <div
                   key={link.href}
                   className="relative"
-                  onMouseEnter={() => (link.submenu || link.pageLinks) && setOpenSubmenu(link.href)}
+                  onMouseEnter={() => link.submenu && setOpenSubmenu(link.href)}
                   onMouseLeave={() => setOpenSubmenu(null)}
                 >
                   <Link
@@ -80,7 +68,7 @@ export function Header() {
                     }`}
                   >
                     {link.label}
-                    {(link.submenu || link.pageLinks) && (
+                    {link.submenu && (
                       <ChevronDown className={`h-3.5 w-3.5 transition-transform ${openSubmenu === link.href ? 'rotate-180' : ''}`} />
                     )}
                     <span className={`absolute bottom-0 left-0 right-0 h-[3px] bg-primary transition-transform origin-center ${
@@ -88,17 +76,8 @@ export function Header() {
                     }`} />
                   </Link>
 
-                  {(link.submenu || link.pageLinks) && openSubmenu === link.href && (
+                  {link.submenu && openSubmenu === link.href && (
                     <div className="absolute left-0 top-[60px] z-50 w-72 rounded-b-xl border border-gray-100 bg-white py-2 shadow-xl">
-                      {link.pageLinks?.map((item) => (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          className="block px-4 py-2 text-[13.5px] text-gray-700 hover:bg-primary-light hover:text-primary transition-colors"
-                        >
-                          {item.label}
-                        </Link>
-                      ))}
                       {link.submenu?.map((item) => (
                         <Link
                           key={item.id}
@@ -183,7 +162,7 @@ export function Header() {
                         >
                           {link.label}
                         </Link>
-                        {(link.submenu || link.pageLinks) && (
+                        {link.submenu && (
                           <button
                             type="button"
                             onClick={() => setMobileExpanded((v) => (v === link.href ? null : link.href))}
@@ -194,18 +173,8 @@ export function Header() {
                           </button>
                         )}
                       </div>
-                      {(link.submenu || link.pageLinks) && mobileExpanded === link.href && (
+                      {link.submenu && mobileExpanded === link.href && (
                         <div className="ml-4 flex flex-col gap-0.5 border-l border-gray-100 pl-3 pb-1">
-                          {link.pageLinks?.map((item) => (
-                            <Link
-                              key={item.href}
-                              href={item.href}
-                              onClick={() => setIsMobileMenuOpen(false)}
-                              className="px-3 py-2 text-[13px] text-gray-600 hover:bg-gray-100 rounded-lg"
-                            >
-                              {item.label}
-                            </Link>
-                          ))}
                           {link.submenu?.map((item) => (
                             <Link
                               key={item.id}
