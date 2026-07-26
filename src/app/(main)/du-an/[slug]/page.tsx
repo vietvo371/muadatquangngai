@@ -521,6 +521,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
   const [unitsData, setUnitsData] = useState<any[]>([]);
   // Dự án khác — hiển thị thay cho ô "Tin mua bán" khi dự án này chưa có tin đăng nào
   const [otherProjects, setOtherProjects] = useState<Project[]>([]);
+  // Slug không khớp dự án nào (đã xoá/đổi slug) — hiện trang "Không tìm thấy", không bịa dữ liệu
+  const [notFound, setNotFound] = useState(false);
+  const [suggestedProjects, setSuggestedProjects] = useState<Project[]>([]);
   
   const [mainImg, setMainImg] = useState(0);
   const [activeTab, setActiveTab] = useState(0);
@@ -624,15 +627,70 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
           }
         }
       } else {
-        // Fallback to static mock project data
-        setProjectData(mockProject);
-        setUnitsData(mockProject.relatedListings);
+        // Không tìm thấy dự án (slug đã đổi/xoá) — báo đúng thực tế, KHÔNG bịa dữ liệu
+        // mock để hiển thị (trước đây fallback về mockProject khiến khách xem phải
+        // trường học/tin đăng hoàn toàn giả mạo mà không hề biết).
+        setNotFound(true);
+        // API /api/v2/projects hiện trả cố định 20 dòng/trang (bỏ qua per_page) — cắt bớt
+        // phía client để trang "Không tìm thấy" không dài quá mức cần thiết.
+        const suggestRes = await fetchProjects({ per_page: 4 });
+        if (suggestRes.success && suggestRes.data) {
+          setSuggestedProjects(suggestRes.data.slice(0, 4));
+        }
       }
     };
     if (slug) {
       loadData();
     }
   }, [slug, isPreview, fetchProjectDetail, fetchProjectUnits, fetchProjects]);
+
+  if (notFound) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center px-4 py-16">
+        <div className="max-w-lg text-center">
+          <Building className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+          <h1 className="text-xl font-bold text-gray-900 mb-2">Không tìm thấy dự án này</h1>
+          <p className="text-sm text-gray-500 mb-6">
+            Dự án có thể đã ngừng đăng, đổi tên hoặc đường dẫn không còn chính xác.
+          </p>
+          <Link
+            href="/du-an"
+            className="inline-flex items-center justify-center h-11 px-6 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors"
+          >
+            Xem tất cả dự án
+          </Link>
+        </div>
+        {suggestedProjects.length > 0 && (
+          <div className="w-full max-w-3xl mt-12">
+            <h2 className="text-sm font-bold text-gray-900 mb-4">Có thể bạn quan tâm</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {suggestedProjects.map((p) => (
+                <Link
+                  key={p.id}
+                  href={`/du-an/${p.slug}`}
+                  className="flex gap-3 bg-white rounded-xl border border-gray-100 p-3 hover:border-primary transition-colors group"
+                >
+                  <div className="relative w-20 h-16 shrink-0 rounded-lg overflow-hidden bg-gray-100">
+                    {p.thumbnail && (
+                      <Image src={p.thumbnail} alt={p.name} fill className="object-cover" sizes="80px" />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-800 line-clamp-2 group-hover:text-primary transition-colors">
+                      {p.name}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {p.location?.address || p.location?.district?.name || p.location?.province?.name || ''}
+                    </p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   // Loading skeleton state
   if (isLoading || !projectData) {
