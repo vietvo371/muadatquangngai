@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { formatPrice, timeAgo } from '@/lib/formatters';
 import { ContactDialog } from '@/components/shared/ContactDialog';
-import { useProjects } from '@/hooks/useProjects';
+import { useProjects, type Project } from '@/hooks/useProjects';
 import { sanitizeRichText } from '@/lib/sanitize-html';
 import { visibleFloorPlans, minFloorPlanArea } from '@/lib/floor-plans';
 import { DEFAULT_PROJECT_TYPE, isLandLikeProjectType, getProjectTypeLabel } from '@/lib/project-type';
@@ -437,6 +437,9 @@ const mapApiUnit = (apiProp: any) => {
 function NearbyTab({ project }: { project: NearbyProject }) {
   const [cat, setCat] = useState<NearbyCategory>('school');
   const places = project.nearbyPlaces[cat] || [];
+  // Chưa có nguồn dữ liệu tiện ích lân cận thật (xem mapApiProjectDetail) — ẩn hẳn khối tab
+  // thay vì hiện 4 tab bấm vào đâu cũng ra "Chưa có thông tin", trông như tính năng bị hỏng.
+  const hasAnyNearbyData = Object.values(project.nearbyPlaces).some((arr) => arr.length > 0);
   return (
     <div className="space-y-4">
       <h2 className="text-base font-bold text-gray-900">Vị trí dự án {project.name}</h2>
@@ -459,47 +462,49 @@ function NearbyTab({ project }: { project: NearbyProject }) {
       </div>
 
       {/* Category tabs */}
-      <div className="border border-gray-200 rounded-xl overflow-hidden">
-        <div className="flex overflow-x-auto border-b border-gray-100">
-          {nearbyTabs.map(({ key, label, Icon }) => (
-            <button
-              key={key}
-              onClick={() => setCat(key)}
-              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm whitespace-nowrap border-b-2 transition-colors ${
-                cat === key
-                  ? 'border-primary text-primary font-semibold'
-                  : 'border-transparent text-gray-500 hover:text-gray-800'
-              }`}
-            >
-              <Icon className="h-4 w-4" />
-              {label}
-            </button>
-          ))}
-        </div>
+      {hasAnyNearbyData && (
+        <div className="border border-gray-200 rounded-xl overflow-hidden">
+          <div className="flex overflow-x-auto border-b border-gray-100">
+            {nearbyTabs.map(({ key, label, Icon }) => (
+              <button
+                key={key}
+                onClick={() => setCat(key)}
+                className={`flex items-center gap-1.5 px-4 py-2.5 text-sm whitespace-nowrap border-b-2 transition-colors ${
+                  cat === key
+                    ? 'border-primary text-primary font-semibold'
+                    : 'border-transparent text-gray-500 hover:text-gray-800'
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                {label}
+              </button>
+            ))}
+          </div>
 
-        <p className="px-4 py-2 text-xs text-gray-500 bg-gray-50 border-b border-gray-100">
-          {places.length > 0
-            ? `Có ${places.length} ${nearbyTabs.find((t) => t.key === cat)?.label.toLowerCase()} trong vòng 5 km`
-            : 'Chưa có thông tin tiện ích lân cận cho dự án này.'}
-        </p>
+          <p className="px-4 py-2 text-xs text-gray-500 bg-gray-50 border-b border-gray-100">
+            {places.length > 0
+              ? `Có ${places.length} ${nearbyTabs.find((t) => t.key === cat)?.label.toLowerCase()} trong vòng 5 km`
+              : `Chưa có thông tin ${nearbyTabs.find((t) => t.key === cat)?.label.toLowerCase()} gần dự án này.`}
+          </p>
 
-        <div className="divide-y divide-gray-50">
-          {places.map((p) => (
-            <div key={p.name} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors">
-              <div>
-                <p className="text-sm font-semibold text-gray-800">{p.name}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{p.address}</p>
+          <div className="divide-y divide-gray-50">
+            {places.map((p) => (
+              <div key={p.name} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors">
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">{p.name}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{p.address}</p>
+                </div>
+                <div className="text-right shrink-0 ml-4">
+                  <p className="text-sm font-semibold text-gray-700">{p.dist}</p>
+                  <p className="text-xs text-gray-400 flex items-center gap-0.5 justify-end">
+                    <Clock className="h-3 w-3" /> {p.time}
+                  </p>
+                </div>
               </div>
-              <div className="text-right shrink-0 ml-4">
-                <p className="text-sm font-semibold text-gray-700">{p.dist}</p>
-                <p className="text-xs text-gray-400 flex items-center gap-0.5 justify-end">
-                  <Clock className="h-3 w-3" /> {p.time}
-                </p>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -509,11 +514,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
   const slug = unwrappedParams?.slug;
   const searchParams = useSearchParams();
   const isPreview = searchParams?.get('preview') === '1';
-  const { fetchProjectDetail, fetchProjectUnits, isLoading } = useProjects();
+  const { fetchProjectDetail, fetchProjectUnits, fetchProjects, isLoading } = useProjects();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [projectData, setProjectData] = useState<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [unitsData, setUnitsData] = useState<any[]>([]);
+  // Dự án khác — hiển thị thay cho ô "Tin mua bán" khi dự án này chưa có tin đăng nào
+  const [otherProjects, setOtherProjects] = useState<Project[]>([]);
   
   const [mainImg, setMainImg] = useState(0);
   const [activeTab, setActiveTab] = useState(0);
@@ -600,10 +607,21 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
 
         // Fetch related units/listings of the project
         const unitsRes = await fetchProjectUnits(res.data.id);
-        if (unitsRes.success && unitsRes.data && unitsRes.data.length > 0) {
+        const hasUnits = unitsRes.success && unitsRes.data && unitsRes.data.length > 0;
+        if (hasUnits) {
           setUnitsData(unitsRes.data.map(mapApiUnit));
         } else {
-          setUnitsData(mapped.relatedListings || mockProject.relatedListings);
+          const fallbackListings = mapped.relatedListings || mockProject.relatedListings;
+          setUnitsData(fallbackListings);
+
+          // Dự án này chưa có tin đăng nào — lấy 2 dự án mới nhất khác thay vào,
+          // giữ khách ở lại trang thay vì thấy ô trống.
+          if (!fallbackListings || fallbackListings.length === 0) {
+            const otherRes = await fetchProjects({ per_page: 3 });
+            if (otherRes.success && otherRes.data) {
+              setOtherProjects(otherRes.data.filter((p) => p.slug !== slug).slice(0, 2));
+            }
+          }
         }
       } else {
         // Fallback to static mock project data
@@ -614,7 +632,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
     if (slug) {
       loadData();
     }
-  }, [slug, isPreview, fetchProjectDetail, fetchProjectUnits]);
+  }, [slug, isPreview, fetchProjectDetail, fetchProjectUnits, fetchProjects]);
 
   // Loading skeleton state
   if (isLoading || !projectData) {
@@ -1207,42 +1225,84 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
               </div>
             </div>
 
-            {/* Related listings */}
-            <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-                <div className="flex items-center gap-2">
-                  <div className="w-1 h-4 bg-primary rounded-full" />
-                  <h3 className="text-sm font-bold text-gray-900">Tin mua bán tại {projectData.name}</h3>
-                </div>
-                <Link href="/mua-ban" className="text-xs text-primary hover:underline flex items-center gap-0.5">
-                  Xem tất cả <ChevronRight className="h-3.5 w-3.5" />
-                </Link>
-              </div>
-              <div className="divide-y divide-gray-50">
-                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                {unitsData.length > 0 ? (
-                  unitsData.map((item: any) => (
-                    <Link key={item.id} href={item.href} className="flex gap-3 p-4 hover:bg-gray-50 transition-colors group">
-                      <div className="relative w-24 h-18 shrink-0 rounded-lg overflow-hidden" style={{ height: '72px' }}>
-                        <Image src={item.image} alt={item.title} fill className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="96px" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-800 line-clamp-2 group-hover:text-primary transition-colors leading-snug mb-1">
-                          {item.title}
-                        </p>
-                        <p className="text-sm font-bold text-primary">{item.price} <span className="text-gray-400 font-normal">·</span> <span className="text-gray-500 font-normal">{item.area}</span></p>
-                        <p className="text-xs text-gray-400 mt-0.5">{item.address} · {item.postedAt}</p>
-                      </div>
-                    </Link>
-                  ))
-                ) : (
-                  <div className="p-8 text-center text-gray-400">
-                    <p className="text-sm font-semibold">Chưa có tin đăng mua bán nào tại dự án này.</p>
-                    <p className="text-xs text-gray-400 mt-1">Hãy là người đầu tiên đăng tin bán hoặc cho thuê tại {projectData.name}!</p>
+            {/* Related listings — nếu dự án chưa có tin đăng nào, đổi sang gợi ý Dự án khác */}
+            {unitsData.length > 0 || otherProjects.length === 0 ? (
+              <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+                <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                  <div className="flex items-center gap-2">
+                    <div className="w-1 h-4 bg-primary rounded-full" />
+                    <h3 className="text-sm font-bold text-gray-900">Tin mua bán tại {projectData.name}</h3>
                   </div>
-                )}
+                  <Link href="/mua-ban" className="text-xs text-primary hover:underline flex items-center gap-0.5">
+                    Xem tất cả <ChevronRight className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
+                <div className="divide-y divide-gray-50">
+                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                  {unitsData.length > 0 ? (
+                    unitsData.map((item: any) => (
+                      <Link key={item.id} href={item.href} className="flex gap-3 p-4 hover:bg-gray-50 transition-colors group">
+                        <div className="relative w-24 h-18 shrink-0 rounded-lg overflow-hidden" style={{ height: '72px' }}>
+                          <Image src={item.image} alt={item.title} fill className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="96px" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-800 line-clamp-2 group-hover:text-primary transition-colors leading-snug mb-1">
+                            {item.title}
+                          </p>
+                          <p className="text-sm font-bold text-primary">{item.price} <span className="text-gray-400 font-normal">·</span> <span className="text-gray-500 font-normal">{item.area}</span></p>
+                          <p className="text-xs text-gray-400 mt-0.5">{item.address} · {item.postedAt}</p>
+                        </div>
+                      </Link>
+                    ))
+                  ) : (
+                    <div className="p-8 text-center text-gray-400">
+                      <p className="text-sm font-semibold">Chưa có tin đăng mua bán nào tại dự án này.</p>
+                      <p className="text-xs text-gray-400 mt-1">Hãy là người đầu tiên đăng tin bán hoặc cho thuê tại {projectData.name}!</p>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+                <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                  <div className="flex items-center gap-2">
+                    <div className="w-1 h-4 bg-primary rounded-full" />
+                    <h3 className="text-sm font-bold text-gray-900">Dự án khác</h3>
+                  </div>
+                  <Link href="/du-an" className="text-xs text-primary hover:underline flex items-center gap-0.5">
+                    Xem tất cả <ChevronRight className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
+                <div className="divide-y divide-gray-50">
+                  {otherProjects.map((p) => {
+                    const priceFrom = p.price?.from;
+                    const priceTo = p.price?.to;
+                    const priceLabel = priceFrom
+                      ? priceTo && priceTo !== priceFrom
+                        ? `${formatPrice(priceFrom)} – ${formatPrice(priceTo)}`
+                        : `Từ ${formatPrice(priceFrom)}`
+                      : 'Liên hệ';
+                    const addressLabel = p.location?.address || p.location?.district?.name || p.location?.province?.name || '';
+                    return (
+                      <Link key={p.id} href={`/du-an/${p.slug}`} className="flex gap-3 p-4 hover:bg-gray-50 transition-colors group">
+                        <div className="relative w-24 h-18 shrink-0 rounded-lg overflow-hidden bg-gray-100" style={{ height: '72px' }}>
+                          {p.thumbnail && (
+                            <Image src={p.thumbnail} alt={p.name} fill className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="96px" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-800 line-clamp-2 group-hover:text-primary transition-colors leading-snug mb-1">
+                            {p.name}
+                          </p>
+                          <p className="text-sm font-bold text-primary">{priceLabel}</p>
+                          {addressLabel && <p className="text-xs text-gray-400 mt-0.5">{addressLabel}</p>}
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
           </div>
 
