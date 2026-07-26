@@ -234,6 +234,18 @@ khoản SSH jailed (`muada4728`) không có quyền root, không sửa được 
 qua dòng lệnh. Mọi thay đổi vhost phải làm qua CyberPanel web UI (vHost
 Conf), không cần root SSH cho site này.
 
+**Build báo `Killed` / `error Command failed with exit code 137`** — bị
+kernel OOM-killer giết (VPS này chỉ có 1.9GB RAM, dùng chung nhiều site).
+Xác nhận bằng `dmesg | grep -i oom` (root) thấy dòng
+`Out of memory: Killed process ... (node)`. Cách khắc phục: thêm swap
+(kiểm tra `free -h` trước, disk còn trống thì thêm 2GB):
+```bash
+fallocate -l 2G /swapfile2 && chmod 600 /swapfile2 && mkswap /swapfile2 && swapon /swapfile2
+echo "/swapfile2 none swap sw 0 0" >> /etc/fstab   # để swap tự bật lại sau khi VPS reboot
+```
+Cần root SSH cho việc này (xem mục 0.5). Sau khi thêm swap, chạy lại
+`yarn build` bình thường — không cần giới hạn `NODE_OPTIONS` gì thêm.
+
 
 ## 7. Ghi chú build.log false-positive (bài học 26/07/2026)
 
