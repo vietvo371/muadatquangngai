@@ -1,9 +1,15 @@
 /**
- * Geocode địa chỉ dự án + tra cứu tiện ích thật lân cận (trường học, siêu thị, công viên,
- * bệnh viện) bằng dữ liệu mở — không có ngân sách Google Places nên dùng Nominatim
- * (geocode, đã dùng ở /api/v2/geocode/search) + Overpass API (OpenStreetMap, miễn phí,
- * không cần key). Kết quả tính MỘT LẦN lúc tạo/sửa dự án rồi lưu vào cột nearby_places —
- * trang public không gọi API ngoài lúc tải trang (xem lib/api-resources/project-resource.ts).
+ * Geocode địa chỉ dự án (Nominatim) + tra cứu tiện ích thật lân cận (trường học, siêu thị,
+ * công viên, bệnh viện) bằng Goong Place API (Autocomplete + Detail) — dữ liệu địa phương
+ * Việt Nam. Dùng key server-only riêng (GOONG_PLACE_API_KEY, KHÔNG phải
+ * NEXT_PUBLIC_GOONG_API_KEY dùng cho bản đồ — key đó chỉ có quyền Maptiles, không gọi được
+ * Place API, đã xác nhận qua lỗi API_KEY_UNAUTHORIZED). Không thêm tiền tố NEXT_PUBLIC_ vì
+ * key Place API tính phí theo lượt gọi — không được lộ ra bundle client cho ai cũng dùng
+ * được. Từng thử
+ * OpenStreetMap/Overpass trước (miễn phí, không cần key) nhưng dữ liệu ở Quảng Ngãi quá
+ * thưa (chỉ ~4 điểm trong bán kính 8km khi test) — Goong cho kết quả thật nhiều hơn hẳn.
+ * Kết quả tính MỘT LẦN lúc tạo/sửa dự án rồi lưu vào cột nearby_places — trang public
+ * không gọi API ngoài lúc tải trang (xem lib/api-resources/project-resource.ts).
  */
 
 export type NearbyCategory = 'school' | 'supermarket' | 'park' | 'hospital';
@@ -18,18 +24,36 @@ export interface NearbyPlace {
 export type NearbyPlacesResult = Record<NearbyCategory, NearbyPlace[]>;
 
 const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search';
-const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
+const GOONG_AUTOCOMPLETE_URL = 'https://rsapi.goong.io/Place/AutoComplete';
+const GOONG_DETAIL_URL = 'https://rsapi.goong.io/Place/Detail';
+const GOONG_API_KEY = process.env.GOONG_PLACE_API_KEY ?? '';
 const USER_AGENT = 'batdongsan-quangngai/1.0 (+https://muadatquangngai.com)';
-const RADIUS_METERS = 5000;
+const RADIUS_KM = 5;
 const RESULTS_PER_CATEGORY = 5;
+// Lấy dư ứng viên từ Autocomplete vì "radius" chỉ ưu tiên sắp xếp (soft bias), không phải
+// bộ lọc cứng — vài kết quả trả về có thể thực sự cách xa hơn bán kính, phải tự lọc lại
+// bằng toạ độ thật lấy từ Place/Detail rồi mới chốt danh sách gần nhất. Không lấy dư quá
+// nhiều vì mỗi ứng viên tốn 1 lần gọi Place/Detail (tính phí cao hơn AutoComplete).
+const CANDIDATES_PER_CATEGORY = RESULTS_PER_CATEGORY + 2;
 // Tốc độ trung bình giả định để ước lượng thời gian di chuyển trong nội thành/thị trấn.
 const AVG_SPEED_KMH = 30;
 
-const OVERPASS_QUERY: Record<NearbyCategory, string> = {
-  school: 'node["amenity"="school"]',
-  supermarket: 'node["shop"="supermarket"]',
-  park: 'node["leisure"="park"]',
-  hospital: 'node["amenity"~"^(hospital|clinic)$"]',
+// Từ khoá chung chung ("trường học") khớp rất kém trên Goong AutoComplete — tên trường thật
+// ở Việt Nam luôn theo cấp học cụ thể (Tiểu học/THCS/THPT/Mầm non), tìm riêng từng cấp rồi
+// gộp lại cho ra nhiều kết quả thật hơn hẳn so với 1 từ khoá chung.
+const CATEGORY_KEYWORDS: Record<NearbyCategory, string[]> = {
+  school: ['trường tiểu học', 'trường thcs', 'trường thpt', 'trường mầm non'],
+  supermarket: ['siêu thị'],
+  park: ['công viên'],
+  hospital: ['bệnh viện'],
+};
+
+// AutoComplete tìm theo từ khoá xuất hiện BẤT KỲ ĐÂU trong tên — "trường học" khớp cả
+// "Chuyên Sỉ Thời Trang Trường Học" (shop quần áo, không phải trường). Trường thật ở Việt
+// Nam hầu như luôn đặt tên bắt đầu bằng "Trường ..." — lọc lại để loại các khớp nhầm kiểu
+// tên doanh nghiệp chứa từ khoá nhưng không phải trường học.
+const CATEGORY_NAME_FILTER: Partial<Record<NearbyCategory, RegExp>> = {
+  school: /^Trường\b/i,
 };
 
 // Tâm điểm Quảng Ngãi (bờ biển) — dùng để loại kết quả Nominatim khớp NHẦM sang phần đất
@@ -113,91 +137,105 @@ function formatTime(km: number): string {
   return `${minutes} phút`;
 }
 
-interface OverpassElement {
-  lat: number;
-  lon: number;
-  tags?: Record<string, string>;
+interface GoongPrediction {
+  place_id: string;
+  description: string;
+  structured_formatting?: { main_text: string; secondary_text?: string };
 }
 
-function categoryOf(tags: Record<string, string>): NearbyCategory | null {
-  if (tags.amenity === 'school') return 'school';
-  if (tags.shop === 'supermarket') return 'supermarket';
-  if (tags.leisure === 'park') return 'park';
-  if (tags.amenity === 'hospital' || tags.amenity === 'clinic') return 'hospital';
-  return null;
-}
-
-/**
- * Gộp cả 4 danh mục vào MỘT request Overpass (thay vì 4 request riêng) — instance công cộng
- * overpass-api.de rate-limit khá chặt (429 khi gọi dồn dập), gộp lại vừa nhanh hơn vừa an toàn
- * hơn. Ném lỗi khi gọi thất bại/bị rate-limit — KHÔNG trả mảng rỗng, để caller không lỡ lưu
- * "không có tiện ích nào" vào DB chỉ vì Overpass đang quá tải tạm thời.
- */
-async function queryAllCategories(lat: number, lng: number): Promise<OverpassElement[]> {
-  const filters = Object.values(OVERPASS_QUERY)
-    .map((f) => `${f}(around:${RADIUS_METERS},${lat},${lng});`)
-    .join('');
-  const query = `[out:json][timeout:25];(${filters});out body ${RESULTS_PER_CATEGORY * 3 * 4};`;
-
-  for (let attempt = 0; attempt < 2; attempt++) {
-    const res = await fetch(OVERPASS_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': USER_AGENT },
-      body: `data=${encodeURIComponent(query)}`,
-    });
-
-    if (res.status === 429 && attempt === 0) {
-      await new Promise((r) => setTimeout(r, 5000));
-      continue;
-    }
-    if (!res.ok) throw new Error(`Overpass ${res.status}`);
-
-    const data = (await res.json()) as { elements?: OverpassElement[] };
-    return data.elements ?? [];
+async function goongFetch(url: string): Promise<Response> {
+  const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
+  // 429 = hết quota tức thời (hiếm với free tier 5 req/s) — chờ rồi thử lại 1 lần, không
+  // hiểu nhầm quá tải tạm thời thành "không tìm thấy".
+  if (res.status === 429) {
+    await new Promise((r) => setTimeout(r, 3000));
+    return fetch(url, { headers: { 'User-Agent': USER_AGENT } });
   }
+  return res;
+}
 
-  throw new Error('Overpass rate-limited sau khi thử lại.');
+async function autocomplete(keyword: string, lat: number, lng: number): Promise<GoongPrediction[]> {
+  const url = `${GOONG_AUTOCOMPLETE_URL}?api_key=${GOONG_API_KEY}&input=${encodeURIComponent(keyword)}&location=${lat},${lng}&radius=${RADIUS_KM}&limit=${CANDIDATES_PER_CATEGORY}`;
+  const res = await goongFetch(url);
+  if (!res.ok) throw new Error(`Goong AutoComplete ${res.status}`);
+
+  const data = (await res.json()) as { predictions?: GoongPrediction[] };
+  return data.predictions ?? [];
+}
+
+async function placeDetailCoords(placeId: string): Promise<{ lat: number; lng: number } | null> {
+  const url = `${GOONG_DETAIL_URL}?place_id=${encodeURIComponent(placeId)}&api_key=${GOONG_API_KEY}`;
+  const res = await goongFetch(url);
+  if (!res.ok) return null;
+
+  const data = (await res.json()) as { result?: { geometry?: { location?: { lat: number; lng: number } } } };
+  const loc = data.result?.geometry?.location;
+  return loc ? { lat: loc.lat, lng: loc.lng } : null;
 }
 
 /**
- * Toạ độ → 4 danh mục tiện ích thật trong bán kính RADIUS_METERS (Overpass/OpenStreetMap).
- * Ném lỗi nếu Overpass thất bại — xem computeProjectLocationData, lỗi ở đây làm cả kết quả
- * geocode/địa chỉ bị huỷ theo, KHÔNG lưu dữ liệu tiện ích rỗng giả do lỗi tạm thời.
+ * Một danh mục (vd "trường học") → tối đa RESULTS_PER_CATEGORY địa điểm thật gần nhất, dùng
+ * Goong AutoComplete (tìm theo TỪNG từ khoá trong CATEGORY_KEYWORDS, ưu tiên gần toạ độ) rồi
+ * gộp + khử trùng lặp theo place_id, cuối cùng gọi Place/Detail để lấy toạ độ chính xác từng
+ * ứng viên — AutoComplete không lọc cứng theo bán kính nên phải tự lọc lại bằng khoảng cách
+ * thật, loại các kết quả vượt RADIUS_KM.
  */
-export async function fetchNearbyPlaces(lat: number, lng: number): Promise<NearbyPlacesResult> {
-  const elements = await queryAllCategories(lat, lng);
+async function queryCategory(cat: NearbyCategory, lat: number, lng: number): Promise<NearbyPlace[]> {
+  const predictionLists = await Promise.all(
+    CATEGORY_KEYWORDS[cat].map((keyword) => autocomplete(keyword, lat, lng))
+  );
 
-  const result: NearbyPlacesResult = { school: [], supermarket: [], park: [], hospital: [] };
-  const withDistance: Record<NearbyCategory, Array<NearbyPlace & { _km: number }>> = {
-    school: [],
-    supermarket: [],
-    park: [],
-    hospital: [],
-  };
+  const seen = new Set<string>();
+  const predictions = predictionLists.flat().filter((p) => {
+    if (seen.has(p.place_id)) return false;
+    seen.add(p.place_id);
+    return true;
+  });
 
-  for (const el of elements) {
-    if (!el.tags?.name) continue;
-    const cat = categoryOf(el.tags);
-    if (!cat) continue;
+  const nameFilter = CATEGORY_NAME_FILTER[cat];
+  const withDistance: Array<NearbyPlace & { _km: number }> = [];
+  for (const p of predictions) {
+    const name = p.structured_formatting?.main_text ?? p.description;
+    if (nameFilter && !nameFilter.test(name.trim())) continue;
 
-    const km = haversineKm(lat, lng, el.lat, el.lon);
-    withDistance[cat].push({
-      name: el.tags.name,
-      address: el.tags['addr:street'] ?? el.tags['addr:full'] ?? '',
+    const coords = await placeDetailCoords(p.place_id);
+    if (!coords) continue;
+
+    const km = haversineKm(lat, lng, coords.lat, coords.lng);
+    if (km > RADIUS_KM) continue;
+
+    withDistance.push({
+      name,
+      address: p.structured_formatting?.secondary_text ?? '',
       dist: formatDist(km),
       time: formatTime(km),
       _km: km,
     });
   }
 
-  for (const cat of Object.keys(result) as NearbyCategory[]) {
-    result[cat] = withDistance[cat]
-      .sort((a, b) => a._km - b._km)
-      .slice(0, RESULTS_PER_CATEGORY)
-      .map(({ name, address, dist, time }) => ({ name, address, dist, time }));
-  }
+  return withDistance
+    .sort((a, b) => a._km - b._km)
+    .slice(0, RESULTS_PER_CATEGORY)
+    .map(({ name, address, dist, time }) => ({ name, address, dist, time }));
+}
 
-  return result;
+/**
+ * Toạ độ → 4 danh mục tiện ích thật trong bán kính RADIUS_KM (Goong Place API). Ném lỗi nếu
+ * bất kỳ danh mục nào gọi API thất bại — xem computeProjectLocationData, lỗi ở đây làm cả
+ * kết quả geocode/địa chỉ bị huỷ theo, KHÔNG lưu dữ liệu tiện ích rỗng giả do lỗi tạm thời.
+ */
+export async function fetchNearbyPlaces(lat: number, lng: number): Promise<NearbyPlacesResult> {
+  if (!GOONG_API_KEY) throw new Error('Thiếu GOONG_PLACE_API_KEY.');
+
+  const categories: NearbyCategory[] = ['school', 'supermarket', 'park', 'hospital'];
+  const results = await Promise.all(categories.map((cat) => queryCategory(cat, lat, lng)));
+
+  return {
+    school: results[0],
+    supermarket: results[1],
+    park: results[2],
+    hospital: results[3],
+  };
 }
 
 /**
