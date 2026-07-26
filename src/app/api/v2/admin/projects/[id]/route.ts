@@ -8,6 +8,7 @@ import { validateProjectFields } from '@/lib/api-resources/project-validation';
 import { validationErrorResponse } from '@/lib/validation';
 import { slugify } from '@/lib/formatters';
 import { randomBytes } from 'crypto';
+import { computeProjectLocationData } from '@/lib/nearby-places';
 
 function randomSuffix(length: number): string {
   const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -143,6 +144,16 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   if ('floor_plans' in body) data.floor_plans = body.floor_plans;
   if ('address' in body) data.address = body.address;
   if ('thumbnail' in body) data.thumbnail = body.thumbnail;
+
+  // Chỉ geocode lại khi address thực sự đổi — tránh gọi Nominatim/Overpass (rate-limit)
+  // trên mỗi lần sửa dự án dù các trường khác (giá, mô tả...) không liên quan tới vị trí.
+  const addressChanging = 'address' in body && body.address !== project.address;
+  if (addressChanging) {
+    const locationData = await computeProjectLocationData(body.address as string);
+    data.latitude = locationData ? String(locationData.lat) : null;
+    data.longitude = locationData ? String(locationData.lng) : null;
+    data.nearby_places = locationData ? JSON.parse(JSON.stringify(locationData.nearbyPlaces)) : null;
+  }
 
   const updated = await db.projects.update({ where: { id: project.id }, data });
 

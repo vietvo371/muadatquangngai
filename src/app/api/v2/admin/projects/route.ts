@@ -9,6 +9,7 @@ import { validateProjectFields } from '@/lib/api-resources/project-validation';
 import { FieldError, validationErrorResponse, isInteger } from '@/lib/validation';
 import { slugify } from '@/lib/formatters';
 import { DEFAULT_PROJECT_TYPE } from '@/lib/project-type';
+import { computeProjectLocationData } from '@/lib/nearby-places';
 
 function randomSuffix(length: number): string {
   const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -96,6 +97,10 @@ export async function POST(request: Request) {
 
   if (errors.length > 0) return validationErrorResponse(errors);
 
+  // Geocode địa chỉ + tra tiện ích thật MỘT LẦN lúc tạo — không chặn việc lưu dự án nếu
+  // geocode thất bại (địa chỉ lạ/không xác định được), chỉ đơn giản chưa có dữ liệu này.
+  const locationData = await computeProjectLocationData(body.address as string);
+
   const now = new Date();
   const created = await db.projects.create({
     data: {
@@ -125,6 +130,9 @@ export async function POST(request: Request) {
       floor_plans: body.floor_plans ?? undefined,
       address: body.address as string,
       thumbnail: (body.thumbnail as string) ?? null,
+      latitude: locationData ? String(locationData.lat) : null,
+      longitude: locationData ? String(locationData.lng) : null,
+      nearby_places: locationData ? JSON.parse(JSON.stringify(locationData.nearbyPlaces)) : undefined,
       view_count: 0,
       created_at: now,
       updated_at: now,

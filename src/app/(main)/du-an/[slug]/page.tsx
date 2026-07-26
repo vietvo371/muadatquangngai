@@ -343,15 +343,14 @@ const mapApiProjectDetail = (apiProject: any) => {
     },
   ];
 
-  // Chỉ hiện tiện ích lân cận khi dự án thật sự có dữ liệu. Trước đây thiếu dữ liệu là bịa
-  // ra "Trường Tiểu học <tên xã>" cách "0,8 km — 2 phút" và mấy địa điểm ở "Quảng Ngãi"
-  // (đơn vị đã bị xoá sau sáp nhập). Người mua nhà đọc những con số đó như thông tin thật.
+  // Dữ liệu thật (OpenStreetMap qua Overpass), tính 1 lần lúc tạo/sửa dự án — xem
+  // lib/nearby-places.ts + admin/projects routes. Dự án tạo trước khi có tính năng này
+  // chưa được backfill sẽ rơi về rỗng, KHÔNG bịa dữ liệu giả như trước đây.
   const nearbyPlaces = apiProject.nearby_places || { school: [], supermarket: [], park: [], hospital: [] };
 
-  // Bảng projects chưa có cột toạ độ dùng được qua Prisma (cột PostGIS `location` là
-  // Unsupported), nên KHÔNG ghim cứng 1 toạ độ giả (trước đây map luôn hiện đúng vị trí
-  // dự án "De Palace River" bất kể dự án nào đang xem). Nhúng bản đồ theo đúng địa chỉ
-  // text của từng dự án — không cần API key, không bịa toạ độ.
+  // Nhúng bản đồ theo địa chỉ text (không cần API key). Cột location PostGIS gốc vẫn
+  // Unsupported qua Prisma, nhưng latitude/longitude (geocode qua Nominatim, xem
+  // lib/nearby-places.ts) giờ có sẵn ở apiProject.location nếu cần toạ độ chính xác hơn.
   const address = apiProject.location?.address || apiProject.address || 'Quảng Ngãi';
 
   return {
@@ -443,8 +442,9 @@ const mapApiUnit = (apiProp: any) => {
 function NearbyTab({ project }: { project: NearbyProject }) {
   const [cat, setCat] = useState<NearbyCategory>('school');
   const places = project.nearbyPlaces[cat] || [];
-  // Chưa có nguồn dữ liệu tiện ích lân cận thật (xem mapApiProjectDetail) — ẩn hẳn khối tab
-  // thay vì hiện 4 tab bấm vào đâu cũng ra "Chưa có thông tin", trông như tính năng bị hỏng.
+  // Ẩn hẳn khối tab chỉ khi dự án chưa từng geocode được (chưa backfill/geocode thất bại)
+  // — còn lại luôn hiện 4 tab với dữ liệu thật, tab nào không có kết quả thật trong vòng
+  // 5km thì báo trống thật, không bịa.
   const hasAnyNearbyData = Object.values(project.nearbyPlaces).some((arr) => arr.length > 0);
   return (
     <div className="space-y-4">

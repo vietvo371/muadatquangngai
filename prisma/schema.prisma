@@ -399,6 +399,9 @@ model projects {
   agent_id                       BigInt?
   construction_note              String?                   @db.VarChar(500)
   floor_plans                    Json?
+  latitude                       Decimal?                  @db.Decimal(10, 6)
+  longitude                      Decimal?                  @db.Decimal(10, 6)
+  nearby_places                  Json?
   users_projects_agent_idTousers users?                    @relation("projects_agent_idTousers", fields: [agent_id], references: [id], onUpdate: NoAction, map: "projects_agent_id_foreign")
   districts                      districts                 @relation(fields: [district_id], references: [id], onUpdate: NoAction, map: "projects_district_id_foreign")
   provinces                      provinces                 @relation(fields: [province_id], references: [id], onUpdate: NoAction, map: "projects_province_id_foreign")

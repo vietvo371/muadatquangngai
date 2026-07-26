@@ -32,6 +32,9 @@ export interface ProjectRow {
   construction_progress: number | null;
   utilities: unknown;
   floor_plans: unknown;
+  latitude: unknown; // Prisma.Decimal
+  longitude: unknown; // Prisma.Decimal
+  nearby_places: unknown;
   view_count: number;
   created_at: Date | null;
   provinces: { id: bigint; name: string };
@@ -79,7 +82,11 @@ export function mapProjectResource(project: ProjectRow, ward: WardRow | null) {
       district: { id: project.districts.id, name: project.districts.name },
       ward: ward ? { id: ward.id, name: ward.name } : null,
       address: project.address,
+      latitude: toFloatOrNull(project.latitude),
+      longitude: toFloatOrNull(project.longitude),
     },
+
+    nearby_places: project.nearby_places ?? null,
 
     scale: {
       total_area: toFloatOrNull(project.total_area),
@@ -147,6 +154,9 @@ export interface AdminProjectScalarRow {
   construction_progress: number | null;
   utilities: unknown;
   floor_plans: unknown;
+  latitude: unknown;
+  longitude: unknown;
+  nearby_places: unknown;
   view_count: number;
   created_at: Date | null;
 }
@@ -196,7 +206,11 @@ export function mapAdminProjectResource(project: AdminProjectScalarRow & AdminPr
       ...('districts' in project ? { district: project.districts ? { id: project.districts.id, name: project.districts.name } : null } : {}),
       ...('wards' in project ? { ward: project.wards ? { id: project.wards.id, name: project.wards.name } : null } : {}),
       address: project.address,
+      latitude: toFloatOrNull(project.latitude),
+      longitude: toFloatOrNull(project.longitude),
     },
+
+    nearby_places: project.nearby_places ?? null,
 
     scale: {
       total_area: toFloatOrNull(project.total_area),
