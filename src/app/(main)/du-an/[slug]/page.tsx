@@ -348,6 +348,12 @@ const mapApiProjectDetail = (apiProject: any) => {
   // (đơn vị đã bị xoá sau sáp nhập). Người mua nhà đọc những con số đó như thông tin thật.
   const nearbyPlaces = apiProject.nearby_places || { school: [], supermarket: [], park: [], hospital: [] };
 
+  // Bảng projects chưa có cột toạ độ dùng được qua Prisma (cột PostGIS `location` là
+  // Unsupported), nên KHÔNG ghim cứng 1 toạ độ giả (trước đây map luôn hiện đúng vị trí
+  // dự án "De Palace River" bất kể dự án nào đang xem). Nhúng bản đồ theo đúng địa chỉ
+  // text của từng dự án — không cần API key, không bịa toạ độ.
+  const address = apiProject.location?.address || apiProject.address || 'Quảng Ngãi';
+
   return {
     id: apiProject.id.toString(),
     uuid: apiProject.uuid,
@@ -356,7 +362,7 @@ const mapApiProjectDetail = (apiProject: any) => {
     developer: apiProject.developer || apiProject.investor || 'Chưa cập nhật',
     status: apiProject.status || 'selling',
     type: apiProject.type || DEFAULT_PROJECT_TYPE,
-    address: apiProject.location?.address || apiProject.address || 'Quảng Ngãi',
+    address,
     province: provinceName,
     district: districtName,
     ward: wardName,
@@ -393,7 +399,7 @@ const mapApiProjectDetail = (apiProject: any) => {
     floorPlansUnitLabel: floorPlansConfig.unitLabel,
     unitWord,
     faq,
-    mapUrl: apiProject.map_url || 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3849.012!2d108.7859137!3d15.1319266!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3169ad3732456f77%3A0xce93b603f79b6e4e!2sDe+Palace+River+-+Nam+S%C3%B4ng+Tr%C3%A0!5e0!3m2!1svi!2svn!4v1700000000000!5m2!1svi!2svn',
+    mapUrl: apiProject.map_url || `https://www.google.com/maps?q=${encodeURIComponent(`${address}, ${provinceName}`)}&output=embed`,
     nearbyPlaces,
     keywords: apiProject.keywords || [
       `Dự án ${apiProject.name}`,
