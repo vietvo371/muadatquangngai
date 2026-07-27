@@ -1,28 +1,43 @@
 'use client';
 
-import { Suspense, useState, useEffect } from 'react';
+import { Suspense, useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Shield, CheckCircle, ArrowLeft, Loader2 } from 'lucide-react';
 import { OTPInput } from '@/components/ui/otp-input';
+import axios from '@/lib/axios';
+import { useAuth } from '@/hooks/useAuth';
 
 function VerifyEmailContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user } = useAuth();
   const [status, setStatus] = useState<'idle' | 'loading' | 'sent' | 'error'>('idle');
-  const [email, setEmail] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
   const [otp, setOtp] = useState('');
-  const [resendCooldown, setResendCooldown] = useState(59);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const hasSentInitial = useRef(false);
 
+  const email = user?.email ?? searchParams?.get('email') ?? '';
+
+  // Đọc thẳng localStorage thay vì useAuth().isAuthenticated — store Zustand khởi tạo lại
+  // isLoading=true sau mỗi lần load trang thật (không có AuthProvider nào gọi fetchUser() để
+  // hạ isLoading về false), nên chờ isLoading resolve sẽ treo mãi. axios.ts cũng đọc trực
+  // tiếp localStorage theo đúng cách này; interceptor 401 của nó tự lo việc redirect nếu
+  // token đã hết hạn/không hợp lệ.
   useEffect(() => {
-    if (searchParams) {
-      const emailParam = searchParams.get('email');
-      if (emailParam) {
-        setEmail(emailParam);
-      }
+    if (typeof window === 'undefined') return;
+    if (!localStorage.getItem('access_token')) {
+      router.replace('/login');
+      return;
     }
-  }, [searchParams]);
+    if (!hasSentInitial.current) {
+      hasSentInitial.current = true;
+      handleResend();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (resendCooldown > 0) {
@@ -32,15 +47,20 @@ function VerifyEmailContent() {
   }, [resendCooldown]);
 
   const handleResend = async () => {
-    if (!email || resendCooldown > 0) return;
+    if (resendCooldown > 0) return;
 
     setStatus('loading');
+    setErrorMessage('');
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await axios.post('/api/v2/auth/email-verification/send');
       setStatus('sent');
-      setResendCooldown(59);
-    } catch {
+      setResendCooldown(60);
+    } catch (err: any) {
       setStatus('error');
+      setErrorMessage(err.response?.data?.message || 'Không gửi được mã. Vui lòng thử lại.');
+      // 429 nghĩa là mã trước vẫn còn hiệu lực (đã gửi trong <60s) — vẫn đếm ngược ở client
+      // để nút "Gửi lại mã" không mời bấm lại ngay vào đúng giới hạn vừa bị chặn.
+      if (err.response?.status === 429) setResendCooldown(60);
     }
   };
 
@@ -48,12 +68,14 @@ function VerifyEmailContent() {
     if (code.length !== 6) return;
 
     setStatus('loading');
+    setErrorMessage('');
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      // redirect or set verified state
-      router.push('/dashboard');
-    } catch {
+      await axios.post('/api/v2/auth/email-verification/verify', { code });
+      router.push('/verify-email?verified=true');
+    } catch (err: any) {
       setStatus('error');
+      setOtp('');
+      setErrorMessage(err.response?.data?.message || 'Mã xác thực không đúng.');
     }
   };
 
@@ -89,7 +111,7 @@ function VerifyEmailContent() {
 
       {status === 'error' && (
         <div className="mb-4 p-3 bg-red-50 text-[#e03131] text-[13px] rounded-lg border border-[#e03131]/20">
-          Đã xảy ra lỗi. Vui lòng thử lại.
+          {errorMessage || 'Đã xảy ra lỗi. Vui lòng thử lại.'}
         </div>
       )}
 

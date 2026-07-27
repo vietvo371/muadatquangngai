@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { buildAuthUrl, generatePkcePair, generateState, getAppOrigin, isGoogleOAuthConfigured } from '@/lib/oauth/google';
+import { buildAuthUrl, generatePkcePair, generateState, isGoogleOAuthConfigured } from '@/lib/oauth/google';
+import { getAppOrigin } from '@/lib/app-url';
 
 /** GET /api/v2/auth/oauth/google/start — redirect sang màn hình đồng ý của Google. */
 export async function GET(request: Request) {

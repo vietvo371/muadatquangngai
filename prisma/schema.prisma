@@ -212,6 +212,7 @@ model otp_codes {
   id         BigInt    @id @default(autoincrement())
   user_id    BigInt?
   phone      String?   @db.VarChar(20)
+  email      String?   @db.VarChar(255)
   code       String?   @db.VarChar(6)
   otp        String?   @db.VarChar(100)
   type       String?   @db.VarChar(20)

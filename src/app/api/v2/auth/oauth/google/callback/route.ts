@@ -3,7 +3,8 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { db } from '@/lib/db';
 import { createToken, hashPassword } from '@/lib/auth';
-import { exchangeCode, fetchProfile, getAppOrigin } from '@/lib/oauth/google';
+import { exchangeCode, fetchProfile } from '@/lib/oauth/google';
+import { getAppOrigin } from '@/lib/app-url';
 
 const PROVIDER = 'google';
 
