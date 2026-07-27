@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { db } from '@/lib/db';
 import { createToken, hashPassword } from '@/lib/auth';
-import { exchangeCode, fetchProfile } from '@/lib/oauth/google';
+import { exchangeCode, fetchProfile, getAppOrigin } from '@/lib/oauth/google';
 
 const PROVIDER = 'google';
 
@@ -14,7 +14,8 @@ const PROVIDER = 'google';
  */
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const failRedirect = NextResponse.redirect(`${url.origin}/login?error=oauth_failed`);
+  const origin = getAppOrigin(request);
+  const failRedirect = NextResponse.redirect(`${origin}/login?error=oauth_failed`);
 
   const code = url.searchParams.get('code');
   const state = url.searchParams.get('state');
@@ -28,7 +29,7 @@ export async function GET(request: Request) {
     return failRedirect;
   }
 
-  const redirectUri = `${url.origin}/api/v2/auth/oauth/google/callback`;
+  const redirectUri = `${origin}/api/v2/auth/oauth/google/callback`;
   const tokenData = await exchangeCode(code, redirectUri, verifier);
   if (!tokenData) return failRedirect;
 
@@ -85,7 +86,7 @@ export async function GET(request: Request) {
 
   const accessToken = await createToken(userId);
 
-  const res = NextResponse.redirect(`${url.origin}/oauth-callback#access_token=${accessToken}&token_type=Bearer`);
+  const res = NextResponse.redirect(`${origin}/oauth-callback#access_token=${accessToken}&token_type=Bearer`);
   res.cookies.delete('oauth_state');
   res.cookies.delete('oauth_verifier');
   return res;

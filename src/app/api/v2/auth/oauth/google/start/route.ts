@@ -1,22 +1,22 @@
 import { NextResponse } from 'next/server';
-import { buildAuthUrl, generatePkcePair, generateState, isGoogleOAuthConfigured } from '@/lib/oauth/google';
+import { buildAuthUrl, generatePkcePair, generateState, getAppOrigin, isGoogleOAuthConfigured } from '@/lib/oauth/google';
 
 /** GET /api/v2/auth/oauth/google/start — redirect sang màn hình đồng ý của Google. */
 export async function GET(request: Request) {
-  const url = new URL(request.url);
+  const origin = getAppOrigin(request);
 
   if (!isGoogleOAuthConfigured()) {
-    return NextResponse.redirect(`${url.origin}/login?error=oauth_not_configured`);
+    return NextResponse.redirect(`${origin}/login?error=oauth_not_configured`);
   }
 
-  const redirectUri = `${url.origin}/api/v2/auth/oauth/google/callback`;
+  const redirectUri = `${origin}/api/v2/auth/oauth/google/callback`;
   const state = generateState();
   const { verifier, challenge } = generatePkcePair();
 
   const res = NextResponse.redirect(buildAuthUrl(redirectUri, state, challenge));
   const cookieOptions = {
     httpOnly: true,
-    secure: url.protocol === 'https:',
+    secure: origin.startsWith('https:'),
     sameSite: 'lax' as const,
     maxAge: 600,
     path: '/',
