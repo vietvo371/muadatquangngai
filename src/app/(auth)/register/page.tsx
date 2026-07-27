@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, Loader2, Mail, Lock, User, Phone } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Mail, Lock, User, Phone, Wand2, Copy, Check } from 'lucide-react';
+import { generateStrongPassword } from '@/lib/password-generator';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -27,6 +28,20 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [acceptTerms, setAcceptTerms] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleGeneratePassword = () => {
+    const generated = generateStrongPassword();
+    setFormData({ ...formData, password: generated, password_confirmation: generated });
+    setShowPassword(true);
+  };
+
+  const handleCopyPassword = async () => {
+    if (!formData.password) return;
+    await navigator.clipboard.writeText(formData.password);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,6 +65,7 @@ export default function RegisterPage() {
         email: formData.email,
         phone: formData.phone,
         password: formData.password,
+        password_confirmation: formData.password_confirmation,
       });
       
       if (response.data.success) {
@@ -137,7 +153,17 @@ export default function RegisterPage() {
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="password" className="text-[13px] font-semibold text-gray-700">Mật khẩu</Label>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="password" className="text-[13px] font-semibold text-gray-700">Mật khẩu</Label>
+            <button
+              type="button"
+              onClick={handleGeneratePassword}
+              className="flex items-center gap-1 text-xs font-medium text-primary hover:text-primary-dark"
+            >
+              <Wand2 className="h-3.5 w-3.5" />
+              Tạo mật khẩu mạnh
+            </button>
+          </div>
           <div className="relative mt-1">
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
             <Input
@@ -148,17 +174,27 @@ export default function RegisterPage() {
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               required
               minLength={8}
-              className="pl-10 pr-10 h-11 focus:ring-[3px] focus:ring-primary/15 focus:border-primary transition-all"
+              className="pl-10 pr-16 h-11 focus:ring-[3px] focus:ring-primary/15 focus:border-primary transition-all"
             />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-            >
-              {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-            </button>
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleCopyPassword}
+                title="Sao chép mật khẩu"
+                className="text-gray-400 hover:text-gray-600"
+              >
+                {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
+            </div>
           </div>
-          <PasswordStrength password={formData.password} />
+          <PasswordStrength password={formData.password} showChecklist />
         </div>
 
         <div className="space-y-1.5">

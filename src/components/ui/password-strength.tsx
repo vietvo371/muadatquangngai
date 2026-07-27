@@ -1,20 +1,29 @@
 "use client"
 
 import React, { useMemo } from 'react'
+import { Check, X } from 'lucide-react'
+
+interface PasswordRule {
+  label: string
+  test: (password: string) => boolean
+}
+
+export const PASSWORD_RULES: PasswordRule[] = [
+  { label: 'Ít nhất 8 ký tự', test: (p) => p.length >= 8 },
+  { label: 'Có chữ hoa (A-Z)', test: (p) => /[A-Z]/.test(p) },
+  { label: 'Có chữ số (0-9)', test: (p) => /[0-9]/.test(p) },
+  { label: 'Có ký tự đặc biệt (!@#$...)', test: (p) => /[^A-Za-z0-9]/.test(p) },
+]
 
 interface PasswordStrengthProps {
   password?: string
+  showChecklist?: boolean
 }
 
-export function PasswordStrength({ password = '' }: PasswordStrengthProps) {
+export function PasswordStrength({ password = '', showChecklist = false }: PasswordStrengthProps) {
   const score = useMemo(() => {
     if (!password) return -1
-    let s = 0
-    if (password.length >= 8) s += 1
-    if (/[A-Z]/.test(password)) s += 1
-    if (/[0-9]/.test(password)) s += 1
-    if (/[^A-Za-z0-9]/.test(password)) s += 1
-    return s
+    return PASSWORD_RULES.reduce((s, rule) => s + (rule.test(password) ? 1 : 0), 0)
   }, [password])
 
   if (score === -1) return null
@@ -47,6 +56,22 @@ export function PasswordStrength({ password = '' }: PasswordStrengthProps) {
       <div className={`text-[12px] font-semibold text-right ${status.textColor}`}>
         {status.label}
       </div>
+      {showChecklist && (
+        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1">
+          {PASSWORD_RULES.map((rule) => {
+            const passed = rule.test(password)
+            return (
+              <li
+                key={rule.label}
+                className={`flex items-center gap-1.5 text-xs ${passed ? 'text-green-600' : 'text-gray-400'}`}
+              >
+                {passed ? <Check className="h-3.5 w-3.5 shrink-0" /> : <X className="h-3.5 w-3.5 shrink-0" />}
+                {rule.label}
+              </li>
+            )
+          })}
+        </ul>
+      )}
     </div>
   )
 }
