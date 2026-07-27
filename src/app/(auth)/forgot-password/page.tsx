@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Mail, CheckCircle, ArrowLeft, Loader2 } from 'lucide-react';
+import axios from '@/lib/axios';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -19,11 +20,10 @@ export default function ForgotPasswordPage() {
     setIsLoading(true);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await axios.post('/api/v2/auth/forgot-password', { email });
       setIsSent(true);
-    } catch {
-      setError('Đã xảy ra lỗi. Vui lòng thử lại.');
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Đã xảy ra lỗi. Vui lòng thử lại.');
     } finally {
       setIsLoading(false);
     }
