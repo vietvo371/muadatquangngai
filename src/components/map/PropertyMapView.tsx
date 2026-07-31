@@ -25,7 +25,18 @@ interface PropertyMapViewProps {
   highlightedId?: string | number | null;
   /** Bấm marker → cha cuộn danh sách tới thẻ tương ứng. */
   onMarkerClick?: (id: string | number) => void;
+  /** Người dùng kéo/zoom xong → phát khung nhìn để cha đề nghị "tìm khu vực này". */
+  onUserMove?: (bounds: MapBounds) => void;
+  /** Bỏ qua fitBounds tự động theo danh sách khi đang tìm-theo-vùng (giữ nguyên khung người dùng chọn). */
+  autoFit?: boolean;
   className?: string;
+}
+
+export interface MapBounds {
+  minLat: number;
+  maxLat: number;
+  minLng: number;
+  maxLng: number;
 }
 
 const QUANG_NGAI: [number, number] = [108.7922, 15.1212]; // MapLibre dùng [lng, lat]
@@ -60,16 +71,21 @@ function createPriceMarker(label: string, active: boolean) {
  * (KHÔNG dùng Leaflet/OSM cũ — dự án đã chốt Goong). Đồng bộ 2 chiều với danh sách qua
  * `highlightedId` (danh sách → bản đồ) và `onMarkerClick` (bản đồ → danh sách).
  */
-export function PropertyMapView({ properties, highlightedId, onMarkerClick, className = '' }: PropertyMapViewProps) {
+export function PropertyMapView({ properties, highlightedId, onMarkerClick, onUserMove, autoFit = true, className = '' }: PropertyMapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markersRef = useRef<Map<string, { marker: maplibregl.Marker; el: HTMLElement; label: string }>>(new Map());
   const popupRef = useRef<maplibregl.Popup | null>(null);
   const loadedRef = useRef(false);
+  // Đánh dấu lần dời bản đồ do CODE (fitBounds) để không nhầm là người dùng kéo → không hiện
+  // nút "tìm khu vực này" một cách vô cớ.
+  const programmaticMoveRef = useRef(false);
 
-  // onMarkerClick đi qua ref để effect khởi tạo/vẽ marker không phụ thuộc identity của nó.
+  // Callback đi qua ref để effect khởi tạo/vẽ không phụ thuộc identity của chúng.
   const onClickRef = useRef(onMarkerClick);
   onClickRef.current = onMarkerClick;
+  const onUserMoveRef = useRef(onUserMove);
+  onUserMoveRef.current = onUserMove;
 
   // Khởi tạo bản đồ đúng một lần.
   useEffect(() => {
@@ -82,6 +98,14 @@ export function PropertyMapView({ properties, highlightedId, onMarkerClick, clas
     });
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
     map.on('load', () => { loadedRef.current = true; });
+    map.on('moveend', () => {
+      // Chỉ phát khi người dùng thao tác, bỏ qua lần fitBounds do code.
+      if (programmaticMoveRef.current) { programmaticMoveRef.current = false; return; }
+      const b = map.getBounds();
+      onUserMoveRef.current?.({
+        minLat: b.getSouth(), maxLat: b.getNorth(), minLng: b.getWest(), maxLng: b.getEast(),
+      });
+    });
     mapRef.current = map;
     const markers = markersRef.current;
     return () => {
@@ -122,12 +146,17 @@ export function PropertyMapView({ properties, highlightedId, onMarkerClick, clas
       bounds.extend([p.longitude as number, p.latitude as number]);
     });
 
-    // Đưa toàn bộ marker vào khung nhìn (một marker thì chỉ dời tâm, không zoom quá sâu).
-    if (withCoords.length === 1) {
-      map.setCenter([withCoords[0].longitude as number, withCoords[0].latitude as number]);
-      map.setZoom(14);
-    } else {
-      map.fitBounds(bounds, { padding: 60, maxZoom: 15, duration: 400 });
+    // Đưa toàn bộ marker vào khung nhìn — nhưng KHÔNG tự dời khi đang tìm-theo-vùng (autoFit
+    // false), để giữ đúng khung người dùng đã kéo tới. Đánh dấu programmatic để moveend bỏ qua.
+    if (autoFit) {
+      if (withCoords.length === 1) {
+        programmaticMoveRef.current = true;
+        map.setCenter([withCoords[0].longitude as number, withCoords[0].latitude as number]);
+        map.setZoom(14);
+      } else {
+        programmaticMoveRef.current = true;
+        map.fitBounds(bounds, { padding: 60, maxZoom: 15, duration: 400 });
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- highlightedId xử lý ở effect riêng
   }, [properties]);

@@ -13,7 +13,7 @@ import { FilterTags } from '@/components/shared/FilterTags';
 import { PropertyCardSkeleton } from '@/components/property/PropertyCardSkeleton';
 import { filterProperties, buildFilterTags, removeTag } from '@/lib/filter-properties';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { SearchX, ChevronRight, ChevronLeft, Home, MapPin, Bell, X } from 'lucide-react';
+import { SearchX, Search as SearchIcon, ChevronRight, ChevronLeft, Home, MapPin, Bell, X } from 'lucide-react';
 import { formatPrice } from '@/lib/formatters';
 import { Switch } from '@/components/ui/switch';
 
@@ -163,6 +163,10 @@ function PropertyListingContent() {
   // Chế độ bản đồ (bật bằng nút "Xem bản đồ" như batdongsan.com.vn ?tpl=map) — mặc định tắt,
   // trang chỉ hiện danh sách. Khởi tạo theo ?tpl=map để mở link map trực tiếp cũng đúng.
   const [mapMode, setMapMode] = useState(searchParams?.get('tpl') === 'map');
+  // Tìm theo khung nhìn bản đồ (feedback: kéo/zoom → tìm tin khu vực đó). `bbox` = vùng đang
+  // lọc; `pendingBounds` = vùng người dùng vừa kéo tới, chờ bấm "Tìm khu vực này".
+  const [bbox, setBbox] = useState<import('@/components/map/PropertyMapView').MapBounds | null>(null);
+  const [pendingBounds, setPendingBounds] = useState<import('@/components/map/PropertyMapView').MapBounds | null>(null);
   const router = useRouter();
   const pathname = usePathname() || '/mua-ban';
 
@@ -225,7 +229,8 @@ function PropertyListingContent() {
       const apiFilters: any = {
         type: 'sell',
         page,
-        per_page: 6,
+        // Tìm theo vùng thì lấy nhiều tin hơn để bản đồ đủ marker; danh sách thường giữ 6.
+        per_page: bbox ? 60 : 6,
         sort: sortParam,
       };
 
@@ -233,6 +238,12 @@ function PropertyListingContent() {
       if (filters.priceMax !== '') apiFilters.price_max = filters.priceMax;
       if (filters.types.length > 0) apiFilters.category = filters.types[0];
       if (filters.district !== '') apiFilters.district = filters.district;
+      if (bbox) {
+        apiFilters.min_lat = bbox.minLat;
+        apiFilters.max_lat = bbox.maxLat;
+        apiFilters.min_lng = bbox.minLng;
+        apiFilters.max_lng = bbox.maxLng;
+      }
 
       if (filters.bedrooms !== 'any') {
         const bedVal = parseInt(filters.bedrooms);
@@ -257,7 +268,7 @@ function PropertyListingContent() {
     };
 
     loadProperties();
-  }, [page, filters, sort, fetchProperties]);
+  }, [page, filters, sort, bbox, fetchProperties]);
 
   const updateFilters = useCallback((updates: Partial<FilterState>) => {
     setFilters(prev => ({ ...prev, ...updates }));
@@ -314,8 +325,8 @@ function PropertyListingContent() {
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      {/* ══ HERO SLIDER ══ */}
-      {sliderProperties.length > 0 && (
+      {/* ══ HERO SLIDER ══ (ẩn ở chế độ bản đồ để dành toàn màn hình cho list + bản đồ) */}
+      {!mapMode && sliderProperties.length > 0 && (
         <div className="relative w-full h-[320px] md:h-[420px] overflow-hidden bg-gray-900 select-none">
           {sliderProperties.map((p, i) => (
             <div
@@ -402,7 +413,8 @@ function PropertyListingContent() {
         </div>
       )}
 
-      <div className="max-w-[1200px] mx-auto px-4 py-6">
+      {/* Chế độ bản đồ: full-bleed (bỏ max-w) để list + bản đồ chiếm gần trọn màn hình. */}
+      <div className={mapMode ? 'w-full px-3 py-3' : 'max-w-[1200px] mx-auto px-4 py-6'}>
         {/* Horizontal Search & Filters */}
         <FilterHorizontal
           filters={filters}
@@ -413,7 +425,7 @@ function PropertyListingContent() {
           context="sell"
         />
 
-        <div className="flex gap-8 items-start">
+        <div className={`flex gap-6 items-start ${mapMode ? 'h-[calc(100vh-150px)]' : ''}`}>
           {/* Mobile Filter Sheet */}
           <Sheet open={mobileFilterOpen} onOpenChange={setMobileFilterOpen}>
             <SheetContent side="left" className="w-[300px] p-0 overflow-y-auto">
@@ -432,8 +444,9 @@ function PropertyListingContent() {
             </SheetContent>
           </Sheet>
 
-          {/* Main Content — khi bật bản đồ, cột danh sách co lại để nhường chỗ bản đồ bên phải. */}
-          <div className={`min-w-0 ${mapMode ? 'lg:w-[42%] lg:flex-none w-full' : 'flex-1'}`}>
+          {/* Main Content — khi bật bản đồ, cột danh sách co lại + cuộn riêng, bản đồ bên phải
+              chiếm full chiều cao. */}
+          <div className={`min-w-0 ${mapMode ? 'lg:w-[40%] lg:flex-none w-full h-full overflow-y-auto pr-1' : 'flex-1'}`}>
             {/* Breadcrumb (Nested Inside Left Column) */}
             <div className="flex items-center gap-2 text-[13px] text-gray-500 mb-3.5 font-medium">
               <Link href="/" className="hover:text-primary transition-colors flex items-center gap-1">
@@ -620,8 +633,8 @@ function PropertyListingContent() {
           {/* Bản đồ — CHỈ hiện khi bật chế độ bản đồ bằng nút "Xem bản đồ" (như batdongsan
               ?tpl=map). Đồng bộ 2 chiều với danh sách. Dùng Goong, KHÔNG dùng Leaflet cũ. */}
           {mapMode && (
-            <aside className="hidden lg:block flex-1 shrink-0 sticky top-[80px] self-start">
-              <div className="relative rounded-2xl overflow-hidden border border-gray-200 shadow-sm h-[calc(100vh-100px)]">
+            <aside className="hidden lg:block flex-1 shrink-0 h-full">
+              <div className="relative rounded-2xl overflow-hidden border border-gray-200 shadow-sm h-full">
                 <button
                   type="button"
                   onClick={() => setMapMode(false)}
@@ -630,9 +643,34 @@ function PropertyListingContent() {
                   <X className="w-4 h-4" />
                   Đóng bản đồ
                 </button>
+
+                {/* Nút "Tìm khu vực này" — hiện khi người dùng kéo/zoom bản đồ sang vùng khác. */}
+                {pendingBounds && (
+                  <button
+                    type="button"
+                    onClick={() => { setBbox(pendingBounds); setPendingBounds(null); setPage(1); }}
+                    className="absolute top-3 left-1/2 -translate-x-1/2 z-10 h-9 px-4 rounded-full bg-white text-gray-800 font-semibold text-[13px] flex items-center gap-1.5 shadow-lg border border-gray-200 hover:bg-gray-50"
+                  >
+                    <SearchIcon className="w-4 h-4 text-primary" />
+                    Tìm trong khu vực này
+                  </button>
+                )}
+                {bbox && (
+                  <button
+                    type="button"
+                    onClick={() => { setBbox(null); setPendingBounds(null); setPage(1); }}
+                    className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 h-8 px-3.5 rounded-full bg-gray-900/85 text-white font-medium text-[12px] flex items-center gap-1.5 shadow-lg hover:bg-gray-900"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    Bỏ lọc theo khu vực
+                  </button>
+                )}
+
                 <PropertyMapView
                   properties={displayProperties}
                   highlightedId={hoveredId}
+                  autoFit={!bbox}
+                  onUserMove={(b) => setPendingBounds(b)}
                   onMarkerClick={(id) => {
                     setHoveredId(id);
                     document.getElementById(`prop-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });

@@ -36,6 +36,15 @@ export async function GET(request: NextRequest) {
   const bedroomsParam = searchParams.get('bedrooms');
   const sort = searchParams.get('sort') ?? 'newest';
 
+  // Khung nhìn bản đồ (feedback: phóng to/kéo bản đồ → tìm tin trong khu vực đang xem). Chỉ
+  // áp khi đủ 4 cạnh hợp lệ; tin thiếu toạ độ tự loại (latitude not null).
+  const parseNum = (v: string | null) => (v !== null && v !== '' && Number.isFinite(Number(v)) ? Number(v) : null);
+  const minLat = parseNum(searchParams.get('min_lat'));
+  const maxLat = parseNum(searchParams.get('max_lat'));
+  const minLng = parseNum(searchParams.get('min_lng'));
+  const maxLng = parseNum(searchParams.get('max_lng'));
+  const hasBbox = minLat !== null && maxLat !== null && minLng !== null && maxLng !== null;
+
   const perPageParam = parseInt(searchParams.get('per_page') ?? '20', 10);
   const perPage = Math.min(Number.isFinite(perPageParam) && perPageParam > 0 ? perPageParam : 20, 100);
   const pageParam = parseInt(searchParams.get('page') ?? '1', 10);
@@ -61,6 +70,12 @@ export async function GET(request: NextRequest) {
           const bd = parseInt(bedroomsParam, 10);
           return { bedrooms: bd >= 4 ? { gte: 4 } : bd };
         })()
+      : {}),
+    ...(hasBbox
+      ? {
+          latitude: { not: null, gte: minLat as number, lte: maxLat as number },
+          longitude: { not: null, gte: minLng as number, lte: maxLng as number },
+        }
       : {}),
   };
 
