@@ -141,6 +141,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   if ('floors' in body) data.floors = body.floors;
   if ('bedrooms' in body) data.bedrooms = body.bedrooms;
   if ('bathrooms' in body) data.bathrooms = body.bathrooms;
+  if ('toilets' in body) data.toilets = body.toilets;
   if ('parking' in body) data.parking = Boolean(body.parking);
   if ('direction' in body) data.direction = body.direction;
   if ('balcony_direction' in body) data.balcony_direction = body.balcony_direction;
