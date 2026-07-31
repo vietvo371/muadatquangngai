@@ -45,6 +45,7 @@ const mapApiProperty = (apiProp: any) => {
     longitude: apiProp.location?.longitude != null ? Number(apiProp.location.longitude) : null,
     bedrooms: Number(apiProp.bedrooms || 0),
     bathrooms: Number(apiProp.bathrooms || 0),
+    facade: apiProp.facade != null ? Number(apiProp.facade) : null,
     isVip: apiProp.is_vip || 'normal',
     user: {
       name: apiProp.owner?.name || 'Môi giới',

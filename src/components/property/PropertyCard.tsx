@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Heart, MapPin, Bed, Bath, Square, User, CheckCircle, Camera, Eye } from 'lucide-react';
+import { Heart, MapPin, Bed, Bath, Square, User, CheckCircle, Camera, Ruler } from 'lucide-react';
 import { formatPrice, timeAgo, derivePrices } from '@/lib/formatters';
 import { CONFIG } from '@/lib/config';
 
@@ -19,9 +19,10 @@ interface PropertyCardProps {
     address?: string;
     bedrooms?: number;
     bathrooms?: number;
+    /** Mặt tiền (m) — khách yêu cầu hiện lên thẻ (feedback "diện tích đất phía trước"). */
+    facade?: number | null;
     isVip?: string;
     is_verified?: boolean;
-    views?: number;
     created_at?: string;
     user?: {
       name: string;
@@ -163,10 +164,10 @@ export function PropertyCard({ property, className, variant = 'default' }: Prope
                   {property.bathrooms} phòng tắm
                 </span>
               )}
-              {property.views !== undefined && (
+              {property.facade != null && Number(property.facade) > 0 && (
                 <span className="flex items-center gap-1">
-                  <Eye className="h-3.5 w-3.5 text-gray-400" />
-                  {property.views} lượt xem
+                  <Ruler className="h-3.5 w-3.5 text-gray-400" />
+                  Mặt tiền {property.facade} m
                 </span>
               )}
             </div>
@@ -266,14 +267,8 @@ export function PropertyCard({ property, className, variant = 'default' }: Prope
           <Heart className="h-4 w-4" />
         </button>
 
-        {/* Bottom Right Badges */}
+        {/* Bottom Right Badges — đã bỏ lượt xem theo yêu cầu khách (tin mới toàn 0 lượt). */}
         <div className="absolute bottom-2 right-2 flex items-center gap-1.5">
-          {property.views !== undefined && (
-            <div className="flex items-center gap-1 px-2 py-0.5 bg-black/50 backdrop-blur-sm text-white text-[11px] font-medium rounded-full">
-              <Eye className="h-3 w-3" />
-              {property.views}
-            </div>
-          )}
           {property.images_count !== undefined && (
             <div className="flex items-center gap-1 px-2 py-0.5 bg-black/50 backdrop-blur-sm text-white text-[11px] font-medium rounded-full">
               <Camera className="h-3 w-3" />
@@ -313,6 +308,12 @@ export function PropertyCard({ property, className, variant = 'default' }: Prope
             <Square className="h-3.5 w-3.5 text-gray-400 group-hover:text-primary transition-colors duration-300" />
             {property.area} m²
           </span>
+          {property.facade != null && Number(property.facade) > 0 && (
+            <span className="flex items-center gap-1">
+              <Ruler className="h-3.5 w-3.5 text-gray-400 group-hover:text-primary transition-colors duration-300" />
+              MT {property.facade} m
+            </span>
+          )}
         </div>
 
         <div className="flex items-end justify-between mt-1">

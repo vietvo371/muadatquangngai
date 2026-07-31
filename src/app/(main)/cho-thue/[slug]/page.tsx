@@ -3,11 +3,10 @@
 import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { 
-  Heart, 
-  Share2, 
-  MapPin, 
+  Heart,
+  Share2,
+  MapPin,
   Clock,
-  Eye,
   CheckCircle,
   Home,
   ChevronRight,
@@ -304,10 +303,7 @@ export default function ChoThueDetailPage({ params }: { params: Promise<{ slug: 
             {/* Stats and Actions row */}
             <div className="flex items-center justify-between border-y border-gray-100 py-4 mb-8">
               <div className="flex items-center gap-4 sm:gap-6 text-[13px] text-gray-500 font-medium flex-wrap">
-                <span className="flex items-center gap-1.5">
-                  <Eye className="h-4 w-4 text-gray-400" />
-                  {propertyData.viewCount.toLocaleString('vi-VN')} lượt xem
-                </span>
+                {/* Đã bỏ lượt xem theo yêu cầu khách. */}
                 <span className="flex items-center gap-1.5">
                   <Clock className="h-4 w-4 text-gray-400" />
                   Đăng {timeAgo(propertyData.publishedAt)}
