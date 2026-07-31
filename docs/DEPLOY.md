@@ -139,13 +139,26 @@ cd ~/public_html
 
 git pull origin main
 yarn install --frozen-lockfile --network-timeout 600000   # postinstall tự chạy `prisma generate`
-yarn build
-pm2 restart muadatquangngai
+# QUAN TRỌNG: nối build và restart bằng `&&`, KHÔNG bằng `;` — xem cảnh báo dưới.
+NODE_OPTIONS=--max-old-space-size=1536 yarn build && pm2 restart muadatquangngai
 ```
 
-Next.js 16 build mất ~4 phút trên VPS này — nếu chạy qua SSH có thể rớt kết
-nối giữa chừng, nên bọc bằng `nohup ... &` và `tail -f ~/deploy.log` để theo
-dõi nếu cần chạy không giám sát.
+> **BẮT BUỘC dùng `&&` giữa `yarn build` và `pm2 restart`, KHÔNG dùng `;`.**
+> Build VPS hay bị OOM-killer giết (exit 137, xem mục 8) và để lại `.next` DỞ DANG
+> (thiếu `~/public_html/.next/BUILD_ID`). Nếu nối bằng `;`, `pm2 restart` vẫn chạy sau
+> khi build fail → nạp bản `.next` hỏng → **site 503 cho khách thật** (đã xảy ra
+> 31/07/2026). Với `&&`, build fail thì restart KHÔNG chạy, app cũ tiếp tục phục vụ.
+> `NODE_OPTIONS=--max-old-space-size=1536` giới hạn heap để giảm nguy cơ OOM.
+>
+> **Nếu lỡ đã 503 vì nạp `.next` hỏng**: `pm2 stop muadatquangngai` (giải phóng RAM,
+> app đang 503 đằng nào cũng vô dụng) → rebuild với `&& pm2 restart` như trên → verify
+> `.next/BUILD_ID` tồn tại + `curl / ` trả 200. Dừng app trước khi build giúp build
+> không OOM (site khác trên VPS chiếm RAM song song). Xác nhận build XONG bằng
+> `pgrep -f "[y]arn build"` rỗng, KHÔNG chỉ đọc log.
+
+Next.js 16 build mất **~16-19 phút** trên VPS này (RAM 1.9GB, chạy chung site khác) —
+nếu chạy qua SSH có thể rớt kết nối giữa chừng, nên bọc bằng `nohup ... &` và theo dõi
+bằng `until ! pgrep -f "[y]arn build"; do sleep 20; done` để được báo khi xong.
 
 **Chỉ chạy `yarn install`** (bỏ qua) nếu `package.json`/`yarn.lock` không
 đổi — build nhanh hơn. Prisma `postinstall` sẽ tự re-generate client nếu
