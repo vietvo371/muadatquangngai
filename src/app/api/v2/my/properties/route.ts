@@ -145,6 +145,11 @@ export async function POST(request: Request) {
   if (body.legal !== undefined && body.legal !== null && !inList(body.legal, LEGAL)) {
     errors.push(new FieldError('legal', 'Giá trị đã chọn trong trường pháp lý không hợp lệ.'));
   }
+  // Cột legal_note là VARCHAR(500) — thiếu chặn ở đây thì chuỗi dài hơn làm Postgres báo lỗi
+  // và người dùng nhận 500 thay vì thông báo đọc được.
+  if (typeof body.legal_note === 'string' && body.legal_note.length > 500) {
+    errors.push(new FieldError('legal_note', 'Trường mô tả pháp lý không được lớn hơn 500 ký tự.'));
+  }
   if (body.parking !== undefined && body.parking !== null && !isBoolean(body.parking)) {
     errors.push(new FieldError('parking', 'Trường chỗ để xe phải là đúng hoặc sai.'));
   }
@@ -320,7 +325,9 @@ export async function POST(request: Request) {
       balcony_direction: forGroup('balcony_direction', body.balcony_direction ?? null),
       furniture: forGroup('furniture', body.furniture ?? 'none') ?? 'none',
       legal: forGroup('legal', body.legal ?? null),
-      legal_note: body.legal_note ?? null,
+      // Chú thích chỉ có nghĩa khi pháp lý bị lọc bỏ theo nhóm cũng phải biến mất theo — nếu
+      // không, tin đất chuyển sang nhóm khác vẫn còn câu mô tả pháp lý mồ côi trong DB.
+      legal_note: forGroup('legal', body.legal ?? null) ? (body.legal_note ?? null) : null,
       province_id: BigInt(provinceId),
       district_id: BigInt(districtId),
       ward_id: body.ward_id != null ? BigInt(body.ward_id) : null,

@@ -1,5 +1,5 @@
 import { Banknote, Maximize, Bed, Bath, Compass, SquareStack } from 'lucide-react';
-import { formatPrice } from '@/lib/formatters';
+import { formatPrice, derivePrices } from '@/lib/formatters';
 
 interface SpecBoxesProps {
   price: number;
@@ -12,13 +12,16 @@ interface SpecBoxesProps {
 }
 
 export function SpecBoxes({ price, priceUnit, priceNegotiable, area, bedrooms, bathrooms, direction }: SpecBoxesProps) {
-  const pricePerM2 = area > 0 ? Math.round(price / area) : null;
+  // Không tự chia price cho area: khi price_unit là 'per_m2' thì price đã LÀ giá mỗi m².
+  const { total: totalPrice, perM2: pricePerM2 } = derivePrices(price, priceUnit, area);
 
   const specs: { icon: React.ElementType; label: string; value: string; sub?: string }[] = [
     {
       icon: Banknote,
       label: 'Mức giá',
-      value: priceNegotiable ? 'Thỏa thuận' : formatPrice(price, priceUnit),
+      value: priceNegotiable
+        ? 'Thỏa thuận'
+        : formatPrice(totalPrice ?? price, priceUnit === 'per_m2' ? undefined : priceUnit),
       sub: pricePerM2 && !priceNegotiable ? `${formatPrice(pricePerM2)}/m²` : undefined,
     },
     { icon: Maximize, label: 'Diện tích', value: `${area} m²` },

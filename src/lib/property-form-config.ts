@@ -112,20 +112,29 @@ export const DIRECTION_OPTIONS: readonly SelectOption[] = [
 ];
 
 /**
- * Pháp lý — 6 mục theo spec. Giữ nguyên giá trị cũ (so_do, contract, other) và chỉ
- * THÊM giá trị mới, để tin đăng đã tồn tại không bị hỏng.
+ * Pháp lý — rút xuống 4 mục theo feedback 28/07 ("danh sách có quá nhiều lựa chọn").
+ * Chọn `other` thì form hiện thêm ô mô tả, lưu vào cột `properties.legal_note`.
  */
 export const LEGAL_OPTIONS: readonly SelectOption[] = [
-  { value: 'so_do', label: 'Sổ đỏ/Sổ hồng' },
+  { value: 'so_do', label: 'Sổ đỏ / Sổ hồng' },
   { value: 'contract', label: 'Hợp đồng mua bán' },
-  { value: 'dat_coc', label: 'Hợp đồng đặt cọc' },
-  { value: 'viet_tay', label: 'Giấy tờ viết tay' },
-  { value: 'cho_so', label: 'Đang chờ cấp sổ' },
-  { value: 'other', label: 'Pháp lý khác' },
+  { value: 'cho_so', label: 'Đang chờ sổ' },
+  { value: 'other', label: 'Khác' },
 ];
 
-/** Giá trị cũ không còn trong form nhưng vẫn tồn tại trong DB — chỉ dùng để hiển thị. */
-const LEGACY_LEGAL_LABELS: Record<string, string> = { so_hong: 'Sổ hồng' };
+/** Giá trị pháp lý cần mô tả thêm — form hiện ô nhập `legal_note` khi chọn giá trị này. */
+export const LEGAL_NEEDS_NOTE = 'other';
+
+/**
+ * Giá trị cũ không còn trong form nhưng vẫn tồn tại trong DB — chỉ dùng để HIỂN THỊ và để
+ * validate không từ chối tin đăng cũ đang sửa. `dat_coc`/`viet_tay` bị bỏ khỏi danh sách
+ * chọn ở feedback 28/07 nhưng tin đã đăng vẫn đang mang giá trị đó, xoá hẳn là làm hỏng.
+ */
+const LEGACY_LEGAL_LABELS: Record<string, string> = {
+  so_hong: 'Sổ hồng',
+  dat_coc: 'Hợp đồng đặt cọc',
+  viet_tay: 'Giấy tờ viết tay',
+};
 
 /**
  * Tình trạng nội thất — 6 mục theo spec, cũng chỉ thêm chứ không đổi giá trị cũ
@@ -140,11 +149,16 @@ export const FURNITURE_OPTIONS: readonly SelectOption[] = [
   { value: 'khac', label: 'Tình trạng khác' },
 ];
 
-/** Đơn vị giá — spec bổ sung "Thoả thuận" bên cạnh Tổng giá và Giá/m². */
+/**
+ * Đơn vị giá trong form — chỉ 2 lựa chọn theo feedback 28/07: tổng giá trị BĐS, hoặc giá
+ * mỗi m². "Thoả thuận" đã bị bỏ khỏi đây vì trùng nghĩa với checkbox "Giá có thể thương
+ * lượng" ngay bên dưới — cùng một ý mà hai chỗ nhập thì người dùng không biết chọn cái nào.
+ * Giá trị `negotiable`/`per_month` vẫn hợp lệ ở API (xem VALID_PRICE_UNITS) để tin đã đăng
+ * không hỏng.
+ */
 export const PRICE_UNIT_OPTIONS: readonly SelectOption[] = [
-  { value: 'total', label: 'Tổng giá' },
-  { value: 'per_m2', label: 'Giá/m²' },
-  { value: 'negotiable', label: 'Thoả thuận' },
+  { value: 'total', label: 'VND' },
+  { value: 'per_m2', label: 'VND/m²' },
 ];
 
 // ---------------------------------------------------------------------------

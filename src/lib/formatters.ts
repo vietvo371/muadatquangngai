@@ -19,6 +19,47 @@ export function formatPrice(
   return formatted;
 }
 
+/**
+ * Tiền dạng ngắn có giữ phần thập phân — "2 tỷ", "16,667 triệu".
+ *
+ * Khác `formatPrice` ở chỗ không làm tròn về đơn vị chẵn: giá mỗi m² làm tròn thành "17
+ * triệu" thay vì "16,667 triệu" là sai lệch tới 2%, đủ để người bán thấy con số quy đổi
+ * không khớp với số họ vừa nhập và mất tin tưởng vào phần tính toán.
+ */
+export function formatMoneyShort(value: number): string {
+  const short = (n: number) => n.toLocaleString('vi-VN', { maximumFractionDigits: 3 });
+  if (value >= 1_000_000_000) return `${short(value / 1_000_000_000)} tỷ`;
+  if (value >= 1_000_000) return `${short(value / 1_000_000)} triệu`;
+  return `${short(value)} đ`;
+}
+
+/**
+ * Quy đổi giá của một tin đăng về cặp (tổng giá, giá mỗi m²).
+ *
+ * Cột `price` mang nghĩa KHÁC NHAU tuỳ `price_unit`: với `per_m2` thì nó chính là giá mỗi m²
+ * chứ không phải tổng giá. Trước đây mọi chỗ hiển thị đều mặc định `price` là tổng rồi tự
+ * chia cho diện tích, nên tin nhập theo giá/m² hiện sai cả hai con số (lệch đúng một lần
+ * diện tích). Mọi nơi cần hiển thị giá phải đi qua hàm này thay vì tự tính.
+ *
+ * Trả `null` cho phần không suy ra được (thiếu diện tích, hoặc giá thoả thuận) — người gọi
+ * tự quyết ẩn đi, tuyệt đối không hiển thị số 0 như một mức giá thật.
+ */
+export function derivePrices(
+  price: number | null | undefined,
+  priceUnit: string | null | undefined,
+  area: number | null | undefined
+): { total: number | null; perM2: number | null } {
+  const p = Number(price) || 0;
+  const a = Number(area) || 0;
+  if (p <= 0) return { total: null, perM2: null };
+
+  if (priceUnit === 'per_m2') {
+    return { total: a > 0 ? Math.round(p * a) : null, perM2: p };
+  }
+  // 'total', 'per_month', 'negotiable' và mọi giá trị lạ đều coi price là con số đã nhập.
+  return { total: p, perM2: a > 0 ? Math.round(p / a) : null };
+}
+
 export function formatArea(area: number): string {
   return `${area.toLocaleString("vi-VN")} m²`;
 }

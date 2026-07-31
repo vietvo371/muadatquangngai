@@ -26,18 +26,21 @@ import {
   stripFieldsNotInGroup,
   DIRECTION_OPTIONS,
   LEGAL_OPTIONS,
+  LEGAL_NEEDS_NOTE,
   FURNITURE_OPTIONS,
   PRICE_UNIT_OPTIONS,
   isValidPhone,
   isValidEmail,
 } from '@/lib/property-form-config';
+import { derivePrices, formatMoneyShort } from '@/lib/formatters';
 import { 
   ArrowLeft, 
   ArrowRight, 
   Check, 
-  Home, 
+  Home,
   DollarSign,
-  Loader2
+  Loader2,
+  Sparkles
 } from 'lucide-react';
 
 // Bản đồ dùng Leaflet nên phải nạp phía client, không dựng sẵn trên server được.
@@ -87,6 +90,8 @@ interface PropertyFormData {
   facade?: number;
   furniture?: string;
   legal?: string;
+  /** Mô tả pháp lý tự do — chỉ dùng khi legal = 'other' (feedback 28/07 mục 4). */
+  legal_note?: string;
   features: number[];
 
   // Thông tin liên hệ — mặc định lấy từ tài khoản, cho phép sửa (spec mục 4.5)
@@ -98,6 +103,32 @@ interface PropertyFormData {
   // Step 4: Package
   package_id: number | null;
 }
+
+/**
+ * Base UI `Select.Value` in ra GIÁ TRỊ THÔ khi không truyền children dạng hàm — với mọi
+ * Select dùng id/mã làm value thì người dùng nhìn thấy con số vô nghĩa thay vì tên. Hai
+ * helper dưới đây dựng sẵn hàm hiển thị nhãn, để không lặp lại tìm-nhãn ở từng chỗ.
+ * Lưu ý: children ghi đè cả prop `placeholder`, nên hàm phải tự trả về nhãn rỗng.
+ */
+const optionLabel =
+  (options: readonly { value: string; label: string }[], emptyLabel: string) =>
+  (v: string) =>
+    options.find((o) => o.value === v)?.label ?? emptyLabel;
+
+/** Select số lượng (phòng ngủ, số tầng...) — value là chuỗi số, "0" nghĩa là không có. */
+const countLabel =
+  (zeroLabel: string) =>
+  (v: string) =>
+    !v || v === '0' ? zeroLabel : v;
+
+/** Mốc giá bấm nhanh — đúng 5 mốc trong bản thiết kế kèm feedback 28/07. */
+const PRICE_PRESETS: readonly { label: string; value: number }[] = [
+  { label: '20 triệu', value: 20_000_000 },
+  { label: '200 triệu', value: 200_000_000 },
+  { label: '2 tỷ', value: 2_000_000_000 },
+  { label: '20 tỷ', value: 20_000_000_000 },
+  { label: '200 tỷ', value: 200_000_000_000 },
+];
 
 // 3 bước theo spec mục 2. Trước đây tách làm 4 (cơ bản / ảnh / chi tiết / thanh toán),
 // giờ gộp toàn bộ thông tin BĐS vào bước 1.
@@ -147,8 +178,7 @@ export default function DangTinPage() {
       .catch(() => { /* giữ mặc định */ });
   }, []);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  /** Nút AI nào đang chạy — dùng để hiện spinner đúng nút và khoá các nút còn lại. */
-  const [aiLoading, setAiLoading] = useState<'title' | 'description' | 'both' | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
 
   const [packages, setPackages] = useState<PackageOption[]>([]);
   const [balance, setBalance] = useState<number>(0);
@@ -189,6 +219,7 @@ export default function DangTinPage() {
     direction: '',
     furniture: 'none',
     legal: '',
+    legal_note: '',
     features: [],
     contact_name: '',
     contact_phone: '',
@@ -307,6 +338,7 @@ export default function DangTinPage() {
         road_width: isFieldVisible(nextGroup, 'road_width') ? prev.road_width : undefined,
         facade: isFieldVisible(nextGroup, 'facade') ? prev.facade : undefined,
         legal: isFieldVisible(nextGroup, 'legal') ? prev.legal : '',
+        legal_note: isFieldVisible(nextGroup, 'legal') ? prev.legal_note : '',
         furniture: isFieldVisible(nextGroup, 'furniture') ? prev.furniture : 'none',
         features: isFieldVisible(nextGroup, 'utilities') ? prev.features : [],
       } as PropertyFormData;
@@ -314,21 +346,20 @@ export default function DangTinPage() {
   };
 
   /**
-   * Gọi AI viết tiêu đề/mô tả (spec mục 4.6). Spec yêu cầu rõ: "Không tự động ghi đè nội
-   * dung đã nhập mà không có xác nhận" — nên nếu ô đã có chữ thì hỏi trước.
+   * Gọi AI viết CẢ tiêu đề lẫn mô tả trong một lượt (feedback 28/07 mục 5 — trước đây tách
+   * làm 2 nút riêng nên phải bấm 2 lần). Spec cũ vẫn giữ nguyên một điểm: "Không tự động ghi
+   * đè nội dung đã nhập mà không có xác nhận" — nên nếu đã có chữ thì hỏi trước.
    */
-  const generateContent = async (mode: 'title' | 'description' | 'both') => {
-    const willOverwrite =
-      (mode !== 'description' && formData.title.trim()) ||
-      (mode !== 'title' && formData.description.trim());
+  const generateContent = async () => {
+    const willOverwrite = formData.title.trim() || formData.description.trim();
     if (willOverwrite && !window.confirm('Nội dung hiện tại sẽ được thay bằng nội dung AI vừa tạo. Bạn có chắc không?')) {
       return;
     }
 
-    setAiLoading(mode);
+    setAiLoading(true);
     try {
       const res = await api.post('/api/v2/ai/generate-listing', {
-        mode,
+        mode: 'both',
         category_id: formData.category_id,
         street: formData.street,
         district_name: formData.district_name,
@@ -360,7 +391,7 @@ export default function DangTinPage() {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
       toast.error(msg || 'Không tạo được nội dung. Vui lòng thử lại.');
     } finally {
-      setAiLoading(null);
+      setAiLoading(false);
     }
   };
 
@@ -438,6 +469,13 @@ export default function DangTinPage() {
       setIsGeocoding(false);
     }
   };
+
+  /**
+   * Quy đổi giá hiển thị ngay dưới ô nhập (feedback mục 3.3). Chỉ trả về khi có tổng giá
+   * thật — thiếu diện tích thì `perM2` là null và phần đó tự ẩn, không hiện "0/m²".
+   */
+  const derived = derivePrices(formData.price, formData.price_unit, formData.area);
+  const priceBreakdown = derived.total !== null ? { total: derived.total, perM2: derived.perM2 } : null;
 
   const formerUnits = formData.district_id ? (FORMER_UNITS[formData.district_id] ?? []) : [];
 
@@ -541,6 +579,12 @@ export default function DangTinPage() {
         price_negotiable: formData.price_negotiable || formData.price_unit === 'negotiable',
         area: formData.area,
         ...groupFields,
+        // Chỉ gửi chú thích pháp lý khi loại pháp lý thật sự cần nó — tránh lưu chú thích
+        // mồ côi nếu người dùng gõ rồi đổi lại lựa chọn.
+        legal_note:
+          isFieldVisible(group, 'legal') && formData.legal === LEGAL_NEEDS_NOTE && formData.legal_note?.trim()
+            ? formData.legal_note.trim()
+            : undefined,
         province_id: formData.province_id,
         district_id: formData.district_id,
         ward_id: formData.ward_id || undefined,
@@ -684,7 +728,11 @@ export default function DangTinPage() {
                     onValueChange={(value) => handleCategoryChange(value || '')}
                   >
                     <SelectTrigger className="mt-2 h-12 bg-gray-50 border-gray-200 focus:ring-primary focus:border-primary">
-                      <SelectValue placeholder="-- Chọn phân khúc --" />
+                      <SelectValue>
+                        {(v: string) =>
+                          apiCategories.find((c) => String(c.id) === v)?.name ?? '-- Chọn phân khúc --'
+                        }
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {apiCategories
@@ -826,25 +874,52 @@ export default function DangTinPage() {
           {currentStep === 1 && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <section>
-                <h3 className="text-lg font-bold text-gray-900 mb-5 pb-2 border-b">Mức giá & Diện tích</h3>
-                
-                <div className="grid md:grid-cols-2 gap-6 mb-6">
-                  <div>
-                    <Label className="font-semibold text-gray-700">Mức giá <span className="text-red-500">*</span></Label>
-                    <div className="flex mt-2 shadow-sm rounded-lg overflow-hidden">
+                <h3 className="text-lg font-bold text-gray-900 mb-5 pb-2 border-b">Diện tích & Mức giá</h3>
+
+                {/* Diện tích đặt TRƯỚC mức giá (feedback 28/07) — người bán nghĩ theo trình tự
+                    "đất bao nhiêu m² rồi mới bao nhiêu tiền", và phần quy đổi giá/m² bên dưới
+                    cũng cần diện tích mới tính được. */}
+                <div className="mb-6">
+                  <Label className="font-semibold text-gray-700">Diện tích <span className="text-red-500">*</span></Label>
+                  <div className="relative mt-2 shadow-sm rounded-lg overflow-hidden md:w-1/2">
+                    <Input
+                      type="number"
+                      min={0}
+                      value={formData.area || ''}
+                      onChange={(e) => updateFormData({ area: parseFloat(e.target.value) || 0 })}
+                      placeholder="VD: 120"
+                      className="h-12 bg-gray-50 focus:bg-white pr-12"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">m²</span>
+                  </div>
+                </div>
+
+                <div className="mb-6">
+                  <div className="grid md:grid-cols-3 gap-4">
+                    <div className="md:col-span-2">
+                      <Label className="font-semibold text-gray-700">Mức giá <span className="text-red-500">*</span></Label>
+                      {/* Ô text chứ không phải type="number": input số không cho chèn dấu phân
+                          cách nghìn, mà "2000000000" thì không ai đọc nổi có đúng 2 tỷ hay không. */}
                       <Input
-                        type="number"
-                        value={formData.price || ''}
-                        onChange={(e) => updateFormData({ price: parseInt(e.target.value) || 0 })}
-                        placeholder="VD: 2000000000"
-                        className="flex-1 rounded-r-none border-r-0 h-12 bg-gray-50 focus:bg-white"
+                        type="text"
+                        inputMode="numeric"
+                        value={formData.price ? formData.price.toLocaleString('vi-VN') : ''}
+                        onChange={(e) => {
+                          const digits = e.target.value.replace(/\D/g, '');
+                          updateFormData({ price: digits ? parseInt(digits, 10) : 0 });
+                        }}
+                        placeholder="VD: 2.000.000.000"
+                        className="mt-2 h-12 bg-gray-50 focus:bg-white"
                       />
+                    </div>
+                    <div>
+                      <Label className="font-semibold text-gray-700">Đơn vị</Label>
                       <Select
                         value={formData.price_unit}
-                        onValueChange={(value) => updateFormData({ price_unit: value as any })}
+                        onValueChange={(value) => updateFormData({ price_unit: (value || 'total') as PropertyFormData['price_unit'] })}
                       >
-                        <SelectTrigger className="w-32 rounded-l-none h-12 bg-gray-100 border-l-0 font-medium">
-                          <SelectValue />
+                        <SelectTrigger className="mt-2 h-12 w-full bg-gray-50 font-medium">
+                          <SelectValue>{optionLabel(PRICE_UNIT_OPTIONS, 'VND')}</SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                           {PRICE_UNIT_OPTIONS.map(o => (
@@ -853,31 +928,51 @@ export default function DangTinPage() {
                         </SelectContent>
                       </Select>
                     </div>
-                    
-                    <div className="mt-3 flex items-center">
-                      <Checkbox
-                        id="negotiable"
-                        checked={formData.price_negotiable}
-                        onCheckedChange={(checked) => updateFormData({ price_negotiable: !!checked })}
-                      />
-                      <Label htmlFor="negotiable" className="ml-2 cursor-pointer text-sm font-medium text-gray-700">
-                        Giá có thể thương lượng
-                      </Label>
-                    </div>
                   </div>
-                  
-                  <div>
-                    <Label className="font-semibold text-gray-700">Diện tích <span className="text-red-500">*</span></Label>
-                    <div className="relative mt-2 shadow-sm rounded-lg overflow-hidden">
-                      <Input
-                        type="number"
-                        value={formData.area || ''}
-                        onChange={(e) => updateFormData({ area: parseInt(e.target.value) || 0 })}
-                        placeholder="VD: 75"
-                        className="h-12 bg-gray-50 focus:bg-white pr-12"
-                      />
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">m²</span>
-                    </div>
+
+                  {/* Mức giá gợi ý nhanh — đúng các mốc trong bản thiết kế feedback. */}
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {PRICE_PRESETS.map((preset) => (
+                      <button
+                        key={preset.value}
+                        type="button"
+                        onClick={() => updateFormData({ price: preset.value, price_unit: 'total' })}
+                        className={`rounded-lg border px-3 py-1.5 text-[13px] font-medium transition-colors ${
+                          formData.price === preset.value && formData.price_unit === 'total'
+                            ? 'border-primary bg-primary-light text-primary'
+                            : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Quy đổi hai chiều, cập nhật ngay khi gõ (feedback mục 3.3). Chỉ hiện khi
+                      quy đổi được thật — thiếu diện tích thì im lặng, không hiện số 0. */}
+                  {priceBreakdown && (
+                    <p className="mt-2.5 text-[13px] text-gray-600">
+                      Tổng trị giá <strong className="text-gray-900">{formatMoneyShort(priceBreakdown.total)}</strong>
+                      {priceBreakdown.perM2 !== null && (
+                        <> (~{formatMoneyShort(priceBreakdown.perM2)}/m²)</>
+                      )}
+                    </p>
+                  )}
+                  {formData.price > 0 && formData.area <= 0 && (
+                    <p className="mt-2.5 text-[13px] text-amber-700">
+                      Nhập diện tích ở trên để hệ thống tự quy đổi giá mỗi m².
+                    </p>
+                  )}
+
+                  <div className="mt-3 flex items-center">
+                    <Checkbox
+                      id="negotiable"
+                      checked={formData.price_negotiable}
+                      onCheckedChange={(checked) => updateFormData({ price_negotiable: !!checked })}
+                    />
+                    <Label htmlFor="negotiable" className="ml-2 cursor-pointer text-sm font-medium text-gray-700">
+                      Giá có thể thương lượng
+                    </Label>
                   </div>
                 </div>
               </section>
@@ -895,7 +990,9 @@ export default function DangTinPage() {
                         value={String(formData.bedrooms ?? 0)}
                         onValueChange={(value) => updateFormData({ bedrooms: parseInt(value || '0') })}
                       >
-                        <SelectTrigger className="mt-2 h-11 bg-gray-50"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="mt-2 h-11 bg-gray-50">
+                          <SelectValue>{countLabel('Không có')}</SelectValue>
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="0">Không có</SelectItem>
                           {[1,2,3,4,5,6,7,8,9,10].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
@@ -911,7 +1008,9 @@ export default function DangTinPage() {
                         value={String(formData.bathrooms ?? 0)}
                         onValueChange={(value) => updateFormData({ bathrooms: parseInt(value || '0') })}
                       >
-                        <SelectTrigger className="mt-2 h-11 bg-gray-50"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="mt-2 h-11 bg-gray-50">
+                          <SelectValue>{countLabel('Không có')}</SelectValue>
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="0">Không có</SelectItem>
                           {[1,2,3,4,5,6,7,8].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
@@ -927,7 +1026,9 @@ export default function DangTinPage() {
                         value={String(formData.toilets ?? 0)}
                         onValueChange={(value) => updateFormData({ toilets: parseInt(value || '0') })}
                       >
-                        <SelectTrigger className="mt-2 h-11 bg-gray-50"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="mt-2 h-11 bg-gray-50">
+                          <SelectValue>{countLabel('Không có')}</SelectValue>
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="0">Không có</SelectItem>
                           {[1,2,3,4,5,6,7,8].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
@@ -943,7 +1044,9 @@ export default function DangTinPage() {
                         value={String(formData.floors ?? 0)}
                         onValueChange={(value) => updateFormData({ floors: parseInt(value || '0') })}
                       >
-                        <SelectTrigger className="mt-2 h-11 bg-gray-50"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="mt-2 h-11 bg-gray-50">
+                          <SelectValue>{countLabel('Không xác định')}</SelectValue>
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="0">Không xác định</SelectItem>
                           {[1,2,3,4,5,6,7,8,9,10].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
@@ -960,9 +1063,7 @@ export default function DangTinPage() {
                         onValueChange={(value) => updateFormData({ direction: value || '' })}
                       >
                         <SelectTrigger className="mt-2 h-11 bg-gray-50">
-                          <SelectValue placeholder="Tùy chọn">
-                            {(v: string) => DIRECTION_OPTIONS.find(o => o.value === v)?.label ?? 'Tùy chọn'}
-                          </SelectValue>
+                          <SelectValue>{optionLabel(DIRECTION_OPTIONS, 'Tùy chọn')}</SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                           {DIRECTION_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
@@ -979,9 +1080,7 @@ export default function DangTinPage() {
                         onValueChange={(value) => updateFormData({ balcony_direction: value || '' })}
                       >
                         <SelectTrigger className="mt-2 h-11 bg-gray-50">
-                          <SelectValue placeholder="Tùy chọn">
-                            {(v: string) => DIRECTION_OPTIONS.find(o => o.value === v)?.label ?? 'Tùy chọn'}
-                          </SelectValue>
+                          <SelectValue>{optionLabel(DIRECTION_OPTIONS, 'Tùy chọn')}</SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                           {DIRECTION_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
@@ -1025,12 +1124,17 @@ export default function DangTinPage() {
                       <Label className="text-sm font-medium text-gray-600">Pháp lý</Label>
                       <Select
                         value={formData.legal || ''}
-                        onValueChange={(value) => updateFormData({ legal: value || '' })}
+                        onValueChange={(value) =>
+                          updateFormData({
+                            legal: value || '',
+                            // Đổi sang loại pháp lý khác thì phần mô tả tự do không còn đúng
+                            // ngữ cảnh — xoá luôn để không lưu chú thích lạc đề xuống DB.
+                            ...(value === LEGAL_NEEDS_NOTE ? {} : { legal_note: '' }),
+                          })
+                        }
                       >
                         <SelectTrigger className="mt-2 h-11 bg-gray-50">
-                          <SelectValue placeholder="Tùy chọn">
-                            {(v: string) => LEGAL_OPTIONS.find(o => o.value === v)?.label ?? 'Tùy chọn'}
-                          </SelectValue>
+                          <SelectValue>{optionLabel(LEGAL_OPTIONS, 'Tùy chọn')}</SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                           {LEGAL_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
@@ -1040,6 +1144,24 @@ export default function DangTinPage() {
                   )}
                 </div>
 
+                {/* Ô mô tả pháp lý — chỉ hiện khi chọn "Khác" (feedback 28/07 mục 4), lưu vào
+                    cột properties.legal_note đã có sẵn nên không cần migration. */}
+                {isFieldVisible(group, 'legal') && formData.legal === LEGAL_NEEDS_NOTE && (
+                  <div className="mb-6">
+                    <Label className="font-semibold text-gray-700">Mô tả tình trạng pháp lý</Label>
+                    <Input
+                      value={formData.legal_note ?? ''}
+                      onChange={(e) => updateFormData({ legal_note: e.target.value })}
+                      placeholder="VD: Đất đã có quyết định giao đất, đang hoàn thiện thủ tục cấp sổ"
+                      maxLength={500}
+                      className="mt-2 h-11 bg-gray-50"
+                    />
+                    <p className="mt-1.5 text-xs text-gray-500">
+                      Ghi rõ giúp người mua yên tâm hơn. Tối đa 500 ký tự.
+                    </p>
+                  </div>
+                )}
+
                 {isFieldVisible(group, 'furniture') && (
                   <div className="mb-6">
                     <Label className="font-semibold text-gray-700">Tình trạng nội thất</Label>
@@ -1048,9 +1170,7 @@ export default function DangTinPage() {
                       onValueChange={(value) => updateFormData({ furniture: value || '' })}
                     >
                       <SelectTrigger className="mt-2 h-11 bg-gray-50 w-full md:w-1/2">
-                        <SelectValue>
-                          {(v: string) => FURNITURE_OPTIONS.find(o => o.value === v)?.label ?? 'Chọn tình trạng'}
-                        </SelectValue>
+                        <SelectValue>{optionLabel(FURNITURE_OPTIONS, 'Chọn tình trạng')}</SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {FURNITURE_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
@@ -1149,38 +1269,21 @@ export default function DangTinPage() {
                         AI dựa trên thông tin bạn vừa nhập ở trên, không tự thêm thông tin khác.
                       </p>
                     </div>
-                    <div className="flex gap-2 shrink-0">
+                    {/* Một nút duy nhất (feedback 28/07 mục 5) — trước đây 3 nút Tạo tiêu đề /
+                        Viết mô tả / Tạo cả hai chỉ làm tăng số thao tác mà kết quả mong muốn
+                        gần như luôn là "sinh cả hai". */}
+                    <div className="shrink-0">
                       <Button
                         type="button"
-                        variant="outline"
-                        disabled={aiLoading !== null || !formData.category_id}
-                        onClick={() => generateContent('title')}
-                        className="h-9"
+                        disabled={aiLoading || !formData.category_id}
+                        onClick={() => generateContent()}
+                        className="h-10 px-4 bg-primary hover:bg-primary/90 text-white"
                       >
-                        {aiLoading === 'title' ? (
-                          <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Đang viết</>
-                        ) : 'Tạo tiêu đề'}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        disabled={aiLoading !== null || !formData.category_id}
-                        onClick={() => generateContent('description')}
-                        className="h-9"
-                      >
-                        {aiLoading === 'description' ? (
-                          <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Đang viết</>
-                        ) : 'Viết mô tả'}
-                      </Button>
-                      <Button
-                        type="button"
-                        disabled={aiLoading !== null || !formData.category_id}
-                        onClick={() => generateContent('both')}
-                        className="h-9 bg-primary hover:bg-primary/90 text-white"
-                      >
-                        {aiLoading === 'both' ? (
-                          <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Đang viết</>
-                        ) : 'Tạo cả hai'}
+                        {aiLoading ? (
+                          <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Đang viết nội dung...</>
+                        ) : (
+                          <><Sparkles className="h-4 w-4 mr-2" />Tạo tiêu đề & mô tả bằng AI</>
+                        )}
                       </Button>
                     </div>
                   </div>

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { Heart, MapPin, Bed, Bath, Square, User, CheckCircle, Camera, Eye } from 'lucide-react';
-import { formatPrice, timeAgo } from '@/lib/formatters';
+import { formatPrice, timeAgo, derivePrices } from '@/lib/formatters';
 import { CONFIG } from '@/lib/config';
 
 interface PropertyCardProps {
@@ -50,6 +50,18 @@ export function PropertyCard({ property, className, variant = 'default' }: Prope
   const href = `/${property.type === 'sell' ? 'mua-ban' : 'cho-thue'}/${property.slug}`;
   // eslint-disable-next-line react-hooks/purity
   const isNew = property.created_at && (Date.now() - new Date(property.created_at).getTime() < 86400000);
+
+  // Không tự chia price cho area: khi price_unit là 'per_m2' thì price đã LÀ giá mỗi m², chia
+  // thêm lần nữa ra con số lệch đúng một lần diện tích.
+  const { total: totalPrice, perM2: pricePerM2 } = derivePrices(
+    property.price,
+    property.priceUnit,
+    property.area
+  );
+  const priceLabel = formatPrice(
+    totalPrice ?? property.price,
+    property.priceUnit === 'per_m2' ? undefined : property.priceUnit
+  );
 
   if (variant === 'compact') {
     return (
@@ -164,11 +176,11 @@ export function PropertyCard({ property, className, variant = 'default' }: Prope
               <div>
                 <p className="text-xs text-gray-400">Mức giá</p>
                 <p className="text-base font-bold text-[#e03131]">
-                  {formatPrice(property.price, property.priceUnit)}
+                  {priceLabel}
                 </p>
-                {property.area > 0 && property.type === 'sell' && (
+                {pricePerM2 !== null && property.type === 'sell' && (
                   <p className="text-xs text-gray-400">
-                    {formatPrice(Math.round(property.price / property.area))}/m²
+                    {formatPrice(pricePerM2)}/m²
                   </p>
                 )}
               </div>
@@ -306,11 +318,11 @@ export function PropertyCard({ property, className, variant = 'default' }: Prope
         <div className="flex items-end justify-between mt-1">
           <div>
             <p className="text-[18px] font-bold text-[#e03131] leading-none">
-              {formatPrice(property.price, property.priceUnit)}
+              {priceLabel}
             </p>
-            {property.area > 0 && property.type === 'sell' && (
+            {pricePerM2 !== null && property.type === 'sell' && (
               <p className="text-[11px] text-gray-400 mt-0.5">
-                · {formatPrice(Math.round(property.price / property.area))}/m²
+                · {formatPrice(pricePerM2)}/m²
               </p>
             )}
           </div>
