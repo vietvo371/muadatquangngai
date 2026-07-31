@@ -13,7 +13,7 @@ import { FilterTags } from '@/components/shared/FilterTags';
 import { PropertyCardSkeleton } from '@/components/property/PropertyCardSkeleton';
 import { filterProperties, buildFilterTags, removeTag } from '@/lib/filter-properties';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { SearchX, ChevronRight, ChevronLeft, Home, MapPin, Bell, Map as MapIcon, X } from 'lucide-react';
+import { SearchX, ChevronRight, ChevronLeft, Home, MapPin, Bell, X } from 'lucide-react';
 import { formatPrice } from '@/lib/formatters';
 import { Switch } from '@/components/ui/switch';
 
@@ -143,11 +143,12 @@ const mockProperties: MockProperty[] = [
 
 function PropertyListingContent() {
   const [hoveredId, setHoveredId] = useState<string | number | null>(null);
-  const [mobileMapOpen, setMobileMapOpen] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname() || '/cho-thue';
+  // Chế độ bản đồ bật/tắt bằng nút "Xem bản đồ" (như batdongsan ?tpl=map) — mặc định tắt.
+  const [mapMode, setMapMode] = useState(searchParams?.get('tpl') === 'map');
 
   // Real API integration state
   const { fetchProperties, isLoading: isApiLoading } = useProperties();
@@ -415,8 +416,8 @@ function PropertyListingContent() {
             </SheetContent>
           </Sheet>
 
-          {/* Main Content */}
-          <div className="flex-1 min-w-0">
+          {/* Main Content — khi bật bản đồ, cột danh sách co lại để nhường chỗ bản đồ bên phải. */}
+          <div className={`min-w-0 ${mapMode ? 'lg:w-[42%] lg:flex-none w-full' : 'flex-1'}`}>
             {/* Breadcrumb (Nested Inside Left Column) */}
             <div className="flex items-center gap-2 text-[13px] text-gray-500 mb-3.5 font-medium">
               <Link href="/" className="hover:text-primary transition-colors flex items-center gap-1">
@@ -457,6 +458,8 @@ function PropertyListingContent() {
                   totalResults={useRealApi ? apiPagination.total : displayProperties.length}
                   sort={sort}
                   onSortChange={setSort}
+                  mapMode={mapMode}
+                  onToggleMap={() => setMapMode((v) => !v)}
                 />
               </div>
             </div>
@@ -472,9 +475,9 @@ function PropertyListingContent() {
               </div>
             )}
 
-            {/* Danh sách BĐS — một giao diện lưới thống nhất (đã bỏ toggle Lưới/Danh sách). */}
+            {/* Danh sách BĐS — một giao diện lưới thống nhất. Khi bật bản đồ, co về 1 cột. */}
             {isLoading || isFiltering ? (
-              <div className="grid sm:grid-cols-2 gap-5">
+              <div className={`grid gap-5 ${mapMode ? 'grid-cols-1 xl:grid-cols-2' : 'sm:grid-cols-2 lg:grid-cols-3'}`}>
                 {[...Array(6)].map((_, i) => (
                   <PropertyCardSkeleton key={i} variant="grid" />
                 ))}
@@ -509,7 +512,7 @@ function PropertyListingContent() {
                 </div>
               </div>
             ) : (
-              <div ref={listRef} className="grid sm:grid-cols-2 gap-5">
+              <div ref={listRef} className={`grid gap-5 ${mapMode ? 'grid-cols-1 xl:grid-cols-2' : 'sm:grid-cols-2 lg:grid-cols-3'}`}>
                 {displayProperties.map((property, index) => (
                   <div
                     key={property.id}
@@ -597,39 +600,40 @@ function PropertyListingContent() {
             )}
           </div>
 
-          {/* Bản đồ split-view — hiện tất cả BĐS có toạ độ, đồng bộ 2 chiều với danh sách
-              (feedback "Tìm trên bản đồ"). Dùng Goong, KHÔNG dùng Leaflet/OSM cũ. */}
-          <aside className="hidden lg:block w-[40%] max-w-[560px] shrink-0 sticky top-[80px] self-start">
-            <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm h-[calc(100vh-100px)]">
-              <PropertyMapView
-                properties={displayProperties}
-                highlightedId={hoveredId}
-                onMarkerClick={(id) => {
-                  setHoveredId(id);
-                  document.getElementById(`prop-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }}
-                className="w-full h-full"
-              />
-            </div>
-          </aside>
+          {/* Bản đồ — CHỈ hiện khi bật chế độ bản đồ bằng nút "Xem bản đồ" (như batdongsan
+              ?tpl=map). Đồng bộ 2 chiều với danh sách. Dùng Goong, KHÔNG dùng Leaflet cũ. */}
+          {mapMode && (
+            <aside className="hidden lg:block flex-1 shrink-0 sticky top-[80px] self-start">
+              <div className="relative rounded-2xl overflow-hidden border border-gray-200 shadow-sm h-[calc(100vh-100px)]">
+                <button
+                  type="button"
+                  onClick={() => setMapMode(false)}
+                  className="absolute top-3 right-3 z-10 h-9 px-3.5 rounded-lg bg-[#12a5a5] hover:bg-[#0e8f8f] text-white font-semibold text-[13px] flex items-center gap-1.5 shadow-md"
+                >
+                  <X className="w-4 h-4" />
+                  Đóng bản đồ
+                </button>
+                <PropertyMapView
+                  properties={displayProperties}
+                  highlightedId={hoveredId}
+                  onMarkerClick={(id) => {
+                    setHoveredId(id);
+                    document.getElementById(`prop-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }}
+                  className="w-full h-full"
+                />
+              </div>
+            </aside>
+          )}
         </div>
       </div>
 
-      {/* Mobile: nút mở bản đồ nổi + overlay toàn màn hình. */}
-      <button
-        type="button"
-        onClick={() => setMobileMapOpen(true)}
-        className="lg:hidden fixed bottom-5 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-5 h-11 rounded-full bg-gray-900 text-white font-semibold text-[14px] shadow-lg active:scale-95"
-      >
-        <MapIcon className="w-4 h-4" />
-        Tìm trên bản đồ
-      </button>
-
-      {mobileMapOpen && (
+      {/* Mobile: chế độ bản đồ mở dạng overlay toàn màn hình. */}
+      {mapMode && (
         <div className="lg:hidden fixed inset-0 z-50 flex flex-col bg-white">
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
             <span className="font-bold text-gray-900">Bản đồ bất động sản</span>
-            <button type="button" onClick={() => setMobileMapOpen(false)} className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg" aria-label="Đóng bản đồ">
+            <button type="button" onClick={() => setMapMode(false)} className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg" aria-label="Đóng bản đồ">
               <X className="w-5 h-5" />
             </button>
           </div>
