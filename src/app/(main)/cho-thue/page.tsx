@@ -1,6 +1,7 @@
 'use client';
 
-import { Suspense, useState, useMemo, useCallback, useEffect } from 'react';
+import { Suspense, useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
@@ -12,10 +13,18 @@ import { FilterTags } from '@/components/shared/FilterTags';
 import { PropertyCardSkeleton } from '@/components/property/PropertyCardSkeleton';
 import { filterProperties, buildFilterTags, removeTag } from '@/lib/filter-properties';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { SearchX, ChevronRight, ChevronLeft, Home, MapPin, Bell } from 'lucide-react';
+import { SearchX, ChevronRight, ChevronLeft, Home, MapPin, Bell, Map as MapIcon, X } from 'lucide-react';
 import { formatPrice } from '@/lib/formatters';
-import { ContactDialog } from '@/components/shared/ContactDialog';
 import { Switch } from '@/components/ui/switch';
+
+// Bản đồ Goong nạp phía client (feedback "Tìm trên bản đồ" — split-view list + bản đồ).
+const PropertyMapView = dynamic(
+  () => import('@/components/map/PropertyMapView').then((m) => m.PropertyMapView),
+  {
+    ssr: false,
+    loading: () => <div className="w-full h-full bg-gray-100 animate-pulse flex items-center justify-center text-sm text-gray-400">Đang tải bản đồ...</div>,
+  }
+);
 import { CONFIG } from '@/lib/config';
 import { useProperties } from '@/hooks/useProperties';
 import { parseFiltersFromSearchParams, buildSearchParamsFromState } from '@/lib/filter-url-sync';
@@ -32,6 +41,8 @@ const mapApiProperty = (apiProp: any) => {
     category: apiProp.category?.name || 'Bất động sản',
     thumbnail: apiProp.thumbnail || '/images/image_data/Haus-Coastal.jpg',
     location: apiProp.location?.district ? `${apiProp.location.district.name}, Quảng Ngãi` : apiProp.address || 'Quảng Ngãi',
+    latitude: apiProp.location?.latitude != null ? Number(apiProp.location.latitude) : null,
+    longitude: apiProp.location?.longitude != null ? Number(apiProp.location.longitude) : null,
     bedrooms: Number(apiProp.bedrooms || 0),
     bathrooms: Number(apiProp.bathrooms || 0),
     isVip: apiProp.is_vip || 'normal',
@@ -44,21 +55,6 @@ const mapApiProperty = (apiProp: any) => {
   };
 };
 
-const QUICK_PRICE_PRESETS_RENT: Array<{ label: string; min: number | ''; max: number | '' }> = [
-  { label: 'Thỏa thuận', min: '', max: '' },
-  { label: 'Dưới 2 triệu', min: '', max: 2000000 },
-  { label: '2 - 5 triệu', min: 2000000, max: 5000000 },
-  { label: '5 - 10 triệu', min: 5000000, max: 10000000 },
-  { label: 'Trên 10 triệu', min: 10000000, max: '' },
-];
-
-const QUICK_AREA_PRESETS: Array<{ label: string; min: number | ''; max: number | '' }> = [
-  { label: 'Dưới 30 m²', min: '', max: 30 },
-  { label: '30 - 50 m²', min: 30, max: 50 },
-  { label: '50 - 80 m²', min: 50, max: 80 },
-  { label: '80 - 100 m²', min: 80, max: 100 },
-  { label: 'Trên 100 m²', min: 100, max: '' },
-];
 
 
 interface MockProperty {
@@ -146,7 +142,9 @@ const mockProperties: MockProperty[] = [
 ];
 
 function PropertyListingContent() {
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [hoveredId, setHoveredId] = useState<string | number | null>(null);
+  const [mobileMapOpen, setMobileMapOpen] = useState(false);
+  const listRef = useRef<HTMLDivElement>(null);
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname() || '/cho-thue';
@@ -173,7 +171,6 @@ function PropertyListingContent() {
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const [sort, setSort] = useState(initialUrlState.sort);
   const [slide, setSlide] = useState(0);
-  const [contactOpen, setContactOpen] = useState(false);
   const [receiveEmail, setReceiveEmail] = useState(false);
 
   // Đọc lại filter từ URL mỗi khi query đổi do điều hướng bên ngoài (click menu danh mục con ở
@@ -288,16 +285,6 @@ function PropertyListingContent() {
     return sourceList.filter(p => p.isVip !== 'normal');
   }, [useRealApi, apiProperties]);
 
-  const featuredProperties = useMemo(() => {
-    const sourceList = useRealApi ? apiProperties : mockProperties;
-    if (CONFIG.enableVip) {
-      return sourceList.filter(p => p.isVip !== 'normal').slice(0, 5);
-    }
-    // Return top properties sorted by views
-    return [...sourceList]
-      .sort((a, b) => (b.views || 0) - (a.views || 0))
-      .slice(0, 5);
-  }, [useRealApi, apiProperties]);
 
   // Automatic slide rotation
   useEffect(() => {
@@ -466,9 +453,7 @@ function PropertyListingContent() {
               </div>
 
               <div className="flex-1 sm:flex-none">
-                <SortBar 
-                  viewMode={viewMode} 
-                  onViewModeChange={setViewMode} 
+                <SortBar
                   totalResults={useRealApi ? apiPagination.total : displayProperties.length}
                   sort={sort}
                   onSortChange={setSort}
@@ -487,14 +472,11 @@ function PropertyListingContent() {
               </div>
             )}
 
-            {/* Properties Grid */}
+            {/* Danh sách BĐS — một giao diện lưới thống nhất (đã bỏ toggle Lưới/Danh sách). */}
             {isLoading || isFiltering ? (
-              <div className={viewMode === 'grid'
-                ? 'grid sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-5'
-                : 'space-y-4'
-              }>
+              <div className="grid sm:grid-cols-2 gap-5">
                 {[...Array(6)].map((_, i) => (
-                  <PropertyCardSkeleton key={i} variant={viewMode} />
+                  <PropertyCardSkeleton key={i} variant="grid" />
                 ))}
               </div>
             ) : displayProperties.length === 0 ? (
@@ -527,16 +509,18 @@ function PropertyListingContent() {
                 </div>
               </div>
             ) : (
-              <div className={viewMode === 'grid'
-                ? 'grid sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-5'
-                : 'space-y-4'
-              }>
+              <div ref={listRef} className="grid sm:grid-cols-2 gap-5">
                 {displayProperties.map((property, index) => (
                   <div
                     key={property.id}
-                    className={`animate-fade-in-up stagger-${Math.min(index + 1, 8)} opacity-0`}
+                    id={`prop-${property.id}`}
+                    onMouseEnter={() => setHoveredId(property.id)}
+                    onMouseLeave={() => setHoveredId((cur) => (cur === property.id ? null : cur))}
+                    className={`animate-fade-in-up stagger-${Math.min(index + 1, 8)} opacity-0 rounded-2xl transition-shadow ${
+                      String(hoveredId) === String(property.id) ? 'ring-2 ring-primary ring-offset-2' : ''
+                    }`}
                   >
-                    <PropertyCard property={property} variant={viewMode === 'grid' ? 'default' : 'compact'} />
+                    <PropertyCard property={property} variant="default" />
                   </div>
                 ))}
               </div>
@@ -613,117 +597,52 @@ function PropertyListingContent() {
             )}
           </div>
 
-          {/* Right sidebar — Featured properties, CTA, and Quick filters (desktop only) */}
-          <aside className="hidden xl:block w-64 shrink-0 space-y-6 sticky top-[80px]">
-            {/* Lọc theo khoảng giá */}
-            <div className="bg-white rounded-2xl border border-gray-105 p-4 shadow-sm">
-              <h3 className="text-[14px] font-bold text-gray-800 tracking-tight mb-3 flex items-center gap-2">
-                <div className="w-1 h-4 bg-primary rounded-full" />
-                Lọc theo khoảng giá
-              </h3>
-              <div className="flex flex-col gap-2">
-                {QUICK_PRICE_PRESETS_RENT.map((preset) => {
-                  const isSel = filters.priceMin === preset.min && filters.priceMax === preset.max;
-                  return (
-                    <button
-                      key={preset.label}
-                      onClick={() => updateFilters({ priceMin: preset.min, priceMax: preset.max })}
-                      className={`text-left text-[13px] py-0.5 transition-colors hover:text-primary ${
-                        isSel ? 'text-primary font-bold' : 'text-gray-600 font-medium'
-                      }`}
-                    >
-                      {preset.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Lọc theo diện tích */}
-            <div className="bg-white rounded-2xl border border-gray-105 p-4 shadow-sm">
-              <h3 className="text-[14px] font-bold text-gray-800 tracking-tight mb-3 flex items-center gap-2">
-                <div className="w-1 h-4 bg-primary rounded-full" />
-                Lọc theo diện tích
-              </h3>
-              <div className="flex flex-col gap-2">
-                {QUICK_AREA_PRESETS.map((preset) => {
-                  const isSel = filters.areaMin === preset.min && filters.areaMax === preset.max;
-                  return (
-                    <button
-                      key={preset.label}
-                      onClick={() => updateFilters({ areaMin: preset.min, areaMax: preset.max })}
-                      className={`text-left text-[13px] py-0.5 transition-colors hover:text-primary ${
-                        isSel ? 'text-primary font-bold' : 'text-gray-600 font-medium'
-                      }`}
-                    >
-                      {preset.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Tin đăng nổi bật */}
-            {featuredProperties.length > 0 && (
-              <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-                <div className="px-4 py-3.5 border-b border-gray-100 flex items-center gap-2">
-                  <div className="w-1 h-4 bg-primary rounded-full" />
-                  <h3 className="text-[14px] font-bold text-gray-800 tracking-tight">Tin đăng nổi bật</h3>
-                </div>
-                <div className="divide-y divide-gray-50">
-                  {featuredProperties.map((property) => (
-                    <Link
-                      key={property.id}
-                      href={`/${property.type === 'sell' ? 'mua-ban' : 'cho-thue'}/${property.slug}`}
-                      className="flex gap-3 p-3.5 hover:bg-gray-50 transition-colors group"
-                    >
-                      <div className="relative w-20 h-16 shrink-0 rounded-xl overflow-hidden bg-gray-50">
-                        <Image
-                          src={property.thumbnail}
-                          alt={property.title}
-                          fill
-                          className="object-cover group-hover:scale-105 transition-transform duration-300"
-                          sizes="80px"
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[12px] font-bold text-gray-800 line-clamp-2 group-hover:text-primary transition-colors leading-snug mb-1">
-                          {property.title}
-                        </p>
-                        <div className="flex items-center gap-2 justify-between mt-1">
-                          <p className="text-[13px] font-black text-cta">{formatPrice(property.price)}</p>
-                          <p className="text-[11px] font-medium text-gray-400">{property.area} m²</p>
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* CTA tư vấn */}
-            <div className="bg-primary rounded-2xl p-5 text-white shadow-md relative overflow-hidden group">
-              <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-white/10 rounded-full blur-xl group-hover:bg-white/15 transition-all" />
-              <div className="absolute -left-6 -top-6 w-20 h-20 bg-white/5 rounded-full blur-lg" />
-              
-              <div className="relative z-10">
-                <h3 className="text-[15px] font-black mb-1.5 tracking-tight">Ký gửi & Tư vấn</h3>
-                <p className="text-[12px] text-white/80 mb-4 leading-relaxed">
-                  Bạn muốn bán, cho thuê hoặc tìm mua bất động sản tại Quảng Ngãi? Liên hệ ngay!
-                </p>
-                <button
-                  onClick={() => setContactOpen(true)}
-                  className="block w-full text-center bg-white text-primary text-[13px] font-bold py-2 rounded-xl hover:bg-primary-light transition-all shadow-sm active:scale-95"
-                >
-                  Gửi yêu cầu ngay
-                </button>
-              </div>
+          {/* Bản đồ split-view — hiện tất cả BĐS có toạ độ, đồng bộ 2 chiều với danh sách
+              (feedback "Tìm trên bản đồ"). Dùng Goong, KHÔNG dùng Leaflet/OSM cũ. */}
+          <aside className="hidden lg:block w-[40%] max-w-[560px] shrink-0 sticky top-[80px] self-start">
+            <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm h-[calc(100vh-100px)]">
+              <PropertyMapView
+                properties={displayProperties}
+                highlightedId={hoveredId}
+                onMarkerClick={(id) => {
+                  setHoveredId(id);
+                  document.getElementById(`prop-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }}
+                className="w-full h-full"
+              />
             </div>
           </aside>
         </div>
       </div>
 
-      <ContactDialog open={contactOpen} onClose={() => setContactOpen(false)} />
+      {/* Mobile: nút mở bản đồ nổi + overlay toàn màn hình. */}
+      <button
+        type="button"
+        onClick={() => setMobileMapOpen(true)}
+        className="lg:hidden fixed bottom-5 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-5 h-11 rounded-full bg-gray-900 text-white font-semibold text-[14px] shadow-lg active:scale-95"
+      >
+        <MapIcon className="w-4 h-4" />
+        Tìm trên bản đồ
+      </button>
+
+      {mobileMapOpen && (
+        <div className="lg:hidden fixed inset-0 z-50 flex flex-col bg-white">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+            <span className="font-bold text-gray-900">Bản đồ bất động sản</span>
+            <button type="button" onClick={() => setMobileMapOpen(false)} className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg" aria-label="Đóng bản đồ">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="flex-1">
+            <PropertyMapView
+              properties={displayProperties}
+              highlightedId={hoveredId}
+              onMarkerClick={(id) => setHoveredId(id)}
+              className="w-full h-full"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

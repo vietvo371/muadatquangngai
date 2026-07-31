@@ -1,15 +1,14 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { 
-  Search, 
-  Map, 
-  ChevronDown, 
-  SlidersHorizontal, 
-  ShieldCheck, 
-  Award, 
-  X, 
-  RotateCcw 
+import {
+  Search,
+  ChevronDown,
+  SlidersHorizontal,
+  ShieldCheck,
+  Award,
+  X,
+  RotateCcw
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
@@ -157,24 +156,14 @@ export function FilterHorizontal({
           )}
         </div>
 
-        {/* Action Buttons */}
+        {/* Action Buttons — đã bỏ nút "Xem bản đồ" riêng (feedback 28/07); bản đồ nằm trong
+            split-view của trang danh sách. */}
         <div className="flex gap-2 shrink-0">
-          
-          {/* CTA Search Button */}
           <button
             onClick={handleSearchClick}
-            className="flex-1 md:flex-none bg-cta hover:bg-cta-dark text-white font-semibold text-[14px] px-6 h-[48px] rounded-xl transition-all duration-200 shadow-md shadow-cta/10 hover:shadow-lg active:scale-[0.98]"
+            className="flex-1 md:flex-none bg-cta hover:bg-cta-dark text-white font-semibold text-[14px] px-8 h-[48px] rounded-xl transition-all duration-200 shadow-md shadow-cta/10 hover:shadow-lg active:scale-[0.98]"
           >
             Tìm kiếm
-          </button>
-
-          {/* Map View Button */}
-          <button
-            onClick={() => {}}
-            className="flex-1 md:flex-none border border-primary text-primary hover:bg-primary-light font-bold text-[14px] px-5 h-[48px] rounded-xl flex items-center justify-center gap-2 transition-all duration-200 shadow-sm shadow-primary/5 active:scale-[0.98]"
-          >
-            <Map className="w-4 h-4" />
-            <span>Xem bản đồ</span>
           </button>
         </div>
       </div>

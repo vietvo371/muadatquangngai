@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Trang bản đồ riêng /ban-do đã gộp vào split-view của /mua-ban (feedback 28/07) — giữ
+  // redirect để link cũ không 404.
+  async redirects() {
+    return [{ source: '/ban-do', destination: '/mua-ban', permanent: true }];
+  },
   images: {
     remotePatterns: [
       {
