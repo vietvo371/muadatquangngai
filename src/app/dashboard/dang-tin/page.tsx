@@ -31,8 +31,11 @@ import {
   PRICE_UNIT_OPTIONS,
   isValidPhone,
   isValidEmail,
+  directionText,
+  legalText,
 } from '@/lib/property-form-config';
 import { derivePrices, formatMoneyShort } from '@/lib/formatters';
+import { ListingPreview, type ListingPreviewData } from '@/components/property/detail/ListingPreview';
 import { 
   ArrowLeft, 
   ArrowRight, 
@@ -40,7 +43,8 @@ import {
   Home,
   DollarSign,
   Loader2,
-  Sparkles
+  Sparkles,
+  Eye
 } from 'lucide-react';
 
 // Bản đồ dùng Leaflet nên phải nạp phía client, không dựng sẵn trên server được.
@@ -252,6 +256,10 @@ export default function DangTinPage() {
     if (!draft.found) return;
     setFormData(draft.found.data);
     setCurrentStep(draft.found.step || 1);
+    // Bản nháp có sẵn toạ độ nghĩa là người dùng đã ghim trước đó — giữ nguyên, đừng để
+    // auto-geocode ghi đè khi họ mở lại tin dở dang.
+    if (draft.found.data.latitude != null) pinIsAutoRef.current = false;
+    if (draft.found.data.street?.trim()) streetAutoFilledRef.current = false;
     draft.dismiss();
     setDraftHandled(true);
     toast.success('Đã khôi phục bản nháp gần nhất.');
@@ -410,6 +418,11 @@ export default function DangTinPage() {
   // người dùng đã tự sửa tay, coi như họ "chốt" giá trị đó, không tự động đổi nữa.
   const streetAutoFilledRef = useRef(false);
 
+  // Ghim hiện tại do hệ thống tự đặt (auto-geocode / tâm khu vực từ LocationSelect) hay do
+  // người dùng chủ động click/kéo. Mặc định `true`: chỉ khi người dùng tự thao tác lên bản đồ
+  // mới thành `false`, để việc LocationSelect gán tâm tỉnh không bị nhầm là "người dùng đã ghim".
+  const pinIsAutoRef = useRef(true);
+
   /**
    * Người dùng ghim một điểm trên bản đồ (spec: chọn địa chỉ bằng bản đồ thay vì gõ tay).
    *
@@ -418,6 +431,8 @@ export default function DangTinPage() {
    * đăng khó phát hiện.
    */
   const handleMapPick = async ({ lat, lng }: { lat: number; lng: number }) => {
+    // Người dùng tự click/kéo ghim → từ giờ auto-geocode không đè lên nữa.
+    pinIsAutoRef.current = false;
     updateFormData({ latitude: lat, longitude: lng });
     setIsGeocoding(true);
     setGeocodeNote(null);
@@ -471,6 +486,62 @@ export default function DangTinPage() {
   };
 
   /**
+   * Tự động ghim vị trí trên bản đồ khi người dùng đã nhập đủ địa chỉ (feedback 28/07 mục 2).
+   *
+   * Chỉ chạy khi:
+   *  - có đủ tỉnh + xã/phường + địa chỉ cụ thể do NGƯỜI DÙNG gõ (streetAutoFilledRef=false,
+   *    nếu không thì street là do reverse-geocode tự điền → geocode ngược lại sẽ thành vòng lặp);
+   *  - người dùng CHƯA tự đặt ghim (chưa có toạ độ, hoặc ghim hiện tại cũng do auto đặt).
+   *
+   * Lùi dần khi không tra được địa chỉ chi tiết: [số nhà + khu vực] → [chỉ khu vực], và ghi
+   * chú rõ là ghim tương đối để người dùng biết kéo lại cho đúng.
+   */
+  useEffect(() => {
+    const street = formData.street.trim();
+    const area = [formData.ward_name, formData.district_name, formData.province_name].filter(Boolean).join(', ');
+
+    // Thiếu dữ liệu tối thiểu, hoặc street do reverse tự điền, hoặc người dùng đã tự ghim → bỏ qua.
+    if (!formData.province_name || !formData.district_name || !street || streetAutoFilledRef.current) return;
+    if (formData.latitude != null && !pinIsAutoRef.current) return;
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      // Thử địa chỉ đầy đủ trước, không ra thì lùi về tâm khu vực.
+      const queries = [[street, area].filter(Boolean).join(', '), area].filter(Boolean);
+      setIsGeocoding(true);
+      try {
+        for (let i = 0; i < queries.length; i++) {
+          const res = await api.get(`/api/v2/geocode/search?q=${encodeURIComponent(queries[i])}`);
+          const hits: Array<{ lat: number; lng: number; in_coverage: boolean }> = res.data?.data ?? [];
+          // Ưu tiên kết quả nằm trong tỉnh phục vụ; không có thì lấy kết quả đầu.
+          const hit = hits.find((h) => h.in_coverage) ?? hits[0];
+          if (cancelled) return;
+          if (hit) {
+            pinIsAutoRef.current = true;
+            updateFormData({ latitude: hit.lat, longitude: hit.lng });
+            setGeocodeNote(
+              i === 0
+                ? { type: 'ok', text: 'Đã tự động ghim theo địa chỉ. Kéo ghim để chỉnh nếu chưa đúng.' }
+                : { type: 'warn', text: `Chưa tra được số nhà — đã ghim tương đối theo ${formData.district_name}. Kéo ghim để chỉnh cho đúng.` }
+            );
+            return;
+          }
+        }
+      } catch {
+        // Geocode hỏng thì im lặng — người dùng vẫn tự ghim tay được, không chặn luồng.
+      } finally {
+        if (!cancelled) setIsGeocoding(false);
+      }
+    }, 800);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- chỉ chạy lại khi địa chỉ thật đổi
+  }, [formData.street, formData.province_name, formData.district_name, formData.ward_name]);
+
+  /**
    * Quy đổi giá hiển thị ngay dưới ô nhập (feedback mục 3.3). Chỉ trả về khi có tổng giá
    * thật — thiếu diện tích thì `perM2` là null và phần đó tự ẩn, không hiện "0/m²".
    */
@@ -480,6 +551,44 @@ export default function DangTinPage() {
   const formerUnits = formData.district_id ? (FORMER_UNITS[formData.district_id] ?? []) : [];
 
   const selectedPackage = packages.find((p) => p.id === formData.package_id) ?? null;
+
+  // Xem trước bài đăng (feedback 28/07 mục 6).
+  const [showPreview, setShowPreview] = useState(false);
+
+  /** Dựng dữ liệu xem trước từ formData đang soạn — cùng hình dạng object trang chi tiết render. */
+  const buildPreviewData = (): ListingPreviewData => {
+    const address =
+      [formData.street, formData.ward_name, formData.district_name, formData.province_name]
+        .filter(Boolean)
+        .join(', ') || formData.street;
+    return {
+      title: formData.title,
+      type: formData.type,
+      price: formData.price,
+      priceUnit: formData.price_unit,
+      priceNegotiable: formData.price_negotiable || formData.price_unit === 'negotiable',
+      area: formData.area,
+      bedrooms: isFieldVisible(group, 'bedrooms') ? formData.bedrooms : undefined,
+      bathrooms: isFieldVisible(group, 'bathrooms') ? formData.bathrooms : undefined,
+      direction: isFieldVisible(group, 'direction') && formData.direction ? directionText(formData.direction) : undefined,
+      legalLabel: isFieldVisible(group, 'legal') && formData.legal ? legalText(formData.legal) : undefined,
+      legalNote:
+        isFieldVisible(group, 'legal') && formData.legal === LEGAL_NEEDS_NOTE ? formData.legal_note : undefined,
+      description: formData.description,
+      media: formData.images.map((img) => img.url),
+      address,
+      categoryName: apiCategories.find((c) => String(c.id) === formData.category_id)?.name ?? 'Bất động sản',
+      features: features.filter((f) => formData.features.includes(f.id)).map((f) => f.name),
+      user: {
+        name: formData.contact_name || authUser?.name || 'Người đăng',
+        avatar: authUser?.avatar ?? null,
+        phone: formData.contact_phone,
+      },
+    };
+  };
+
+  // Đủ điều kiện xem trước khi đã có thông tin cơ bản của bước 1 + ít nhất một ảnh (bước 2).
+  const canPreview = !!(formData.category_id && formData.title && formData.area > 0 && formData.images.length > 0);
 
   const canProceed = () => {
     switch (currentStep) {
@@ -1439,7 +1548,21 @@ export default function DangTinPage() {
           Quay lại
         </Button>
 
-        {currentStep < LAST_STEP ? (
+        <div className="flex items-center gap-2">
+          {/* Xem trước bài đăng (feedback 28/07 mục 6) — hiện khi đã đủ thông tin cơ bản + ảnh. */}
+          {canPreview && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowPreview(true)}
+              className="gap-2 h-11 px-5 border-primary text-primary hover:bg-primary-light font-semibold rounded-xl"
+            >
+              <Eye className="h-4 w-4" />
+              <span className="hidden sm:inline">Xem trước</span>
+            </Button>
+          )}
+
+          {currentStep < LAST_STEP ? (
           <Button
             onClick={nextStep}
             disabled={!canProceed()}
@@ -1467,7 +1590,19 @@ export default function DangTinPage() {
             )}
           </Button>
         )}
+        </div>
       </div>
+
+      {/* Overlay xem trước bài đăng — đóng lại là quay về đúng chỗ đang soạn. */}
+      {showPreview && (
+        <ListingPreview
+          data={buildPreviewData()}
+          onClose={() => setShowPreview(false)}
+          onSubmit={handleSubmit}
+          submitting={isSubmitting}
+          submitLabel={currentStep === LAST_STEP ? 'Đăng tin ngay' : 'Đăng tin'}
+        />
+      )}
     </div>
   );
 }
