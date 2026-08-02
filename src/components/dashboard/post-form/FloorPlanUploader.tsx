@@ -1,9 +1,10 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
-import { Upload, X, FileText, Loader2, ExternalLink } from 'lucide-react';
+import { Upload, X, FileText, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { fileUploadApi } from '@/lib/admin-api';
+import { useUploadProgress } from '@/hooks/useUploadProgress';
 
 export interface FloorPlanFile {
   url: string;
@@ -28,7 +29,7 @@ interface FloorPlanUploaderProps {
  * Cloudinary phân loại PDF là resource_type nào.
  */
 export function FloorPlanUploader({ files, onChange, maxFiles = 5, disabled = false }: FloorPlanUploaderProps) {
-  const [uploadingCount, setUploadingCount] = useState(0);
+  const uploadProgress = useUploadProgress();
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -50,11 +51,12 @@ export function FloorPlanUploader({ files, onChange, maxFiles = 5, disabled = fa
       }
 
       setError(null);
-      setUploadingCount((n) => n + newFiles.length);
       const results = await Promise.all(
-        newFiles.map(async (file): Promise<FloorPlanFile | null> => {
+        newFiles.map(async (file, idx): Promise<FloorPlanFile | null> => {
+          const progressId = `${file.name}-${file.size}-${Date.now()}-${idx}`;
+          uploadProgress.start(progressId, file.name);
           try {
-            const res = await fileUploadApi.upload(file);
+            const res = await fileUploadApi.upload(file, (percent) => uploadProgress.update(progressId, percent));
             return {
               url: res.url,
               // PDF: bỏ qua thumbnail transform, xem ghi chú đầu file.
@@ -64,15 +66,16 @@ export function FloorPlanUploader({ files, onChange, maxFiles = 5, disabled = fa
             };
           } catch {
             return null;
+          } finally {
+            uploadProgress.finish(progressId);
           }
         })
       );
-      setUploadingCount((n) => n - newFiles.length);
       const uploaded = results.filter((f): f is FloorPlanFile => f !== null);
       if (uploaded.length > 0) onChange([...files, ...uploaded]);
       if (uploaded.length < newFiles.length) setError('Một vài file tải lên thất bại, vui lòng thử lại.');
     },
-    [files, maxFiles, onChange]
+    [files, maxFiles, onChange, uploadProgress]
   );
 
   const canUpload = files.length < maxFiles;
@@ -111,10 +114,21 @@ export function FloorPlanUploader({ files, onChange, maxFiles = 5, disabled = fa
         <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">{error}</div>
       )}
 
-      {uploadingCount > 0 && (
-        <div className="mt-4 flex items-center gap-2 text-gray-500">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          <span>Đang tải {uploadingCount} file...</span>
+      {/* Tiến trình upload thật theo từng file (feedback I.8) */}
+      {Object.entries(uploadProgress.items).length > 0 && (
+        <div className="mt-4 space-y-2">
+          {Object.entries(uploadProgress.items).map(([id, item]) => (
+            <div key={id} className="flex items-center gap-3">
+              <span className="text-sm text-gray-600 truncate max-w-[140px]">{item.name}</span>
+              <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary rounded-full transition-all duration-150"
+                  style={{ width: `${item.percent}%` }}
+                />
+              </div>
+              <span className="text-xs text-gray-500 w-9 text-right">{item.percent}%</span>
+            </div>
+          ))}
         </div>
       )}
 

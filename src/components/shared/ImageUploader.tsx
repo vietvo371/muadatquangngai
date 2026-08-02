@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
-import { Upload, X, Image as ImageIcon, Loader2, GripVertical, AlertTriangle } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, GripVertical, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { fileUploadApi } from '@/lib/admin-api';
 import { IMAGE_CATEGORY_OPTIONS } from '@/lib/property-form-config';
+import { useUploadProgress } from '@/hooks/useUploadProgress';
 
 export interface UploadedFile {
   id?: number;
@@ -45,7 +46,8 @@ export function ImageUploader({
   className = '',
 }: ImageUploaderProps) {
   const [isDragging, setIsDragging] = useState(false);
-  const [uploadingCount, setUploadingCount] = useState(0);
+  /** Tiến trình upload thật theo từng file (feedback I.8), thay cho đếm số cũ. */
+  const uploadProgress = useUploadProgress();
   const [error, setError] = useState<string | null>(null);
   /** Ảnh tải lỗi, giữ lại File gốc để bấm thử lại được. */
   const [failed, setFailed] = useState<Array<{ id: string; file: File; message: string }>>([]);
@@ -81,11 +83,12 @@ export function ImageUploader({
     }
 
     setError(null);
-    setUploadingCount(prev => prev + newFiles.length);
 
     const uploadPromises = newFiles.map(async (file, idx): Promise<UploadedFile | null> => {
+      const progressId = `${file.name}-${file.size}-${Date.now()}-${idx}`;
+      uploadProgress.start(progressId, file.name);
       try {
-        const res = await fileUploadApi.upload(file);
+        const res = await fileUploadApi.upload(file, (percent) => uploadProgress.update(progressId, percent));
         return {
           url: (res as any).url ?? (res as any).data?.url,
           name: file.name,
@@ -102,24 +105,25 @@ export function ImageUploader({
           { id: `${file.name}-${file.size}-${Date.now()}-${idx}`, file, message: (e as Error).message },
         ]);
         return null;
+      } finally {
+        uploadProgress.finish(progressId);
       }
     });
 
     const results = await Promise.all(uploadPromises);
     const uploadedFiles: UploadedFile[] = results.filter((item): item is UploadedFile => item !== null);
 
-    setUploadingCount(prev => prev - newFiles.length);
     if (uploadedFiles.length > 0) onChange([...files, ...uploadedFiles]);
-  }, [files, maxFiles, maxSize, onChange]);
+  }, [files, maxFiles, maxSize, onChange, uploadProgress]);
 
   /** Tải lại một ảnh đã lỗi. Thành công thì bỏ khỏi danh sách lỗi và thêm vào danh sách ảnh. */
   const retryFailed = useCallback(async (id: string) => {
     const item = failed.find((f) => f.id === id);
     if (!item) return;
     setFailed((prev) => prev.filter((f) => f.id !== id));
-    setUploadingCount((n) => n + 1);
+    uploadProgress.start(id, item.file.name);
     try {
-      const res = await fileUploadApi.upload(item.file);
+      const res = await fileUploadApi.upload(item.file, (percent) => uploadProgress.update(id, percent));
       onChange([
         ...files,
         {
@@ -135,9 +139,9 @@ export function ImageUploader({
       setFailed((prev) => [...prev, { ...item, message: (e as Error).message }]);
       toast.error('Tải lại vẫn thất bại: ' + (e as Error).message);
     } finally {
-      setUploadingCount((n) => n - 1);
+      uploadProgress.finish(id);
     }
-  }, [failed, files, onChange]);
+  }, [failed, files, onChange, uploadProgress]);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -281,11 +285,21 @@ export function ImageUploader({
         </div>
       )}
 
-      {/* Uploading indicator */}
-      {uploadingCount > 0 && (
-        <div className="mt-4 flex items-center gap-2 text-gray-500">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          <span>Đang tải {uploadingCount} ảnh...</span>
+      {/* Tiến trình upload thật theo từng file (feedback I.8) */}
+      {Object.entries(uploadProgress.items).length > 0 && (
+        <div className="mt-4 space-y-2">
+          {Object.entries(uploadProgress.items).map(([id, item]) => (
+            <div key={id} className="flex items-center gap-3">
+              <span className="text-sm text-gray-600 truncate max-w-[140px]">{item.name}</span>
+              <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary rounded-full transition-all duration-150"
+                  style={{ width: `${item.percent}%` }}
+                />
+              </div>
+              <span className="text-xs text-gray-500 w-9 text-right">{item.percent}%</span>
+            </div>
+          ))}
         </div>
       )}
 
@@ -502,7 +516,7 @@ export function VideoUploader({
   className = '',
 }: VideoUploaderProps) {
   const [isDragging, setIsDragging] = useState(false);
-  const [uploadingCount, setUploadingCount] = useState(0);
+  const uploadProgress = useUploadProgress();
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<'youtube' | 'upload'>('youtube');
   const [youtubeUrl, setYoutubeUrl] = useState('');
@@ -561,24 +575,26 @@ export function VideoUploader({
     }
 
     setError(null);
-    setUploadingCount(prev => prev + newFiles.length);
 
-    const uploadPromises = newFiles.map(async (file): Promise<UploadedFile | null> => {
+    const uploadPromises = newFiles.map(async (file, idx): Promise<UploadedFile | null> => {
+      const progressId = `${file.name}-${file.size}-${Date.now()}-${idx}`;
+      uploadProgress.start(progressId, file.name);
       try {
-        const res = await fileUploadApi.upload(file);
+        const res = await fileUploadApi.upload(file, (percent) => uploadProgress.update(progressId, percent));
         return { url: res.url, name: file.name, size: file.size };
       } catch (e) {
         toast.error('Upload video thất bại: ' + (e as any).message);
         return null;
+      } finally {
+        uploadProgress.finish(progressId);
       }
     });
 
     const results = await Promise.all(uploadPromises);
     const uploadedVideos: UploadedFile[] = results.filter((v): v is UploadedFile => v !== null);
 
-    setUploadingCount(prev => prev - newFiles.length);
     onChange([...videos, ...uploadedVideos]);
-  }, [videos, maxVideos, maxSize, onChange]);
+  }, [videos, maxVideos, maxSize, onChange, uploadProgress]);
 
   const removeVideo = (index: number) => {
     const video = videos[index];
@@ -671,6 +687,24 @@ export function VideoUploader({
       {error && (
         <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
           {error}
+        </div>
+      )}
+
+      {/* Tiến trình upload thật theo từng file (feedback I.8) */}
+      {Object.entries(uploadProgress.items).length > 0 && (
+        <div className="mt-4 space-y-2">
+          {Object.entries(uploadProgress.items).map(([id, item]) => (
+            <div key={id} className="flex items-center gap-3">
+              <span className="text-sm text-gray-600 truncate max-w-[140px]">{item.name}</span>
+              <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary rounded-full transition-all duration-150"
+                  style={{ width: `${item.percent}%` }}
+                />
+              </div>
+              <span className="text-xs text-gray-500 w-9 text-right">{item.percent}%</span>
+            </div>
+          ))}
         </div>
       )}
 

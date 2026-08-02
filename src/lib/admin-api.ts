@@ -611,38 +611,67 @@ export const fileUploadApi = {
    * Trả về shape { url, thumbnail, public_id, ... } khớp với ImageUploader
    * (đọc res.url). thumbnail dùng transform c_fill,w_400 của Cloudinary.
    */
-  upload: async (file: File) => {
+  /**
+   * `onProgress` optional (feedback I.8) — dùng XMLHttpRequest thay vì fetch vì fetch không có
+   * sự kiện tiến trình upload (`xhr.upload.onprogress`). Giữ nguyên shape trả về và cách báo
+   * lỗi như bản fetch cũ — các nơi gọi không truyền `onProgress` không cần đổi gì.
+   */
+  upload: (file: File, onProgress?: (percent: number) => void): Promise<{
+    url: string;
+    thumbnail: string;
+    public_id: string;
+    width: number;
+    height: number;
+    bytes: number;
+    format: string;
+  }> => {
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
     const preset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
     if (!cloudName || !preset) {
-      throw new Error('Thiếu cấu hình Cloudinary (NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME / _UPLOAD_PRESET).');
+      return Promise.reject(new Error('Thiếu cấu hình Cloudinary (NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME / _UPLOAD_PRESET).'));
     }
 
     const form = new FormData();
     form.append('file', file);
     form.append('upload_preset', preset);
 
-    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, {
-      method: 'POST',
-      body: form,
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => null);
-      throw new Error(err?.error?.message ?? 'Upload Cloudinary thất bại.');
-    }
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`);
 
-    const data = await res.json();
-    // secure_url dạng https://res.cloudinary.com/<cloud>/image/upload/v.../<public_id>.<ext>
-    // Chèn transform c_fill,w_400 vào ngay sau /upload/ để lấy thumbnail.
-    const thumbnail: string = data.secure_url.replace('/upload/', '/upload/c_fill,w_400,q_auto/');
-    return {
-      url: data.secure_url,
-      thumbnail,
-      public_id: data.public_id,
-      width: data.width,
-      height: data.height,
-      bytes: data.bytes,
-      format: data.format,
-    };
+      if (onProgress) {
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+        };
+      }
+
+      xhr.onload = () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let data: any = null;
+        try {
+          data = JSON.parse(xhr.responseText);
+        } catch {
+          // giữ data = null, xử lý ở nhánh lỗi bên dưới
+        }
+        if (xhr.status >= 200 && xhr.status < 300 && data) {
+          // secure_url dạng https://res.cloudinary.com/<cloud>/image/upload/v.../<public_id>.<ext>
+          // Chèn transform c_fill,w_400 vào ngay sau /upload/ để lấy thumbnail.
+          const thumbnail: string = data.secure_url.replace('/upload/', '/upload/c_fill,w_400,q_auto/');
+          resolve({
+            url: data.secure_url,
+            thumbnail,
+            public_id: data.public_id,
+            width: data.width,
+            height: data.height,
+            bytes: data.bytes,
+            format: data.format,
+          });
+        } else {
+          reject(new Error(data?.error?.message ?? 'Upload Cloudinary thất bại.'));
+        }
+      };
+      xhr.onerror = () => reject(new Error('Lỗi kết nối khi tải file lên.'));
+      xhr.send(form);
+    });
   },
 };
