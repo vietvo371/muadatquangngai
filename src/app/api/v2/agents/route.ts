@@ -27,6 +27,9 @@ export async function GET(request: Request) {
 
   const where = {
     role: 'agent',
+    // Chỉ hiện môi giới còn hoạt động — tài khoản bị khoá (`banned`) hoặc tự đóng (`closed`)
+    // không được nằm trong danh bạ công khai, tránh khách gọi vào số không còn phục vụ.
+    status: 'active',
     ...(districtId && /^\d+$/.test(districtId) ? { district_id: BigInt(districtId) } : {}),
     // Tìm cả theo tên môi giới lẫn tên công ty — người dùng thường nhớ một trong hai.
     ...(q

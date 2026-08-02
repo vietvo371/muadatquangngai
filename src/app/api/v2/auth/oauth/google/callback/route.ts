@@ -85,6 +85,17 @@ export async function GET(request: Request) {
     });
   }
 
+  // Chặn tài khoản bị khoá / đã đóng — đăng nhập bằng mật khẩu đã kiểm status từ trước, nhưng
+  // đường Google trước đây bỏ qua nên vẫn vào được: một lối vòng qua lệnh khoá của admin.
+  const account = await db.users.findUnique({ where: { id: userId }, select: { status: true } });
+  if (account?.status === 'banned' || account?.status === 'closed') {
+    const reason = account.status === 'banned' ? 'account_banned' : 'account_closed';
+    const res = NextResponse.redirect(`${origin}/login?error=${reason}`);
+    res.cookies.delete('oauth_state');
+    res.cookies.delete('oauth_verifier');
+    return res;
+  }
+
   const accessToken = await createToken(userId);
 
   const res = NextResponse.redirect(`${origin}/oauth-callback#access_token=${accessToken}&token_type=Bearer`);
