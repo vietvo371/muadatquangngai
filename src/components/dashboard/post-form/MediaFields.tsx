@@ -5,6 +5,8 @@ import { Images } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ImageUploader, VideoUploader, type UploadedFile } from '@/components/shared/ImageUploader';
 import { ImagePreviewLightbox } from './ImagePreviewLightbox';
+import { Tour360Field } from './Tour360Field';
+import { FloorPlanUploader, type FloorPlanFile } from './FloorPlanUploader';
 
 interface MediaFieldsProps {
   title: string;
@@ -25,6 +27,13 @@ interface MediaFieldsProps {
   /** 2 trang lệch nhau nhẹ về màu nền/viền của ô lưu ý — giữ nguyên từng trang. */
   noteBoxClassName?: string;
   noteTextClassName?: string;
+
+  // Tour 360 (feedback I.12) — cả 2 trang đều có, không như video chỉ create mới có.
+  tour360Url?: string;
+  onTour360UrlChange: (url: string | undefined) => void;
+  // Mặt bằng (feedback I.13) — cả 2 trang đều có.
+  floorPlans: FloorPlanFile[];
+  onFloorPlansChange: (files: FloorPlanFile[]) => void;
 }
 
 /** Ảnh (+ Video khi showVideo) — giống hệt nhau giữa trang đăng tin và trang sửa tin. */
@@ -43,6 +52,10 @@ export function MediaFields({
   maxVideoSize,
   noteBoxClassName = 'bg-[#e8f4fb]/50 border border-[#1075b1]/15 rounded-xl p-4 mb-6',
   noteTextClassName = 'text-[13px] text-[#1075b1] space-y-1.5 list-disc list-inside',
+  tour360Url,
+  onTour360UrlChange,
+  floorPlans,
+  onFloorPlansChange,
 }: MediaFieldsProps) {
   // Xem trước dạng gallery (feedback I.10) — không mở popup/đổi trang, chỉ overlay tại chỗ.
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -92,6 +105,24 @@ export function MediaFields({
           <VideoUploader videos={videos} onChange={onVideosChange} maxVideos={maxVideos} maxSize={maxVideoSize} />
         </div>
       )}
+
+      {/* Tour 360 (feedback I.12) — không bắt buộc. */}
+      <div className="pt-2">
+        <h4 className="text-base font-bold text-gray-900 mb-1">Tour 360</h4>
+        <p className="text-[13px] text-gray-500 mb-3">
+          Không bắt buộc. Dán link Matterport hoặc Kuula nếu bạn có tour thực tế ảo.
+        </p>
+        <Tour360Field value={tour360Url} onChange={onTour360UrlChange} />
+      </div>
+
+      {/* Mặt bằng (feedback I.13) — không bắt buộc. */}
+      <div className="pt-2">
+        <h4 className="text-base font-bold text-gray-900 mb-1">Mặt bằng</h4>
+        <p className="text-[13px] text-gray-500 mb-3">
+          Không bắt buộc. Tải lên ảnh hoặc file PDF sơ đồ mặt bằng.
+        </p>
+        <FloorPlanUploader files={floorPlans} onChange={onFloorPlansChange} />
+      </div>
 
       {previewOpen && (
         <ImagePreviewLightbox

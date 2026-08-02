@@ -36,6 +36,7 @@ const mapApiProperty = (apiProp: any) => {
     slug: apiProp.slug,
     price: Number(apiProp.price),
     priceUnit: apiProp.price_unit === 'month' || apiProp.price_unit === 'per_month' ? 'per_month' : (apiProp.price_unit === 'per_m2' || apiProp.price_unit === 'm2' ? 'per_m2' : 'total'),
+    priceDisplayFormat: apiProp.price_display_format,
     area: Number(apiProp.area),
     type: apiProp.type,
     category: apiProp.category?.name || 'Bất động sản',

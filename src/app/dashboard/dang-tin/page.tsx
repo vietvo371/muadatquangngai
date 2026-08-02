@@ -115,9 +115,12 @@ export default function DangTinPage() {
     longitude: undefined,
     images: [],
     videos: [],
+    tour360Url: undefined,
+    floorPlans: [],
     price: 0,
     price_unit: 'total',
     price_negotiable: false,
+    price_display_format: 'short',
     area: 0,
     bedrooms: 0,
     bathrooms: 0,
@@ -348,6 +351,12 @@ export default function DangTinPage() {
           thumbnail: v.thumbnail,
           sort_order: i,
         })),
+        tour360_url: formData.tour360Url,
+        floor_plans: formData.floorPlans.map((fp, i) => ({
+          url: fp.url,
+          thumbnail: fp.thumbnail,
+          sort_order: i,
+        })),
       };
 
       const response = await api.post('/api/v2/my/properties', payload);
@@ -470,6 +479,10 @@ export default function DangTinPage() {
               onVideosChange={(videos) => updateFormData({ videos })}
               maxVideos={limits.video_limit}
               maxVideoSize={limits.video_max_size_mb}
+              tour360Url={formData.tour360Url}
+              onTour360UrlChange={(tour360Url) => updateFormData({ tour360Url })}
+              floorPlans={formData.floorPlans}
+              onFloorPlansChange={(floorPlans) => updateFormData({ floorPlans })}
             />
           )}
 

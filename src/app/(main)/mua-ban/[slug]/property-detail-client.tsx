@@ -31,6 +31,7 @@ const mapApiProperty = (apiProp: any) => {
     slug: apiProp.slug,
     price: Number(apiProp.price),
     priceUnit: apiProp.price_unit === 'month' || apiProp.price_unit === 'per_month' ? 'per_month' : (apiProp.price_unit === 'per_m2' || apiProp.price_unit === 'm2' ? 'per_m2' : 'total'),
+    priceDisplayFormat: apiProp.price_display_format,
     area: Number(apiProp.area),
     type: apiProp.type,
     category: apiProp.category?.name || 'Bất động sản',
@@ -51,9 +52,13 @@ const mapApiProperty = (apiProp: any) => {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mapApiPropertyDetail = (apiProp: any) => {
-  let mediaUrls = apiProp.media && apiProp.media.length > 0 
+  // Chỉ lấy ảnh cho gallery — media giờ có thêm virtual_tour/floor_plan (feedback I.12/I.13),
+  // đưa cả vào đây làm next/image vỡ vì URL không phải ảnh (domain lạ hoặc PDF).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const imageMedia = (apiProp.media ?? []).filter((m: any) => m.type === 'image');
+  let mediaUrls = imageMedia.length > 0
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ? apiProp.media.map((m: any) => m.url) 
+    ? imageMedia.map((m: any) => m.url)
     : [];
   if (mediaUrls.length === 0 && apiProp.thumbnail) {
     mediaUrls = [apiProp.thumbnail];
@@ -70,6 +75,7 @@ const mapApiPropertyDetail = (apiProp: any) => {
     isVip: apiProp.is_vip || 'normal',
     price: Number(apiProp.price),
     priceUnit: apiProp.price_unit === 'month' || apiProp.price_unit === 'per_month' ? 'per_month' : (apiProp.price_unit === 'per_m2' || apiProp.price_unit === 'm2' ? 'per_m2' : 'total'),
+    priceDisplayFormat: apiProp.price_display_format,
     priceNegotiable: Boolean(apiProp.price_negotiable),
     area: Number(apiProp.area),
     bedrooms: Number(apiProp.bedrooms || 0),
@@ -315,6 +321,7 @@ export default function PropertyDetailClient({ params }: { params: Promise<{ slu
               price={propertyData.price}
               priceUnit={propertyData.priceUnit}
               priceNegotiable={propertyData.priceNegotiable}
+              priceDisplayFormat={propertyData.priceDisplayFormat}
               area={propertyData.area}
               bedrooms={propertyData.bedrooms}
               bathrooms={propertyData.bathrooms}

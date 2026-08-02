@@ -61,9 +61,12 @@ const emptyFormData: PropertyFormData = {
   street: '',
   images: [],
   videos: [],
+  tour360Url: undefined,
+  floorPlans: [],
   price: 0,
   price_unit: 'total',
   price_negotiable: false,
+  price_display_format: 'short',
   area: 0,
   bedrooms: 0,
   bathrooms: 0,
@@ -170,10 +173,21 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
               isPrimary: m.is_primary ?? false,
               imageType: m.image_type ?? undefined,
             })),
+          // Trang sửa tin không có bước video (quyết định có chủ đích từ đợt refactor, showVideo=false
+          // ở MediaFields bên dưới) — không nạp lại videos vào state vì không có UI nào đọc tới.
           videos: [],
+          // Tour 360/mặt bằng: trước đây route PUT không xử lý nên tin cũ có sẵn 2 loại này
+          // (nếu có) chưa từng nạp lại được lên form sửa — sửa cùng lúc với việc PUT đã lưu được.
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          tour360Url: (data.media ?? []).find((m: any) => m.type === 'virtual_tour')?.url ?? undefined,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          floorPlans: (data.media ?? [])
+            .filter((m: any) => m.type === 'floor_plan')
+            .map((m: any) => ({ url: m.url || '', thumbnail: m.thumbnail ?? undefined, name: 'floor-plan', size: 0 })),
           price: data.price ?? 0,
           price_unit: data.price_unit || 'total',
           price_negotiable: data.price_negotiable ?? false,
+          price_display_format: data.price_display_format || 'short',
           area: data.area ?? 0,
           bedrooms: data.bedrooms ?? 0,
           bathrooms: data.bathrooms ?? 0,
@@ -259,6 +273,15 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
       sort_order: i,
       image_type: img.imageType,
     })),
+    // Tour 360/mặt bằng: cũng bị bỏ sót y hệt ảnh trước đây — sửa cùng lúc.
+    tour360_url: formData.tour360Url,
+    floor_plans: formData.floorPlans.map((fp, i) => ({
+      url: fp.url,
+      thumbnail: fp.thumbnail,
+      sort_order: i,
+    })),
+    // KHÔNG gửi `videos`: trang sửa tin không có UI video (showVideo=false, quyết định có chủ
+    // đích) — không đụng tới video hiện có nếu không có gì để sửa.
   });
   // KHÔNG gửi `is_vip`: PUT không xử lý trường này (và không nên — nâng gói phải qua luồng có
   // thanh toán). buildPropertyPayload không đưa is_vip vào payload nên không cần lọc thêm.
@@ -422,6 +445,10 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
               showVideo={false}
               noteBoxClassName="bg-[#e8f4fb] border border-primary/20 rounded-xl p-4 mb-6"
               noteTextClassName="text-[13px] text-primary space-y-1.5 list-disc list-inside"
+              tour360Url={formData.tour360Url}
+              onTour360UrlChange={(tour360Url) => updateFormData({ tour360Url })}
+              floorPlans={formData.floorPlans}
+              onFloorPlansChange={(floorPlans) => updateFormData({ floorPlans })}
             />
           )}
 

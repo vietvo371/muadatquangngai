@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { Heart, MapPin, Bed, Bath, Square, User, CheckCircle, Camera, Ruler } from 'lucide-react';
-import { formatPrice, timeAgo, derivePrices } from '@/lib/formatters';
+import { formatPrice, formatPriceByMode, timeAgo, derivePrices } from '@/lib/formatters';
 import { CONFIG } from '@/lib/config';
 import { useFavorite } from '@/hooks/useFavorite';
 
@@ -13,6 +13,8 @@ interface PropertyCardProps {
     title: string;
     price: number;
     priceUnit?: string;
+    /** Cách hiển thị giá người đăng chọn (feedback I.3) — mặc định 'short' nếu không có. */
+    priceDisplayFormat?: 'short' | 'million' | 'mixed';
     area: number;
     type: string;
     thumbnail?: string;
@@ -60,8 +62,12 @@ export function PropertyCard({ property, className, variant = 'default' }: Prope
     property.priceUnit,
     property.area
   );
-  const priceLabel = formatPrice(
+  // Một số nơi gọi PropertyCard truyền thẳng object API (snake_case) thay vì remap sang
+  // camelCase — cùng cách is_vip đã fallback ở trên (feedback I.3).
+  const priceDisplayFormat = property.priceDisplayFormat || (property as any).price_display_format;
+  const priceLabel = formatPriceByMode(
     totalPrice ?? property.price,
+    priceDisplayFormat,
     property.priceUnit === 'per_m2' ? undefined : property.priceUnit
   );
   const { isSaved, toggle: toggleFavorite } = useFavorite(property.id);
