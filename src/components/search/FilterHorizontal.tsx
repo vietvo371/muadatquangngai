@@ -129,7 +129,10 @@ export function FilterHorizontal({
   };
 
   return (
-    <div ref={containerRef} className="w-full bg-white shadow-md border border-gray-150 rounded-2xl p-4 mb-6 z-30 relative transition-all duration-300">
+    <div
+      ref={containerRef}
+      className="w-full bg-white shadow-md border border-gray-150 rounded-2xl p-4 mb-6 z-30 sticky top-[72px] transition-all duration-300"
+    >
       
       {/* ══ ROW 1: SEARCH & MAP ══ */}
       <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center mb-4">
