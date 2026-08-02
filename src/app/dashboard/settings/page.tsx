@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import api from '@/lib/axios';
 import { useAuthStore } from '@/stores/authStore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -42,11 +43,15 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('profile');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [closePassword, setClosePassword] = useState('');
+  const [isClosing, setIsClosing] = useState(false);
 
   // Hồ sơ — nạp từ tài khoản ĐANG ĐĂNG NHẬP. Trước đây hardcode "Nguyễn Văn A" /
   // "nguyenvana@email.com" nên ai vào cũng thấy tên người khác và tưởng đăng nhập nhầm.
+  const router = useRouter();
   const authUser = useAuthStore((s) => s.user);
   const setAuthUser = useAuthStore((s) => s.setUser);
+  const logout = useAuthStore((s) => s.logout);
   const [profile, setProfile] = useState({
     name: '',
     email: '',
@@ -119,14 +124,29 @@ export default function SettingsPage() {
   };
 
   /**
-   * Xoá tài khoản CHƯA có backend (không có endpoint nào) — trước đây chỉ `console.log` rồi đóng
-   * hộp thoại, người dùng tưởng đã xoá xong. Nói thật cho tới khi làm được: xoá tài khoản còn
-   * kéo theo tin đăng, giao dịch, số dư ví nên cần quyết định chính sách (xoá hẳn hay vô hiệu
-   * hoá) trước khi cài đặt.
+   * Đóng tài khoản (POST /api/v2/user/account/close).
+   *
+   * KHÔNG xoá cứng: mọi khoá ngoại trỏ vào `users` đều `onDelete: Cascade` nên xoá user sẽ kéo
+   * theo cả `transactions`/`subscriptions` — mất sạch lịch sử tiền. Server đặt `status = 'closed'`,
+   * ẩn tin đang hiển thị, thu hồi token; ví còn tiền thì từ chối và báo lý do.
    */
-  const handleDeleteAccount = () => {
-    setShowDeleteDialog(false);
-    toast.info('Tính năng xoá tài khoản chưa mở. Vui lòng liên hệ hỗ trợ để được xử lý.');
+  const handleDeleteAccount = async () => {
+    setIsClosing(true);
+    try {
+      await api.post('/api/v2/user/account/close', { password: closePassword });
+      setShowDeleteDialog(false);
+      setClosePassword('');
+      toast.success('Đã đóng tài khoản. Hẹn gặp lại bạn.');
+      logout();
+      router.push('/');
+    } catch (err) {
+      const data = (err as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } })
+        ?.response?.data;
+      const firstError = data?.errors ? Object.values(data.errors).flat()[0] : undefined;
+      toast.error(firstError || data?.message || 'Không đóng được tài khoản. Vui lòng thử lại.');
+    } finally {
+      setIsClosing(false);
+    }
   };
 
   return (
@@ -510,18 +530,24 @@ export default function SettingsPage() {
 
                 <Separator className="bg-gray-100" />
 
-                {/* Delete Account */}
+                {/* Đóng tài khoản — mô tả đúng việc hệ thống THỰC SỰ làm.
+                    Bản trước hứa "xóa vĩnh viễn toàn bộ dữ liệu": vừa sai (nút chỉ console.log),
+                    vừa không làm được — mọi khoá ngoại trỏ vào users đều onDelete: Cascade nên xoá
+                    cứng sẽ kéo theo cả lịch sử giao dịch tiền. */}
                 <div className="p-6 border border-red-200 rounded-xl bg-red-50/50">
                   <h3 className="font-bold text-red-600 text-lg flex items-center gap-2">
                     <AlertTriangle className="h-5 w-5" />
-                    Xóa tài khoản
+                    Đóng tài khoản
                   </h3>
                   <p className="text-sm text-gray-600 mt-2 mb-4 font-medium leading-relaxed">
-                    Khi bạn xóa tài khoản, tất cả dữ liệu (bao gồm tin đăng, tin đã lưu, lịch sử giao dịch) sẽ bị xóa vĩnh viễn khỏi hệ thống. Hành động này tuyệt đối không thể hoàn tác.
+                    Tài khoản sẽ ngừng hoạt động: bạn không đăng nhập được nữa và toàn bộ tin đang
+                    hiển thị sẽ bị ẩn khỏi trang web. Lịch sử giao dịch được giữ lại theo quy định
+                    kế toán. Nếu ví còn tiền, vui lòng sử dụng hết hoặc liên hệ hỗ trợ để rút trước.
+                    Muốn mở lại tài khoản, bạn cần liên hệ bộ phận hỗ trợ.
                   </p>
                   <Button variant="destructive" onClick={() => setShowDeleteDialog(true)} className="gap-2 font-bold shadow-md shadow-red-500/20">
                     <Trash2 className="h-4 w-4" />
-                    Xóa tài khoản vĩnh viễn
+                    Đóng tài khoản
                   </Button>
                 </div>
               </CardContent>
@@ -537,22 +563,42 @@ export default function SettingsPage() {
             <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mb-4">
               <AlertTriangle className="h-8 w-8" />
             </div>
-            <DialogTitle className="text-xl font-bold mb-1 text-white">Xác nhận xóa tài khoản</DialogTitle>
+            <DialogTitle className="text-xl font-bold mb-1 text-white">Xác nhận đóng tài khoản</DialogTitle>
             <DialogDescription className="text-red-100 font-medium">
-              Bạn sắp thực hiện một hành động không thể hoàn tác.
+              Bạn sẽ không đăng nhập lại được nếu không liên hệ hỗ trợ.
             </DialogDescription>
           </div>
           <div className="p-6">
+            {/* Xác nhận bằng MẬT KHẨU thật (server kiểm lại), thay cho ô "gõ DELETE" trước đây —
+                ô đó không nối vào state nên gõ gì cũng bấm xác nhận được. */}
             <p className="text-[15px] text-gray-700 mb-4 font-medium">
-              Vui lòng gõ chữ <strong className="text-red-600 bg-red-50 px-2 py-1 rounded">DELETE</strong> vào ô bên dưới để xác nhận xóa toàn bộ dữ liệu của bạn:
+              Nhập mật khẩu của bạn để xác nhận:
             </p>
-            <Input placeholder="Nhập DELETE" className="h-12 text-center font-bold tracking-wider mb-6 border-red-200 focus-visible:ring-red-500" />
+            <Input
+              type="password"
+              value={closePassword}
+              onChange={(e) => setClosePassword(e.target.value)}
+              placeholder="Mật khẩu"
+              autoComplete="current-password"
+              className="h-12 mb-6 border-red-200 focus-visible:ring-red-500"
+            />
             <div className="flex gap-3">
-              <Button variant="outline" onClick={() => setShowDeleteDialog(false)} className="flex-1 h-11 font-bold">
+              <Button
+                variant="outline"
+                onClick={() => { setShowDeleteDialog(false); setClosePassword(''); }}
+                disabled={isClosing}
+                className="flex-1 h-11 font-bold"
+              >
                 Hủy bỏ
               </Button>
-              <Button variant="destructive" onClick={handleDeleteAccount} className="flex-1 h-11 font-bold">
-                Xác nhận Xóa
+              <Button
+                variant="destructive"
+                onClick={handleDeleteAccount}
+                disabled={isClosing || closePassword.length === 0}
+                className="flex-1 h-11 font-bold"
+              >
+                {isClosing && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                Đóng tài khoản
               </Button>
             </div>
           </div>

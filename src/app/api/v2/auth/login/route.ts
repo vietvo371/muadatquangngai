@@ -63,6 +63,12 @@ export async function POST(request: Request) {
     return apiError('Tài khoản đã bị khóa.', 403);
   }
 
+  // Người dùng tự đóng tài khoản (POST /api/v2/user/account/close) — phân biệt với bị admin khoá
+  // để báo đúng nguyên nhân và hướng dẫn cách mở lại.
+  if (user.status === 'closed') {
+    return apiError('Tài khoản này đã được đóng. Vui lòng liên hệ hỗ trợ nếu bạn muốn mở lại.', 403);
+  }
+
   await db.users.update({ where: { id: user.id }, data: { last_login_at: new Date() } });
 
   const accessToken = await createToken(user.id);
