@@ -69,8 +69,10 @@ export default function DangTinPage() {
   // Giới hạn media/nội dung do quản trị viên cấu hình (spec mục 7.1). Có giá trị mặc định
   // để form vẫn dùng được nếu API lỗi.
   const [limits, setLimits] = useState({
-    images_limit: 10,
+    images_min: 5,
+    images_limit: 50,
     image_max_size_mb: 10,
+    image_min_width: 1280,
     video_limit: 2,
     video_max_size_mb: 100,
     description_min: 50,
@@ -281,7 +283,7 @@ export default function DangTinPage() {
           formData.description.length >= limits.description_min
         );
       case 2:
-        return formData.images.length > 0;
+        return formData.images.length >= limits.images_min;
       case 3:
         // Không cho bấm thanh toán khi số dư không đủ — thà chặn ở đây còn hơn để người
         // dùng bấm rồi nhận lỗi 402 từ server.
@@ -338,6 +340,7 @@ export default function DangTinPage() {
           thumbnail: img.thumbnail,
           is_primary: img.isPrimary ?? i === 0,
           sort_order: i,
+          image_type: img.imageType,
         })),
         // Video lưu chung bảng property_media, phân biệt bằng cột type.
         videos: formData.videos.map((v, i) => ({
@@ -458,8 +461,10 @@ export default function DangTinPage() {
               title="Hình ảnh & Video"
               images={formData.images}
               onImagesChange={(images) => updateFormData({ images })}
+              minFiles={limits.images_min}
               maxFiles={limits.images_limit}
               maxSize={limits.image_max_size_mb}
+              minWidth={limits.image_min_width}
               showVideo
               videos={formData.videos}
               onVideosChange={(videos) => updateFormData({ videos })}

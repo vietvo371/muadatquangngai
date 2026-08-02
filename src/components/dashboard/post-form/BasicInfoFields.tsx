@@ -1,12 +1,15 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import dynamic from 'next/dynamic';
-import { Home, DollarSign, Loader2 } from 'lucide-react';
+import { Home, DollarSign, Loader2, MapPin } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LocationSelect } from '@/components/shared/LocationSelect';
+import api from '@/lib/axios';
+import { toast } from 'sonner';
 
 // Bản đồ dùng Leaflet/MapLibre nên phải nạp phía client, không dựng sẵn trên server được.
 // Dùng chung 1 import động cho cả 2 trang thay vì mỗi trang tự khai báo lại y hệt nhau.
@@ -164,6 +167,30 @@ export function AddressMapFields({
   geocodeNote,
   geocodingMessage = 'Đang tra địa chỉ từ vị trí đã ghim...',
 }: AddressMapFieldsProps) {
+  // Dán link Google Maps để tự ghim (feedback I.2) — vẫn giữ nguyên ghim thủ công bên dưới,
+  // đây chỉ là cách điền nhanh hơn, không thay thế MapPicker.
+  const [mapsLink, setMapsLink] = useState('');
+  const [resolvingLink, setResolvingLink] = useState(false);
+
+  const resolveMapsLink = async () => {
+    const url = mapsLink.trim();
+    if (!url) return;
+    setResolvingLink(true);
+    try {
+      const res = await api.get('/api/v2/geocode/resolve-maps-link', { params: { url } });
+      const { lat, lng } = res.data?.data ?? {};
+      if (typeof lat === 'number' && typeof lng === 'number') {
+        await onMapPick({ lat, lng });
+        setMapsLink('');
+      }
+    } catch (err) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(msg || 'Không đọc được toạ độ từ link này.');
+    } finally {
+      setResolvingLink(false);
+    }
+  };
+
   return (
     <section>
       <h3 className="text-lg font-bold text-gray-900 mb-5 pb-2 border-b">Địa chỉ bất động sản</h3>
@@ -208,6 +235,30 @@ export function AddressMapFields({
           Trước sáp nhập: {formerUnits.join(', ')}
         </p>
       )}
+
+      {/* Dán link Google Maps để tự ghim (feedback I.2) — cách nhanh cho người đã có sẵn vị
+          trí trên Google Maps, không bắt buộc, vẫn ghim tay được như bình thường bên dưới. */}
+      <div className="mt-5">
+        <Label className="font-semibold text-gray-700">Dán link Google Maps (không bắt buộc)</Label>
+        <div className="mt-2 flex gap-2">
+          <Input
+            value={mapsLink}
+            onChange={(e) => setMapsLink(e.target.value)}
+            placeholder="VD: https://maps.app.goo.gl/... hoặc link Google Maps đầy đủ"
+            className="h-11 bg-gray-50 border-gray-200 focus:ring-primary focus:border-primary"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            onClick={resolveMapsLink}
+            disabled={!mapsLink.trim() || resolvingLink}
+            className="h-11 shrink-0 gap-1.5"
+          >
+            {resolvingLink ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
+            Dùng vị trí này
+          </Button>
+        </div>
+      </div>
 
       {/* Chọn vị trí trên bản đồ — khách hàng muốn ghim thay vì gõ tay. */}
       <div className="mt-5">

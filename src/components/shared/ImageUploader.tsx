@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
-import { Upload, X, Image as ImageIcon, Loader2, GripVertical } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, Loader2, GripVertical, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { fileUploadApi } from '@/lib/admin-api';
+import { IMAGE_CATEGORY_OPTIONS } from '@/lib/property-form-config';
 
 export interface UploadedFile {
   id?: number;
@@ -16,6 +18,10 @@ export interface UploadedFile {
   isPrimary?: boolean;
   /** Original File object for newly uploaded items */
   file?: File;
+  /** Phân loại ảnh (feedback I.5) — vd. 'facade', 'bedroom'... xem IMAGE_CATEGORY_OPTIONS. */
+  imageType?: string;
+  /** Chiều rộng ảnh gốc (px), Cloudinary trả kèm lúc upload — dùng cảnh báo ảnh nhỏ (feedback I.9). */
+  width?: number;
 }
 
 interface ImageUploaderProps {
@@ -23,6 +29,8 @@ interface ImageUploaderProps {
   onChange: (files: UploadedFile[]) => void;
   maxFiles?: number;
   maxSize?: number; // in MB
+  /** Cảnh báo (không chặn) khi ảnh nhỏ hơn chiều rộng này — feedback I.9. */
+  minWidth?: number;
   disabled?: boolean;
   className?: string;
 }
@@ -32,6 +40,7 @@ export function ImageUploader({
   onChange,
   maxFiles = 10,
   maxSize = 10,
+  minWidth,
   disabled = false,
   className = '',
 }: ImageUploaderProps) {
@@ -83,6 +92,7 @@ export function ImageUploader({
           size: file.size,
           isPrimary: files.length === 0 && idx === 0,
           file,
+          width: (res as any).width,
         };
       } catch (e) {
         // Giữ lại file lỗi kèm nút thử lại (spec mục 7.1) thay vì chỉ báo toast rồi bỏ
@@ -118,6 +128,7 @@ export function ImageUploader({
           size: item.file.size,
           isPrimary: files.length === 0,
           file: item.file,
+          width: (res as any).width,
         },
       ]);
     } catch (e) {
@@ -171,6 +182,11 @@ export function ImageUploader({
       ...file,
       isPrimary: i === index,
     }));
+    onChange(newFiles);
+  };
+
+  const setImageType = (index: number, imageType: string | null) => {
+    const newFiles = files.map((file, i) => (i === index ? { ...file, imageType: imageType ?? undefined } : file));
     onChange(newFiles);
   };
 
@@ -363,6 +379,17 @@ export function ImageUploader({
                 </div>
               )}
 
+              {/* Cảnh báo ảnh nhỏ (feedback I.9) — không chặn, chỉ nhắc để đổi ảnh chất lượng
+                  hơn nếu có. Đặt cố định (không cần hover) để dễ nhận ra ngay trong lưới ảnh. */}
+              {minWidth && file.width && file.width < minWidth && (
+                <div
+                  className="absolute bottom-2 right-2 z-10 p-1 rounded bg-amber-500 text-white"
+                  title={`Ảnh khá nhỏ (${file.width}px) — nên dùng ảnh rộng từ ${minWidth}px để hiển thị đẹp hơn`}
+                >
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                </div>
+              )}
+
               {/* Actions */}
               <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                 {/* Set Primary */}
@@ -380,6 +407,28 @@ export function ImageUploader({
                   </button>
                 )}
 
+                {/* Phân loại ảnh (feedback I.5) */}
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Select value={file.imageType ?? ''} onValueChange={(v) => setImageType(index, v)}>
+                    <SelectTrigger
+                      className="h-8 w-8 p-0 justify-center bg-white rounded-full border-0 text-gray-700 hover:bg-gray-100 [&>svg]:hidden"
+                      title="Phân loại ảnh"
+                    >
+                      <SelectValue>
+                        {(v: string) => {
+                          const label = IMAGE_CATEGORY_OPTIONS.find((o) => o.value === v)?.label;
+                          return <span className="text-[10px] font-semibold px-1">{label ? label.slice(0, 2) : '?'}</span>;
+                        }}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {IMAGE_CATEGORY_OPTIONS.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 {/* Remove */}
                 <button
                   type="button"
@@ -393,6 +442,14 @@ export function ImageUploader({
                   <X className="h-4 w-4" />
                 </button>
               </div>
+
+              {/* Nhãn phân loại đã chọn — hiện thường trực (không cần hover) để biết ảnh nào
+                  đã gắn phân loại mà không phải hover từng tấm. */}
+              {file.imageType && (
+                <div className="absolute bottom-2 left-8 z-10 px-1.5 py-0.5 rounded bg-black/55 text-white text-[10px] font-medium truncate max-w-[70%]">
+                  {IMAGE_CATEGORY_OPTIONS.find((o) => o.value === file.imageType)?.label}
+                </div>
+              )}
             </div>
           ))}
         </div>

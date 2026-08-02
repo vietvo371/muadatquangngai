@@ -1,13 +1,21 @@
 'use client';
 
+import { useState } from 'react';
+import { Images } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { ImageUploader, VideoUploader, type UploadedFile } from '@/components/shared/ImageUploader';
+import { ImagePreviewLightbox } from './ImagePreviewLightbox';
 
 interface MediaFieldsProps {
   title: string;
   images: UploadedFile[];
   onImagesChange: (images: UploadedFile[]) => void;
+  /** Số ảnh tối thiểu (feedback I.4) — hiện trong ghi chú, validate thật nằm ở canProceed() của page. */
+  minFiles?: number;
   maxFiles: number;
   maxSize: number;
+  /** Cảnh báo (không chặn) khi ảnh nhỏ hơn chiều rộng này — feedback I.9. */
+  minWidth?: number;
   /** Trang sửa tin KHÔNG có video — quyết định có chủ đích, không phải thiếu sót. */
   showVideo: boolean;
   videos?: UploadedFile[];
@@ -24,8 +32,10 @@ export function MediaFields({
   title,
   images,
   onImagesChange,
+  minFiles = 5,
   maxFiles,
   maxSize,
+  minWidth,
   showVideo,
   videos = [],
   onVideosChange,
@@ -34,19 +44,42 @@ export function MediaFields({
   noteBoxClassName = 'bg-[#e8f4fb]/50 border border-[#1075b1]/15 rounded-xl p-4 mb-6',
   noteTextClassName = 'text-[13px] text-[#1075b1] space-y-1.5 list-disc list-inside',
 }: MediaFieldsProps) {
+  // Xem trước dạng gallery (feedback I.10) — không mở popup/đổi trang, chỉ overlay tại chỗ.
+  const [previewOpen, setPreviewOpen] = useState(false);
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <h3 className="text-lg font-bold text-gray-900 mb-2 pb-2 border-b">{title}</h3>
+      <div className="flex items-center justify-between gap-3 pb-2 border-b">
+        <h3 className="text-lg font-bold text-gray-900">{title}</h3>
+        {images.length > 0 && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setPreviewOpen(true)}
+            className="gap-1.5 h-8 text-xs border-gray-200 text-gray-600 hover:bg-gray-50"
+          >
+            <Images className="h-3.5 w-3.5" />
+            Xem trước dạng gallery
+          </Button>
+        )}
+      </div>
 
       <div className={noteBoxClassName}>
         <ul className={noteTextClassName}>
-          <li>Tải lên tối thiểu <strong>1 ảnh</strong>, tối đa <strong>{maxFiles} ảnh</strong>.</li>
+          <li>Tải lên tối thiểu <strong>{minFiles} ảnh</strong>, tối đa <strong>{maxFiles} ảnh</strong>.</li>
           <li>Kéo thả ảnh để thay đổi thứ tự. Ảnh đầu tiên sẽ là ảnh bìa.</li>
           <li>Hạn chế ảnh có chứa logo, watermark của các nền tảng khác.</li>
         </ul>
       </div>
 
-      <ImageUploader files={images} onChange={onImagesChange} maxFiles={maxFiles} maxSize={maxSize} />
+      {images.length > 0 && images.length < minFiles && (
+        <p className="text-[13px] text-amber-700 -mt-3">
+          Cần thêm ít nhất {minFiles - images.length} ảnh nữa để đủ điều kiện đăng tin.
+        </p>
+      )}
+
+      <ImageUploader files={images} onChange={onImagesChange} maxFiles={maxFiles} maxSize={maxSize} minWidth={minWidth} />
 
       {/* Video (spec mục 7.2) — không bắt buộc, chọn tải lên hoặc dán link YouTube. Chỉ trang
           đăng tin có mục này. */}
@@ -58,6 +91,14 @@ export function MediaFields({
           </p>
           <VideoUploader videos={videos} onChange={onVideosChange} maxVideos={maxVideos} maxSize={maxVideoSize} />
         </div>
+      )}
+
+      {previewOpen && (
+        <ImagePreviewLightbox
+          images={images.map((f) => f.url)}
+          initialIndex={0}
+          onClose={() => setPreviewOpen(false)}
+        />
       )}
     </div>
   );

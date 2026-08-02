@@ -147,16 +147,16 @@ export function Sidebar({
                 href={item.href}
                 onClick={handleNavClick}
                 className={cn(
-                  'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                  'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors min-w-0',
                   isActive
                     ? 'bg-primary-light text-primary'
                     : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900',
                   collapsed && 'justify-center px-2'
                 )}
-                title={collapsed ? item.label : undefined}
+                title={item.label}
               >
                 <Icon className="h-5 w-5 flex-shrink-0" />
-                {!collapsed && <span>{item.label}</span>}
+                {!collapsed && <span className="truncate">{item.label}</span>}
               </Link>
             );
           })}

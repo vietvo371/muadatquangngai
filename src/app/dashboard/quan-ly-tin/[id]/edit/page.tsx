@@ -34,7 +34,7 @@ import {
 
 const STEPS = [
   { title: 'Cơ bản', description: 'Phân loại & Vị trí' },
-  { title: 'Hình ảnh', description: 'Tải lên tối đa 10 ảnh' },
+  { title: 'Hình ảnh', description: 'Tối thiểu 5, tối đa 50 ảnh' },
   { title: 'Chi tiết', description: 'Giá & Thông số' },
   { title: 'Gói tin', description: 'Cập nhật gói hiển thị' },
 ];
@@ -96,6 +96,16 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
   const [vipTier, setVipTier] = useState<'normal' | 'vip' | 'vip_plus' | 'diamond'>('normal');
   const [formData, setFormData] = useState<PropertyFormData>(emptyFormData);
 
+  // Giới hạn ảnh do quản trị viên cấu hình (feedback I.4) — trước đây trang này hardcode
+  // 10/10, không đồng bộ với trang đăng tin.
+  const [limits, setLimits] = useState({ images_min: 5, images_limit: 50, image_max_size_mb: 10, image_min_width: 1280 });
+  useEffect(() => {
+    api
+      .get('/api/v2/settings/property')
+      .then((res) => res.data?.data && setLimits((prev) => ({ ...prev, ...res.data.data })))
+      .catch(() => { /* giữ mặc định */ });
+  }, []);
+
   const updateFormData = (updates: Partial<PropertyFormData>) => {
     setFormData((prev) => ({ ...prev, ...updates }));
   };
@@ -150,12 +160,16 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
           longitude: data.location?.longitude ?? undefined,
           street: data.street || '',
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          images: (data.media ?? []).map((m: any) => ({
-            url: m.url || m.thumbnail || '',
-            name: m.name || 'image',
-            size: m.size || 0,
-            isPrimary: m.is_primary ?? false,
-          })),
+          images: (data.media ?? [])
+            .filter((m: any) => m.type === 'image')
+            .map((m: any) => ({
+              id: m.id,
+              url: m.url || m.thumbnail || '',
+              name: m.name || 'image',
+              size: m.size || 0,
+              isPrimary: m.is_primary ?? false,
+              imageType: m.image_type ?? undefined,
+            })),
           videos: [],
           price: data.price ?? 0,
           price_unit: data.price_unit || 'total',
@@ -210,7 +224,7 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
       case 1:
         return !!(formData.type && formData.category_id && formData.title.length >= 10 && formData.description.length >= 50 && formData.province_id && formData.district_id);
       case 2:
-        return formData.images.length > 0;
+        return formData.images.length >= limits.images_min;
       case 3:
         return formData.price > 0 && formData.area > 0;
       case 4:
@@ -234,8 +248,18 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
     }
   };
 
-  const buildPayload = () =>
-    buildPropertyPayload(formData, group, { legalNoteWhenEmpty: null, featureIdsWhenEmpty: [] });
+  const buildPayload = () => ({
+    ...buildPropertyPayload(formData, group, { legalNoteWhenEmpty: null, featureIdsWhenEmpty: [] }),
+    // Ảnh: PUT trước đây không xử lý field này nên ảnh sửa/thêm/xoá ở bước 2 không lưu được
+    // xuống DB — server sync toàn bộ (xoá hết ảnh cũ rồi tạo lại đúng thứ tự/bìa/phân loại).
+    images: formData.images.map((img, i) => ({
+      url: img.url,
+      thumbnail: img.thumbnail,
+      is_primary: img.isPrimary ?? i === 0,
+      sort_order: i,
+      image_type: img.imageType,
+    })),
+  });
   // KHÔNG gửi `is_vip`: PUT không xử lý trường này (và không nên — nâng gói phải qua luồng có
   // thanh toán). buildPropertyPayload không đưa is_vip vào payload nên không cần lọc thêm.
 
@@ -391,8 +415,10 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
               title="Hình ảnh"
               images={formData.images}
               onImagesChange={(images) => updateFormData({ images })}
-              maxFiles={10}
-              maxSize={10}
+              minFiles={limits.images_min}
+              maxFiles={limits.images_limit}
+              maxSize={limits.image_max_size_mb}
+              minWidth={limits.image_min_width}
               showVideo={false}
               noteBoxClassName="bg-[#e8f4fb] border border-primary/20 rounded-xl p-4 mb-6"
               noteTextClassName="text-[13px] text-primary space-y-1.5 list-disc list-inside"
