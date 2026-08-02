@@ -432,6 +432,7 @@ model properties {
   price             Decimal                   @db.Decimal(20, 0)
   price_unit        String                    @default("total") @db.VarChar(20)
   price_negotiable  Boolean                   @default(false)
+  price_display_format String                @default("short") @db.VarChar(20)
   area              Decimal                   @db.Decimal(10, 2)
   area_floor        Decimal?                  @db.Decimal(10, 2)
   area_land         Decimal?                  @db.Decimal(10, 2)

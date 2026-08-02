@@ -20,6 +20,40 @@ export function formatPrice(
 }
 
 /**
+ * Hiển thị giá theo lựa chọn của người đăng (feedback I.3) — KHÔNG sửa `formatPrice` ở trên
+ * để tránh rủi ro cho các chỗ đang gọi nó; hàm này chỉ dùng ở nơi cần tôn trọng
+ * `price_display_format` (card + trang chi tiết).
+ *
+ * - 'short'  : y hệt formatPrice hiện tại — "6.5 tỷ".
+ * - 'million': luôn quy về triệu, không có dấu phân cách nghìn — "6500 triệu" (khớp ví dụ
+ *   feedback nguyên văn).
+ * - 'mixed'  : tách tỷ + triệu dư — "6 tỷ 500 triệu"; bỏ phần triệu nếu dư = 0, bỏ phần tỷ nếu
+ *   giá dưới 1 tỷ (dùng lại dạng million cho phần dưới 1 tỷ).
+ */
+export function formatPriceByMode(
+  price: number,
+  mode: 'short' | 'million' | 'mixed' | undefined,
+  unit?: string
+): string {
+  const billion = 1_000_000_000;
+  const million = 1_000_000;
+  const suffix = unit === 'per_m2' ? '/m²' : unit === 'per_month' ? '/tháng' : '';
+
+  if (!mode || mode === 'short') return formatPrice(price, unit);
+
+  if (mode === 'million') {
+    return `${Math.round(price / million)} triệu${suffix}`;
+  }
+
+  // mode === 'mixed'
+  if (price < billion) return `${Math.round(price / million)} triệu${suffix}`;
+  const billions = Math.floor(price / billion);
+  const remainderMillions = Math.round((price % billion) / million);
+  const text = remainderMillions > 0 ? `${billions} tỷ ${remainderMillions} triệu` : `${billions} tỷ`;
+  return text + suffix;
+}
+
+/**
  * Tiền dạng ngắn có giữ phần thập phân — "2 tỷ", "16,667 triệu".
  *
  * Khác `formatPrice` ở chỗ không làm tròn về đơn vị chẵn: giá mỗi m² làm tròn thành "17

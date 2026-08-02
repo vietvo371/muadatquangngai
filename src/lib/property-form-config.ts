@@ -208,6 +208,25 @@ export const IMAGE_CATEGORY_OPTIONS: readonly SelectOption[] = [
 ];
 export const VALID_IMAGE_CATEGORIES = IMAGE_CATEGORY_OPTIONS.map((o) => o.value);
 
+/** Cách hiển thị giá cho người mua (feedback I.3). */
+export const PRICE_DISPLAY_FORMAT_OPTIONS: readonly SelectOption[] = [
+  { value: 'short', label: '6,5 tỷ' },
+  { value: 'million', label: '6500 triệu' },
+  { value: 'mixed', label: '6 tỷ 500 triệu' },
+];
+export const VALID_PRICE_DISPLAY_FORMATS = PRICE_DISPLAY_FORMAT_OPTIONS.map((o) => o.value);
+
+/** Domain hợp lệ cho link Tour 360 (feedback I.12) — chỉ 2 nền tảng phổ biến ở VN. */
+export const TOUR360_DOMAINS = ['matterport.com', 'kuula.co'];
+export function isValidTour360Url(url: string): boolean {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, '');
+    return TOUR360_DOMAINS.some((d) => host === d || host.endsWith(`.${d}`));
+  } catch {
+    return false;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // PropertyFormData dùng chung — form đăng tin (dang-tin) + form sửa tin (edit).
 // Superset của cả hai: mỗi trang chỉ render/gửi phần field nó thực sự dùng
@@ -244,10 +263,16 @@ export interface PropertyFormData {
     width?: number;
   }>;
   videos: Array<{ url: string; thumbnail?: string; name: string; size: number }>;
+  /** Link Tour 360 Matterport/Kuula (feedback I.12) — chỉ 1 link, không phải mảng. */
+  tour360Url?: string;
+  /** Ảnh/PDF mặt bằng (feedback I.13). */
+  floorPlans: Array<{ url: string; thumbnail?: string; name: string; size: number }>;
 
   price: number;
   price_unit: 'total' | 'per_m2' | 'per_month' | 'negotiable';
   price_negotiable: boolean;
+  /** Cách hiển thị giá cho người mua xem (feedback I.3) — xem PRICE_DISPLAY_FORMAT_OPTIONS. */
+  price_display_format: 'short' | 'million' | 'mixed';
   area: number;
   bedrooms?: number;
   bathrooms?: number;
@@ -320,6 +345,7 @@ export function buildPropertyPayload(
     price: formData.price,
     price_unit: formData.price_unit,
     price_negotiable: formData.price_negotiable || formData.price_unit === 'negotiable',
+    price_display_format: formData.price_display_format,
     area: formData.area,
     ...groupFields,
     legal_note:

@@ -5,8 +5,33 @@ import { mapPropertyResource } from '@/lib/api-resources/property-resource';
 import { validateFeatureIds } from '@/lib/api-resources/property-validation';
 import { FieldError, validationErrorResponse, isNumeric, isInteger, isBoolean, inList, isString } from '@/lib/validation';
 import { slugify } from '@/lib/formatters';
-import { VALID_IMAGE_CATEGORIES } from '@/lib/property-form-config';
+import { VALID_IMAGE_CATEGORIES, VALID_PRICE_DISPLAY_FORMATS, isValidTour360Url } from '@/lib/property-form-config';
 import crypto from 'node:crypto';
+
+/**
+ * Sync toàn bộ media 1 loại (xoá hết rồi tạo lại từ payload) — dùng chung cho video, tour 360,
+ * mặt bằng: không có is_primary/image_type như ảnh nên không cần khối riêng phức tạp như ảnh.
+ */
+async function syncSimpleMedia(
+  propertyId: bigint,
+  type: string,
+  rows: Array<{ url: string; thumbnail: string | null; sort_order: number }>
+) {
+  await db.property_media.deleteMany({ where: { property_id: propertyId, type } });
+  if (rows.length === 0) return;
+  const now = new Date();
+  await db.property_media.createMany({
+    data: rows.map((r) => ({
+      property_id: propertyId,
+      type,
+      url: r.url,
+      thumbnail: r.thumbnail,
+      sort_order: r.sort_order,
+      created_at: now,
+      updated_at: now,
+    })),
+  });
+}
 
 const PROPERTY_INCLUDE = {
   provinces: { select: { id: true, name: true, slug: true } },
@@ -129,6 +154,43 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     errors.push(new FieldError('parking', 'Trường chỗ để xe phải là đúng hoặc sai.'));
   }
   if ('feature_ids' in body) errors.push(...(await validateFeatureIds(body.feature_ids)));
+  if ('price_display_format' in body && body.price_display_format !== null && !inList(body.price_display_format, VALID_PRICE_DISPLAY_FORMATS)) {
+    errors.push(new FieldError('price_display_format', 'Giá trị đã chọn trong trường định dạng giá không hợp lệ.'));
+  }
+  if ('tour360_url' in body && body.tour360_url && !isValidTour360Url(body.tour360_url)) {
+    errors.push(new FieldError('tour360_url', 'Chỉ chấp nhận link Matterport hoặc Kuula.'));
+  }
+
+  // Video: PUT trước đây không xử lý field này gì cả — sửa tin không lưu được video thêm/xoá,
+  // giống hệt lỗ hổng ảnh đã sửa ở trên.
+  if ('videos' in body) {
+    if (!Array.isArray(body.videos)) {
+      errors.push(new FieldError('videos', 'Trường video phải là một mảng.'));
+    } else if (body.videos.length > 5) {
+      errors.push(new FieldError('videos', 'Trường video không được nhiều hơn 5 video.'));
+    } else {
+      for (let i = 0; i < body.videos.length; i++) {
+        const url = body.videos[i] && isString(body.videos[i].url) ? body.videos[i].url : undefined;
+        if (!url) errors.push(new FieldError(`videos.${i}.url`, 'Trường đường dẫn video không được để trống.'));
+        else if (url.length > 500) errors.push(new FieldError(`videos.${i}.url`, 'Trường đường dẫn video không được lớn hơn 500 ký tự.'));
+      }
+    }
+  }
+
+  // Mặt bằng (feedback I.13)
+  if ('floor_plans' in body) {
+    if (!Array.isArray(body.floor_plans)) {
+      errors.push(new FieldError('floor_plans', 'Trường mặt bằng phải là một mảng.'));
+    } else if (body.floor_plans.length > 5) {
+      errors.push(new FieldError('floor_plans', 'Trường mặt bằng không được nhiều hơn 5 file.'));
+    } else {
+      for (let i = 0; i < body.floor_plans.length; i++) {
+        const url = body.floor_plans[i] && isString(body.floor_plans[i].url) ? body.floor_plans[i].url : undefined;
+        if (!url) errors.push(new FieldError(`floor_plans.${i}.url`, 'Trường đường dẫn mặt bằng không được để trống.'));
+        else if (url.length > 500) errors.push(new FieldError(`floor_plans.${i}.url`, 'Trường đường dẫn mặt bằng không được lớn hơn 500 ký tự.'));
+      }
+    }
+  }
 
   // Ảnh: sửa tin cho phép thay toàn bộ danh sách ảnh (thêm/xoá/sắp xếp/đổi phân loại) —
   // trước đây route này không xử lý field images gì cả nên ảnh không lưu được khi sửa tin.
@@ -176,6 +238,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
   if ('price_unit' in body) data.price_unit = body.price_unit;
   if ('price_negotiable' in body) data.price_negotiable = Boolean(body.price_negotiable);
+  if ('price_display_format' in body) data.price_display_format = body.price_display_format ?? 'short';
   if ('area' in body) data.area = String(body.area);
   if ('area_floor' in body) data.area_floor = body.area_floor != null ? String(body.area_floor) : null;
   if ('area_land' in body) data.area_land = body.area_land != null ? String(body.area_land) : null;
@@ -243,6 +306,37 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     } else {
       await db.properties.update({ where: { id: existing.id }, data: { thumbnail: null } });
     }
+  }
+
+  if ('videos' in body && Array.isArray(body.videos)) {
+    await syncSimpleMedia(
+      existing.id,
+      'video',
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (body.videos as Array<Record<string, any>>).map((v, i) => ({
+        url: v.url as string,
+        thumbnail: isString(v.thumbnail) && v.thumbnail.length <= 500 ? v.thumbnail : null,
+        sort_order: isInteger(v.sort_order) ? (v.sort_order as number) : i,
+      }))
+    );
+  }
+
+  if ('tour360_url' in body) {
+    const url = isString(body.tour360_url) ? body.tour360_url.trim() : '';
+    await syncSimpleMedia(existing.id, 'virtual_tour', url ? [{ url, thumbnail: null, sort_order: 0 }] : []);
+  }
+
+  if ('floor_plans' in body && Array.isArray(body.floor_plans)) {
+    await syncSimpleMedia(
+      existing.id,
+      'floor_plan',
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (body.floor_plans as Array<Record<string, any>>).map((fp, i) => ({
+        url: fp.url as string,
+        thumbnail: isString(fp.thumbnail) && fp.thumbnail.length <= 500 ? fp.thumbnail : null,
+        sort_order: isInteger(fp.sort_order) ? (fp.sort_order as number) : i,
+      }))
+    );
   }
 
   const updated = await db.properties.findUniqueOrThrow({ where: { id: existing.id }, include: PROPERTY_INCLUDE });

@@ -14,8 +14,10 @@ import {
   VALID_LEGAL,
   VALID_PRICE_UNITS,
   VALID_IMAGE_CATEGORIES,
+  VALID_PRICE_DISPLAY_FORMATS,
   isValidPhone,
   isValidEmail,
+  isValidTour360Url,
 } from '@/lib/property-form-config';
 
 /** Giới hạn số ảnh (feedback I.4) — admin cấu hình qua bảng settings, có mặc định an toàn. */
@@ -171,6 +173,35 @@ export async function POST(request: Request) {
   }
   if (body.price_negotiable !== undefined && body.price_negotiable !== null && !isBoolean(body.price_negotiable)) {
     errors.push(new FieldError('price_negotiable', 'Trường thương lượng giá phải là đúng hoặc sai.'));
+  }
+  if (body.price_display_format !== undefined && body.price_display_format !== null && !inList(body.price_display_format, VALID_PRICE_DISPLAY_FORMATS)) {
+    errors.push(new FieldError('price_display_format', 'Giá trị đã chọn trong trường định dạng giá không hợp lệ.'));
+  }
+  // Tour 360 (feedback I.12) — 1 link duy nhất, chỉ nhận Matterport/Kuula.
+  const tour360Url = isString(body.tour360_url) ? body.tour360_url.trim() : '';
+  if (tour360Url && !isValidTour360Url(tour360Url)) {
+    errors.push(new FieldError('tour360_url', 'Chỉ chấp nhận link Matterport hoặc Kuula.'));
+  }
+  // Mặt bằng (feedback I.13) — ảnh/PDF, client upload thẳng lên Cloudinary như ảnh/video.
+  const rawFloorPlans = body.floor_plans;
+  let floorPlans: Array<{ url: string; thumbnail: string | null; sort_order: number }> = [];
+  if (Array.isArray(rawFloorPlans)) {
+    if (rawFloorPlans.length > 5) {
+      errors.push(new FieldError('floor_plans', 'Trường mặt bằng không được nhiều hơn 5 file.'));
+    } else {
+      for (let i = 0; i < rawFloorPlans.length; i++) {
+        const url = rawFloorPlans[i] && isString(rawFloorPlans[i].url) ? rawFloorPlans[i].url : undefined;
+        if (!url) errors.push(new FieldError(`floor_plans.${i}.url`, 'Trường đường dẫn mặt bằng không được để trống.'));
+        else if (url.length > 500) errors.push(new FieldError(`floor_plans.${i}.url`, 'Trường đường dẫn mặt bằng không được lớn hơn 500 ký tự.'));
+      }
+      if (errors.length === 0) {
+        floorPlans = rawFloorPlans.map((fp: Record<string, unknown>, i: number) => ({
+          url: fp.url as string,
+          thumbnail: isString(fp.thumbnail) && fp.thumbnail.length <= 500 ? fp.thumbnail : null,
+          sort_order: isInteger(fp.sort_order) ? (fp.sort_order as number) : i,
+        }));
+      }
+    }
   }
   errors.push(...(await validateFeatureIds(body.feature_ids)));
 
@@ -338,6 +369,7 @@ export async function POST(request: Request) {
       price: String(price),
       price_unit: body.price_unit ?? 'total',
       price_negotiable: Boolean(body.price_negotiable ?? false),
+      price_display_format: body.price_display_format ?? 'short',
       area: String(area),
       area_floor: body.area_floor != null ? String(body.area_floor) : null,
       area_land: body.area_land != null ? String(body.area_land) : null,
@@ -375,7 +407,7 @@ export async function POST(request: Request) {
       updated_at: now,
       // Nested create — property + ảnh ghi chung một transaction ngầm của Prisma,
       // không sinh tin mồ côi không ảnh nếu bước ghi ảnh lỗi.
-      ...((images.length > 0 || videos.length > 0) && {
+      ...((images.length > 0 || videos.length > 0 || tour360Url || floorPlans.length > 0) && {
         property_media: {
           create: [
             ...images.map((img) => ({
@@ -395,6 +427,20 @@ export async function POST(request: Request) {
               thumbnail: v.thumbnail,
               is_primary: false,
               sort_order: images.length + v.sort_order,
+              created_at: now,
+              updated_at: now,
+            })),
+            // Tour 360 (feedback I.12) — chỉ 1 dòng, không có thumbnail (nhúng iframe khi hiển thị).
+            ...(tour360Url
+              ? [{ type: 'virtual_tour', url: tour360Url, thumbnail: null, is_primary: false, sort_order: 0, created_at: now, updated_at: now }]
+              : []),
+            // Mặt bằng (feedback I.13) — ảnh/PDF, xem ghi chú thumbnail PDF ở FloorPlanUploader.
+            ...floorPlans.map((fp) => ({
+              type: 'floor_plan',
+              url: fp.url,
+              thumbnail: fp.thumbnail,
+              is_primary: false,
+              sort_order: fp.sort_order,
               created_at: now,
               updated_at: now,
             })),

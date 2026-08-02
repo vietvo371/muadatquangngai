@@ -34,6 +34,7 @@ export interface PropertyRow {
   price: unknown; // Prisma.Decimal
   price_unit: string;
   price_negotiable: boolean;
+  price_display_format?: string;
   area: unknown;
   area_floor: unknown;
   area_land: unknown;
@@ -170,6 +171,7 @@ export function mapPropertyResource(
     price_formatted: priceFormatted(price, property.price_unit),
     price_unit: property.price_unit,
     price_negotiable: property.price_negotiable,
+    price_display_format: property.price_display_format ?? 'short',
 
     area: toFloat(property.area),
     area_floor: toFloatOrNull(property.area_floor),
