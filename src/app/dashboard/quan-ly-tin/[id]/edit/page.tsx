@@ -162,6 +162,8 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [apiCategories, setApiCategories] = useState<Array<{ id: number; name: string; type: string }>>([]);
+  /** Hạn hiển thị VIP của tin — chỉ để xem ở bước 4, không sửa được từ trang này. */
+  const [vipExpiredAt, setVipExpiredAt] = useState<string | null>(null);
   const [features, setFeatures] = useState<Array<{ id: number; name: string }>>([]);
   const [formData, setFormData] = useState<PropertyFormData>(emptyFormData);
 
@@ -249,6 +251,9 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
             : data.is_vip === 'vip' ? 'vip'
             : 'normal',
         });
+
+        // Hạn VIP để hiển thị ở bước 4 (chỉ xem, không đổi được — xem ghi chú ở bước 4).
+        setVipExpiredAt(data.vip_expired_at ?? null);
 
         // Tin đã có toạ độ nghĩa là người dùng đã ghim trước đó — coi như ghim của người dùng
         // để auto-geocode KHÔNG tự đè khi mở lại tin để sửa. Chỉ auto-ghim khi tin chưa có toạ độ.
@@ -497,7 +502,8 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
       latitude: formData.latitude ?? undefined,
       longitude: formData.longitude ?? undefined,
       feature_ids: isFieldVisible(group, 'utilities') && formData.features.length > 0 ? formData.features : [],
-      is_vip: formData.package_id === 'normal' ? undefined : formData.package_id,
+      // KHÔNG gửi `is_vip`: PUT không xử lý trường này (và không nên — nâng gói phải qua luồng có
+      // thanh toán). Gửi lên chỉ tạo ảo giác là sửa tin đổi được hạng hiển thị.
     };
   };
 
@@ -1047,28 +1053,61 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
             </div>
           )}
 
-          {/* Step 4: Packages */}
+          {/* Bước 4: Gói hiển thị — CHỈ XEM.
+              Trước đây bước này cho chọn lại gói nhưng PUT /api/v2/my/properties/[id] không hề
+              xử lý `is_vip`, nên bấm gì cũng không có tác dụng: người dùng tưởng đã nâng cấp.
+              Nâng cấp gói phải đi qua luồng có thanh toán (trừ users.balance, ghi transactions +
+              subscriptions trong một transaction có idempotency_key) như trang đăng tin — nhân
+              bản logic tiền sang đây là chỗ dễ trừ nhầm/trừ hai lần nhất. Nên ở đây chỉ hiển thị
+              đúng tình trạng thật. */}
           {currentStep === 4 && (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <h3 className="text-lg font-bold text-gray-900 mb-2 pb-2 border-b text-center">Gói hiển thị tin đăng</h3>
-              <p className="text-center text-gray-500 text-sm mb-8">Tin đăng sẽ được cập nhật hiển thị ngay lập tức sau khi bạn xác nhận.</p>
 
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {PACKAGES.map((pkg) => (
-                  <PackageCard
-                    key={pkg.id}
-                    id={pkg.id}
-                    name={pkg.name}
-                    price={pkg.price}
-                    duration={pkg.duration}
-                    features={pkg.features}
-                    isPopular={pkg.isPopular}
-                    color={pkg.id as 'normal' | 'vip' | 'vip_plus' | 'diamond'}
-                    selected={formData.package_id === pkg.id}
-                    onSelect={(pid) => updateFormData({ package_id: pid })}
-                  />
-                ))}
-              </div>
+              {(() => {
+                const current = PACKAGES.find((p) => p.id === formData.package_id) ?? PACKAGES[0];
+                const isVip = formData.package_id !== 'normal';
+                const expired = vipExpiredAt ? new Date(vipExpiredAt) : null;
+                const stillValid = expired ? expired.getTime() > Date.now() : false;
+
+                return (
+                  <div className="max-w-xl mx-auto">
+                    <div className="rounded-2xl border border-gray-200 overflow-hidden">
+                      <div className="bg-gray-50 px-5 py-3 border-b border-gray-200">
+                        <h4 className="font-bold text-gray-900">Gói đang áp dụng</h4>
+                      </div>
+                      <div className="p-5 space-y-3 text-sm">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-500">Gói hiển thị</span>
+                          <span className={`font-bold ${isVip ? 'text-cta' : 'text-gray-900'}`}>{current.name}</span>
+                        </div>
+                        {isVip && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-500">Hạn hiển thị</span>
+                            <span className={`font-semibold ${stillValid ? 'text-gray-800' : 'text-red-600'}`}>
+                              {expired
+                                ? `${expired.toLocaleDateString('vi-VN')}${stillValid ? '' : ' (đã hết hạn)'}`
+                                : 'Không giới hạn'}
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {current.features.map((f) => (
+                            <span key={f} className="text-[12px] bg-gray-100 text-gray-600 rounded-full px-2.5 py-1">
+                              {f}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <p className="text-[13px] text-gray-500 mt-4 text-center">
+                      Gói hiển thị không thay đổi được ở trang sửa tin. Để nâng cấp, vui lòng dùng
+                      chức năng đẩy tin trong <Link href="/dashboard/quan-ly-tin" className="text-primary font-semibold hover:underline">Quản lý tin</Link>.
+                    </p>
+                  </div>
+                );
+              })()}
             </div>
           )}
         </CardContent>
