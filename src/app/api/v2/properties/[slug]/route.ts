@@ -17,7 +17,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
         select: { id: true, name: true, phone: true, avatar: true, role: true, rating: true, total_listings: true },
       },
       property_media: {
-        select: { id: true, type: true, url: true, thumbnail: true, caption: true, is_primary: true, sort_order: true },
+        select: { id: true, type: true, image_type: true, url: true, thumbnail: true, caption: true, is_primary: true, sort_order: true },
       },
       property_features: { include: { features: { select: { id: true, name: true, icon: true } } } },
     },
