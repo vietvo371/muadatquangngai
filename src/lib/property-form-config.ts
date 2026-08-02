@@ -190,6 +190,24 @@ export const VALID_LEGAL = [...LEGAL_OPTIONS.map((o) => o.value), ...Object.keys
 export const VALID_FURNITURE = FURNITURE_OPTIONS.map((o) => o.value);
 export const VALID_PRICE_UNITS = ['total', 'per_m2', 'per_month', 'negotiable'];
 
+/**
+ * Phân loại ảnh (feedback I.5) — khớp enum `MediaCategory` phía Laravel (không dùng ở app
+ * đang chạy, nhưng giữ cùng danh sách/nhãn để nhất quán nếu sau này cần lại).
+ */
+export const IMAGE_CATEGORY_OPTIONS: readonly SelectOption[] = [
+  { value: 'facade', label: 'Mặt tiền' },
+  { value: 'living_room', label: 'Phòng khách' },
+  { value: 'bedroom', label: 'Phòng ngủ' },
+  { value: 'kitchen', label: 'Bếp' },
+  { value: 'bathroom', label: 'Nhà vệ sinh' },
+  { value: 'balcony', label: 'Ban công' },
+  { value: 'view', label: 'View' },
+  { value: 'amenity', label: 'Tiện ích' },
+  { value: 'legal', label: 'Pháp lý' },
+  { value: 'other', label: 'Khác' },
+];
+export const VALID_IMAGE_CATEGORIES = IMAGE_CATEGORY_OPTIONS.map((o) => o.value);
+
 // ---------------------------------------------------------------------------
 // PropertyFormData dùng chung — form đăng tin (dang-tin) + form sửa tin (edit).
 // Superset của cả hai: mỗi trang chỉ render/gửi phần field nó thực sự dùng
@@ -213,7 +231,18 @@ export interface PropertyFormData {
   longitude?: number;
   street: string;
 
-  images: Array<{ url: string; thumbnail?: string; name: string; size: number; isPrimary?: boolean }>;
+  images: Array<{
+    id?: number;
+    url: string;
+    thumbnail?: string;
+    name: string;
+    size: number;
+    isPrimary?: boolean;
+    /** id gói phân loại ảnh (feedback I.5) — vd. 'facade', 'bedroom'... xem IMAGE_CATEGORY_OPTIONS. */
+    imageType?: string;
+    /** Chiều rộng ảnh gốc (px), Cloudinary trả kèm lúc upload — dùng cảnh báo ảnh nhỏ (feedback I.9). */
+    width?: number;
+  }>;
   videos: Array<{ url: string; thumbnail?: string; name: string; size: number }>;
 
   price: number;

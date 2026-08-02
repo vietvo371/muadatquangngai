@@ -79,6 +79,7 @@ export interface PropertyRow {
   property_media?: Array<{
     id: bigint;
     type: string;
+    image_type?: string | null;
     url: string;
     thumbnail: string | null;
     caption: string | null;
@@ -234,6 +235,7 @@ export function mapPropertyResource(
             .map((m) => ({
               id: m.id,
               type: m.type,
+              image_type: m.image_type ?? null,
               url: m.url,
               thumbnail: m.thumbnail ?? m.url,
               caption: m.caption,

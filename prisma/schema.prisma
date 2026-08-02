@@ -514,6 +514,7 @@ model property_media {
   id           BigInt     @id @default(autoincrement())
   property_id  BigInt
   type         String     @default("image") @db.VarChar(20)
+  image_type   String?    @db.VarChar(30)
   url          String     @db.VarChar(500)
   thumbnail    String?    @db.VarChar(500)
   caption      String?    @db.VarChar(255)

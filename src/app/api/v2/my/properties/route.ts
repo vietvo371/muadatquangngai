@@ -13,9 +13,25 @@ import {
   VALID_FURNITURE,
   VALID_LEGAL,
   VALID_PRICE_UNITS,
+  VALID_IMAGE_CATEGORIES,
   isValidPhone,
   isValidEmail,
 } from '@/lib/property-form-config';
+
+/** Giới hạn số ảnh (feedback I.4) — admin cấu hình qua bảng settings, có mặc định an toàn. */
+async function getImageCountLimits(): Promise<{ min: number; max: number }> {
+  const rows = await db.settings.findMany({
+    where: { group: 'property', key: { in: ['property_images_min', 'property_images_limit'] } },
+    select: { key: true, value: true },
+  });
+  const map = new Map(rows.map((r) => [r.key, Number(r.value)]));
+  const min = map.get('property_images_min');
+  const max = map.get('property_images_limit');
+  return {
+    min: Number.isFinite(min) && (min as number) > 0 ? (min as number) : 5,
+    max: Number.isFinite(max) && (max as number) > 0 ? (max as number) : 50,
+  };
+}
 
 const PROPERTY_INCLUDE = {
   provinces: { select: { id: true, name: true, slug: true } },
@@ -23,7 +39,7 @@ const PROPERTY_INCLUDE = {
   categories: { select: { id: true, name: true, slug: true, icon: true } },
   users: { select: { id: true, name: true, phone: true, avatar: true, role: true, rating: true, total_listings: true } },
   property_media: {
-    select: { id: true, type: true, url: true, thumbnail: true, caption: true, is_primary: true, sort_order: true },
+    select: { id: true, type: true, image_type: true, url: true, thumbnail: true, caption: true, is_primary: true, sort_order: true },
   },
 } as const;
 
@@ -174,13 +190,16 @@ export async function POST(request: Request) {
 
   // Ảnh: client upload thẳng lên Cloudinary rồi gửi kèm URL. Chỉ nhận URL (không nhận
   // file) nên chỉ cần validate kiểu và độ dài khớp cột VarChar(500).
+  const imageLimits = await getImageCountLimits();
   const rawImages = body.images;
-  let images: Array<{ url: string; thumbnail: string | null; is_primary: boolean; sort_order: number }> = [];
+  let images: Array<{ url: string; thumbnail: string | null; is_primary: boolean; sort_order: number; image_type: string | null }> = [];
   if (rawImages !== undefined && rawImages !== null) {
     if (!Array.isArray(rawImages)) {
       errors.push(new FieldError('images', 'Trường hình ảnh phải là một mảng.'));
-    } else if (rawImages.length > 20) {
-      errors.push(new FieldError('images', 'Trường hình ảnh không được nhiều hơn 20 ảnh.'));
+    } else if (rawImages.length < imageLimits.min) {
+      errors.push(new FieldError('images', `Vui lòng tải lên tối thiểu ${imageLimits.min} ảnh.`));
+    } else if (rawImages.length > imageLimits.max) {
+      errors.push(new FieldError('images', `Trường hình ảnh không được nhiều hơn ${imageLimits.max} ảnh.`));
     } else {
       for (let i = 0; i < rawImages.length; i++) {
         const img = rawImages[i];
@@ -190,6 +209,9 @@ export async function POST(request: Request) {
         } else if (url.length > 500) {
           errors.push(new FieldError(`images.${i}.url`, 'Trường đường dẫn ảnh không được lớn hơn 500 ký tự.'));
         }
+        if (img?.image_type != null && !VALID_IMAGE_CATEGORIES.includes(img.image_type)) {
+          errors.push(new FieldError(`images.${i}.image_type`, 'Phân loại ảnh không hợp lệ.'));
+        }
       }
       if (errors.length === 0) {
         images = rawImages.map((img: Record<string, unknown>, i: number) => ({
@@ -197,6 +219,7 @@ export async function POST(request: Request) {
           thumbnail: isString(img.thumbnail) && img.thumbnail.length <= 500 ? img.thumbnail : null,
           is_primary: Boolean(img.is_primary),
           sort_order: isInteger(img.sort_order) ? (img.sort_order as number) : i,
+          image_type: isString(img.image_type) ? img.image_type : null,
         }));
         // Luôn đảm bảo đúng 1 ảnh đại diện — nếu client không đánh dấu thì lấy ảnh đầu.
         const primaryIdx = images.findIndex((img) => img.is_primary);
@@ -206,6 +229,8 @@ export async function POST(request: Request) {
         }));
       }
     }
+  } else {
+    errors.push(new FieldError('images', `Vui lòng tải lên tối thiểu ${imageLimits.min} ảnh.`));
   }
 
   // Video (spec mục 7.2) — lưu chung property_media, phân biệt bằng cột type. Chỉ nhận
@@ -355,6 +380,7 @@ export async function POST(request: Request) {
           create: [
             ...images.map((img) => ({
               type: 'image',
+              image_type: img.image_type,
               url: img.url,
               thumbnail: img.thumbnail,
               is_primary: img.is_primary,

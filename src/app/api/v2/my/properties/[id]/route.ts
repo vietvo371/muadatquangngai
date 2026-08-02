@@ -5,6 +5,7 @@ import { mapPropertyResource } from '@/lib/api-resources/property-resource';
 import { validateFeatureIds } from '@/lib/api-resources/property-validation';
 import { FieldError, validationErrorResponse, isNumeric, isInteger, isBoolean, inList, isString } from '@/lib/validation';
 import { slugify } from '@/lib/formatters';
+import { VALID_IMAGE_CATEGORIES } from '@/lib/property-form-config';
 import crypto from 'node:crypto';
 
 const PROPERTY_INCLUDE = {
@@ -13,10 +14,25 @@ const PROPERTY_INCLUDE = {
   categories: { select: { id: true, name: true, slug: true, icon: true } },
   users: { select: { id: true, name: true, phone: true, avatar: true, role: true, rating: true, total_listings: true } },
   property_media: {
-    select: { id: true, type: true, url: true, thumbnail: true, caption: true, is_primary: true, sort_order: true },
+    select: { id: true, type: true, image_type: true, url: true, thumbnail: true, caption: true, is_primary: true, sort_order: true },
   },
   property_features: { include: { features: { select: { id: true, name: true, icon: true } } } },
 } as const;
+
+/** Giới hạn số ảnh (feedback I.4) — cùng nguồn setting với route tạo tin. */
+async function getImageCountLimits(): Promise<{ min: number; max: number }> {
+  const rows = await db.settings.findMany({
+    where: { group: 'property', key: { in: ['property_images_min', 'property_images_limit'] } },
+    select: { key: true, value: true },
+  });
+  const map = new Map(rows.map((r) => [r.key, Number(r.value)]));
+  const min = map.get('property_images_min');
+  const max = map.get('property_images_limit');
+  return {
+    min: Number.isFinite(min) && (min as number) > 0 ? (min as number) : 5,
+    max: Number.isFinite(max) && (max as number) > 0 ? (max as number) : 50,
+  };
+}
 
 const DIRECTIONS = ['dong', 'tay', 'nam', 'bac', 'dong_bac', 'dong_nam', 'tay_bac', 'tay_nam'] as const;
 const FURNITURE = ['none', 'basic', 'full'] as const;
@@ -114,6 +130,31 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   }
   if ('feature_ids' in body) errors.push(...(await validateFeatureIds(body.feature_ids)));
 
+  // Ảnh: sửa tin cho phép thay toàn bộ danh sách ảnh (thêm/xoá/sắp xếp/đổi phân loại) —
+  // trước đây route này không xử lý field images gì cả nên ảnh không lưu được khi sửa tin.
+  const imageLimits = await getImageCountLimits();
+  if ('images' in body) {
+    if (!Array.isArray(body.images)) {
+      errors.push(new FieldError('images', 'Trường hình ảnh phải là một mảng.'));
+    } else if (body.images.length < imageLimits.min) {
+      errors.push(new FieldError('images', `Vui lòng tải lên tối thiểu ${imageLimits.min} ảnh.`));
+    } else if (body.images.length > imageLimits.max) {
+      errors.push(new FieldError('images', `Trường hình ảnh không được nhiều hơn ${imageLimits.max} ảnh.`));
+    } else {
+      for (let i = 0; i < body.images.length; i++) {
+        const img = body.images[i];
+        if (!img || !isString(img.url)) {
+          errors.push(new FieldError(`images.${i}.url`, 'Trường đường dẫn ảnh không được để trống.'));
+        } else if (img.url.length > 500) {
+          errors.push(new FieldError(`images.${i}.url`, 'Trường đường dẫn ảnh không được lớn hơn 500 ký tự.'));
+        }
+        if (img?.image_type != null && !VALID_IMAGE_CATEGORIES.includes(img.image_type)) {
+          errors.push(new FieldError(`images.${i}.image_type`, 'Phân loại ảnh không hợp lệ.'));
+        }
+      }
+    }
+  }
+
   if (errors.length > 0) return validationErrorResponse(errors);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -170,6 +211,37 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       await db.property_features.createMany({
         data: featureIds.map((fid) => ({ property_id: existing.id, feature_id: BigInt(fid) })),
       });
+    }
+  }
+
+  if ('images' in body && Array.isArray(body.images)) {
+    const now = new Date();
+    // Sync toàn bộ (giống feature_ids ở trên): xoá hết ảnh cũ của property rồi tạo lại đúng
+    // thứ tự/ảnh bìa/phân loại từ payload — đơn giản và nhất quán hơn diff từng ảnh, chấp
+    // nhận đổi hết `id` của property_media mỗi lần lưu (không có nơi nào khác lưu id ảnh cũ).
+    await db.property_media.deleteMany({ where: { property_id: existing.id, type: 'image' } });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rawImages: Array<Record<string, any>> = body.images;
+    if (rawImages.length > 0) {
+      const primaryIdx = rawImages.findIndex((img) => Boolean(img.is_primary));
+      await db.property_media.createMany({
+        data: rawImages.map((img, i) => ({
+          property_id: existing.id,
+          type: 'image',
+          image_type: isString(img.image_type) ? img.image_type : null,
+          url: img.url as string,
+          thumbnail: isString(img.thumbnail) && img.thumbnail.length <= 500 ? img.thumbnail : null,
+          is_primary: i === (primaryIdx >= 0 ? primaryIdx : 0),
+          sort_order: isInteger(img.sort_order) ? (img.sort_order as number) : i,
+          created_at: now,
+          updated_at: now,
+        })),
+      });
+      const cover = rawImages[primaryIdx >= 0 ? primaryIdx : 0];
+      data.thumbnail = cover?.thumbnail ?? cover?.url ?? null;
+      await db.properties.update({ where: { id: existing.id }, data: { thumbnail: data.thumbnail } });
+    } else {
+      await db.properties.update({ where: { id: existing.id }, data: { thumbnail: null } });
     }
   }
 

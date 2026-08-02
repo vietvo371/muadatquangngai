@@ -13,9 +13,10 @@ import { apiSuccess } from '@/lib/api-response';
  */
 
 const DEFAULTS = {
-  images_limit: 10,
+  images_min: 5,
+  images_limit: 50,
   image_max_size_mb: 10,
-  image_min_width: 400,
+  image_min_width: 1280,
   image_formats: ['jpg', 'jpeg', 'png', 'webp'],
   video_limit: 2,
   video_max_size_mb: 100,
@@ -40,6 +41,7 @@ export async function GET() {
     : DEFAULTS.image_formats;
 
   return apiSuccess({
+    images_min: num(map.get('property_images_min'), DEFAULTS.images_min),
     images_limit: num(map.get('property_images_limit'), DEFAULTS.images_limit),
     image_max_size_mb: num(map.get('property_image_max_size_mb'), DEFAULTS.image_max_size_mb),
     image_min_width: num(map.get('property_image_min_width'), DEFAULTS.image_min_width),
