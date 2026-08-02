@@ -2,12 +2,19 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 /**
- * Chống "thừa index" cho trang danh sách bằng header `X-Robots-Tag`.
+ * Điều khiển việc lập chỉ mục bằng header `X-Robots-Tag`. Hai nhóm:
  *
- * Bối cảnh: bộ lọc đẩy tới 13 tham số lên URL (category, khu_vuc, price_min/max, area_min/max,
- * bedrooms, bathrooms, direction, legal, q, sort) cộng page và tpl=map. Tổ hợp của chúng sinh ra
- * vô số URL nội dung gần trùng nhau — để Google index hết thì ngân sách thu thập bị đốt vào
- * trang rác và thứ hạng trang gốc bị pha loãng.
+ * 1. KHU VỰC RIÊNG TƯ (/dashboard, /admin, trang đăng nhập/đăng ký): `noindex, nofollow`.
+ *    robots.txt đã Disallow những đường dẫn này, nhưng Disallow chỉ chặn CRAWL — nếu có link
+ *    trỏ tới từ nơi khác, Google vẫn có thể đưa URL vào kết quả tìm kiếm (không kèm nội dung).
+ *    Chỉ `noindex` mới thực sự giữ chúng ra ngoài. Hai layout này là client component nên không
+ *    export được `metadata`, dùng header là cách duy nhất gọn gàng.
+ *
+ * 2. TRANG DANH SÁCH ĐÃ LỌC: `noindex, follow`. Bộ lọc đẩy tới 13 tham số lên URL (category,
+ *    khu_vuc, price_min/max, area_min/max, bedrooms, bathrooms, direction, legal, q, sort) cộng
+ *    page và tpl=map; tổ hợp sinh ra vô số URL gần trùng nhau, để index hết thì ngân sách thu
+ *    thập bị đốt vào trang rác và thứ hạng trang gốc bị pha loãng. `follow` để bot vẫn đi tiếp
+ *    vào từng tin đăng.
  *
  * VÌ SAO DÙNG HEADER CHỨ KHÔNG PHẢI generateMetadata: đọc `searchParams` trong generateMetadata
  * khiến route thành dynamic và Suspense boundary của `useSearchParams` trong client component
@@ -24,9 +31,21 @@ const VARIANT_PARAMS = [
   'bedrooms', 'bathrooms', 'direction', 'legal', 'q', 'sort', 'tpl',
 ];
 
+/** Đường dẫn không bao giờ nên xuất hiện trong kết quả tìm kiếm. */
+const PRIVATE_PREFIXES = [
+  '/dashboard', '/admin',
+  '/login', '/login-phone', '/register',
+  '/forgot-password', '/reset-password', '/verify-email', '/oauth-callback',
+];
+
 export function proxy(request: NextRequest) {
   const response = NextResponse.next();
-  const { searchParams } = request.nextUrl;
+  const { pathname, searchParams } = request.nextUrl;
+
+  if (PRIVATE_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
+    response.headers.set('X-Robots-Tag', 'noindex, nofollow');
+    return response;
+  }
 
   const hasVariant = VARIANT_PARAMS.some((key) => {
     const value = searchParams.get(key);
@@ -36,7 +55,6 @@ export function proxy(request: NextRequest) {
   const isPaginated = Number.isFinite(page) && page > 1;
 
   if (hasVariant || isPaginated) {
-    // follow: vẫn cho bot đi tiếp vào từng tin đăng, chỉ không index trang danh sách đã lọc.
     response.headers.set('X-Robots-Tag', 'noindex, follow');
   }
 
@@ -44,5 +62,20 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/mua-ban', '/cho-thue', '/du-an', '/moi-gioi', '/doanh-nghiep'],
+  matcher: [
+    '/mua-ban',
+    '/cho-thue',
+    '/du-an',
+    '/moi-gioi',
+    '/doanh-nghiep',
+    '/dashboard/:path*',
+    '/admin/:path*',
+    '/login',
+    '/login-phone',
+    '/register',
+    '/forgot-password',
+    '/reset-password',
+    '/verify-email',
+    '/oauth-callback',
+  ],
 };

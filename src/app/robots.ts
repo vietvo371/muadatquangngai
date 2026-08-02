@@ -19,7 +19,13 @@ export default function robots(): MetadataRoute.Robots {
       userAgent: '*',
       allow: '/',
       // Khu vực cần đăng nhập + endpoint API: không có nội dung cho người tìm kiếm.
-      disallow: ['/dashboard/', '/admin/', '/api/', '/login', '/register', '/reset-password'],
+      // Kèm theo, `src/proxy.ts` đặt X-Robots-Tag: noindex cho đúng những đường dẫn này —
+      // Disallow chỉ chặn crawl, còn noindex mới thực sự giữ URL ra khỏi kết quả tìm kiếm.
+      disallow: [
+        '/dashboard/', '/admin/', '/api/',
+        '/login', '/login-phone', '/register',
+        '/forgot-password', '/reset-password', '/verify-email', '/oauth-callback',
+      ],
     },
     sitemap: `${SITE_URL}/sitemap.xml`,
   };
