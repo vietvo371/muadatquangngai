@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import api from '@/lib/axios';
+import { useAuthStore } from '@/stores/authStore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -41,13 +43,26 @@ export default function SettingsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  // Profile settings
+  // Hồ sơ — nạp từ tài khoản ĐANG ĐĂNG NHẬP. Trước đây hardcode "Nguyễn Văn A" /
+  // "nguyenvana@email.com" nên ai vào cũng thấy tên người khác và tưởng đăng nhập nhầm.
+  const authUser = useAuthStore((s) => s.user);
+  const setAuthUser = useAuthStore((s) => s.setUser);
   const [profile, setProfile] = useState({
-    name: 'Nguyễn Văn A',
-    email: 'nguyenvana@email.com',
-    phone: '0901234567',
+    name: '',
+    email: '',
+    phone: '',
     avatar: null as string | null,
   });
+
+  useEffect(() => {
+    if (!authUser) return;
+    setProfile({
+      name: authUser.name ?? '',
+      email: authUser.email ?? '',
+      phone: authUser.phone ?? '',
+      avatar: authUser.avatar ?? null,
+    });
+  }, [authUser]);
 
   // Notification settings
   const [notifications, setNotifications] = useState({
@@ -68,21 +83,50 @@ export default function SettingsPage() {
     allow_messages: true,
   });
 
+  /**
+   * Lưu hồ sơ THẬT qua PUT /api/v2/user/profile.
+   *
+   * Bản trước chỉ `setTimeout(1000)` rồi báo "Đã lưu cài đặt thành công!" — người dùng sửa tên,
+   * thấy báo thành công, tải lại trang thì mất sạch. Cùng loại lỗi giả lập từng gặp ở trang quên
+   * mật khẩu.
+   *
+   * Chỉ gửi các trường API thật sự nhận (name, phone). Email không đổi được ở đây, còn thông báo/
+   * riêng tư chưa có cột trong DB nên tab đó không có nút lưu (xem ghi chú ở phần render).
+   */
   const handleSave = async () => {
+    if (!profile.name.trim()) {
+      toast.error('Vui lòng nhập họ tên.');
+      return;
+    }
     setIsSubmitting(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      toast.success('Đã lưu cài đặt thành công!');
-    } catch {
-      toast.error('Lỗi khi lưu cài đặt');
+      const res = await api.put('/api/v2/user/profile', {
+        name: profile.name.trim(),
+        phone: profile.phone.trim() || null,
+      });
+      const updated = res.data?.data;
+      if (updated) setAuthUser({ ...authUser, ...updated });
+      toast.success('Đã lưu thông tin cá nhân.');
+    } catch (err) {
+      const msg =
+        (err as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } })
+          ?.response?.data;
+      const firstError = msg?.errors ? Object.values(msg.errors).flat()[0] : undefined;
+      toast.error(firstError || msg?.message || 'Không lưu được. Vui lòng thử lại.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  /**
+   * Xoá tài khoản CHƯA có backend (không có endpoint nào) — trước đây chỉ `console.log` rồi đóng
+   * hộp thoại, người dùng tưởng đã xoá xong. Nói thật cho tới khi làm được: xoá tài khoản còn
+   * kéo theo tin đăng, giao dịch, số dư ví nên cần quyết định chính sách (xoá hẳn hay vô hiệu
+   * hoá) trước khi cài đặt.
+   */
   const handleDeleteAccount = () => {
-    console.log('Delete account');
     setShowDeleteDialog(false);
+    toast.info('Tính năng xoá tài khoản chưa mở. Vui lòng liên hệ hỗ trợ để được xử lý.');
   };
 
   return (
@@ -211,6 +255,16 @@ export default function SettingsPage() {
                 <CardDescription>Quản lý cách bạn nhận các thông báo từ hệ thống</CardDescription>
               </CardHeader>
               <CardContent className="p-6 space-y-8">
+                {/* Chưa có cột lưu trong DB — nói rõ thay vì để nút "Lưu thay đổi" báo thành công
+                    rồi mất sạch sau khi tải lại trang. */}
+                <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                  <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                  <p className="text-[13px] text-amber-800">
+                    Phần tuỳ chỉnh thông báo đang được hoàn thiện, các lựa chọn bên dưới chưa được lưu lại.
+                    Hiện hệ thống vẫn gửi thông báo quan trọng về tin đăng và tin nhắn của bạn.
+                  </p>
+                </div>
+
                 {/* Email Notifications */}
                 <div>
                   <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -303,13 +357,8 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                <div className="flex justify-end pt-4 border-t border-gray-100">
-                  <Button onClick={handleSave} disabled={isSubmitting} className="h-11 px-8 bg-gray-900 hover:bg-black font-bold">
-                    {isSubmitting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                    <Save className="h-4 w-4 mr-2" />
-                    Lưu thay đổi
-                  </Button>
-                </div>
+                {/* Không có nút "Lưu thay đổi" ở tab này: chưa có cột lưu trong DB nên bấm cũng
+                    không giữ được gì — xem banner cảnh báo ở đầu tab. */}
               </CardContent>
             </Card>
           )}
@@ -322,6 +371,15 @@ export default function SettingsPage() {
                 <CardDescription>Kiểm soát ai có thể xem thông tin và liên hệ với bạn</CardDescription>
               </CardHeader>
               <CardContent className="p-6 space-y-6">
+                {/* Chưa có cột lưu trong DB — xem ghi chú ở tab Thông báo. */}
+                <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                  <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                  <p className="text-[13px] text-amber-800">
+                    Tuỳ chỉnh quyền riêng tư đang được hoàn thiện, các lựa chọn bên dưới chưa được lưu lại.
+                    Hiện số điện thoại của bạn vẫn hiển thị trên tin đăng để người mua liên hệ.
+                  </p>
+                </div>
+
                 <div className="space-y-4">
                   <div className="flex items-center justify-between p-4 rounded-xl border border-gray-100 bg-white">
                     <div className="pr-4">
@@ -372,13 +430,7 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                <div className="flex justify-end pt-4 border-t border-gray-100">
-                  <Button onClick={handleSave} disabled={isSubmitting} className="h-11 px-8 bg-gray-900 hover:bg-black font-bold">
-                    {isSubmitting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                    <Save className="h-4 w-4 mr-2" />
-                    Lưu thay đổi
-                  </Button>
-                </div>
+                {/* Không có nút "Lưu thay đổi": chưa có cột lưu trong DB — xem banner ở trên. */}
               </CardContent>
             </Card>
           )}
