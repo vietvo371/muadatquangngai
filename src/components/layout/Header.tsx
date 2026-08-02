@@ -4,10 +4,11 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { Menu, User, Bell, ChevronDown } from 'lucide-react';
+import { Menu, User, Bell, Heart, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useAuthStore } from '@/stores/authStore';
+import { useFavorite } from '@/hooks/useFavorite';
 import { SELL_CATEGORIES, RENT_CATEGORIES, PROJECT_CATEGORIES, type CategoryMenuItem } from '@/lib/category-menu';
 
 const mainNavLinks: Array<{
@@ -26,6 +27,7 @@ const mainNavLinks: Array<{
 export function Header() {
   const pathname = usePathname();
   const { user, isAuthenticated } = useAuthStore();
+  const { savedCount } = useFavorite(undefined);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
   const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
@@ -96,6 +98,20 @@ export function Header() {
 
           {/* Right Actions */}
           <div className="flex items-center gap-2 shrink-0">
+            {/* Tin yêu thích */}
+            {isAuthenticated && (
+              <Link href="/dashboard/tin-da-luu">
+                <Button variant="ghost" size="icon" className="relative" aria-label="Tin yêu thích">
+                  <Heart className="h-5 w-5" />
+                  {savedCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#e03131] px-1 text-[10px] font-bold text-white">
+                      {savedCount > 99 ? '99+' : savedCount}
+                    </span>
+                  )}
+                </Button>
+              </Link>
+            )}
+
             {/* Notifications */}
             {isAuthenticated && (
               <Link href="/dashboard/thong-bao">

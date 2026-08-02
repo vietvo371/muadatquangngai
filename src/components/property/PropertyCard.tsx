@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Heart, MapPin, Bed, Bath, Square, User, CheckCircle, Camera, Ruler } from 'lucide-react';
 import { formatPrice, timeAgo, derivePrices } from '@/lib/formatters';
 import { CONFIG } from '@/lib/config';
+import { useFavorite } from '@/hooks/useFavorite';
 
 interface PropertyCardProps {
   property: {
@@ -63,6 +64,7 @@ export function PropertyCard({ property, className, variant = 'default' }: Prope
     totalPrice ?? property.price,
     property.priceUnit === 'per_m2' ? undefined : property.priceUnit
   );
+  const { isSaved, toggle: toggleFavorite } = useFavorite(property.id);
 
   if (variant === 'compact') {
     return (
@@ -103,11 +105,13 @@ export function PropertyCard({ property, className, variant = 'default' }: Prope
 
             {/* Heart */}
             <button
-              onClick={(e) => { e.preventDefault(); }}
-              className="absolute right-2 top-2 rounded-full bg-white/90 p-1.5 text-gray-400 shadow-sm transition-colors hover:bg-white hover:text-[#e03131]"
-              aria-label="Lưu tin"
+              onClick={(e) => { e.preventDefault(); toggleFavorite(); }}
+              className={`absolute right-2 top-2 rounded-full bg-white/90 p-1.5 shadow-sm transition-colors hover:bg-white hover:text-[#e03131] ${
+                isSaved ? 'text-[#e03131]' : 'text-gray-400'
+              }`}
+              aria-label={isSaved ? 'Bỏ lưu tin' : 'Lưu tin'}
             >
-              <Heart className="h-4 w-4" />
+              <Heart className={`h-4 w-4 ${isSaved ? 'fill-current' : ''}`} />
             </button>
 
             {/* Image count */}
@@ -260,11 +264,13 @@ export function PropertyCard({ property, className, variant = 'default' }: Prope
 
         {/* Heart Button */}
         <button
-          onClick={(e) => { e.preventDefault(); }}
-          className="absolute top-2 right-2 p-1.5 bg-white/90 hover:bg-white rounded-full shadow-sm transition-colors text-gray-400 hover:text-[#e03131]"
-          aria-label="Lưu tin"
+          onClick={(e) => { e.preventDefault(); toggleFavorite(); }}
+          className={`absolute top-2 right-2 p-1.5 bg-white/90 hover:bg-white rounded-full shadow-sm transition-colors hover:text-[#e03131] ${
+            isSaved ? 'text-[#e03131]' : 'text-gray-400'
+          }`}
+          aria-label={isSaved ? 'Bỏ lưu tin' : 'Lưu tin'}
         >
-          <Heart className="h-4 w-4" />
+          <Heart className={`h-4 w-4 ${isSaved ? 'fill-current' : ''}`} />
         </button>
 
         {/* Bottom Right Badges — đã bỏ lượt xem theo yêu cầu khách (tin mới toàn 0 lượt). */}

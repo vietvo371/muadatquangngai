@@ -21,6 +21,7 @@ import { SimilarListings } from '@/components/property/detail/SimilarListings';
 import { timeAgo } from '@/lib/formatters';
 import { CONFIG } from '@/lib/config';
 import { useProperties } from '@/hooks/useProperties';
+import { useFavorite } from '@/hooks/useFavorite';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mapApiProperty = (apiProp: any) => {
@@ -204,7 +205,6 @@ const similarProperties = [
 export default function PropertyDetailClient({ params }: { params: Promise<{ slug: string }> }) {
   const unwrappedParams = use(params);
   const slug = unwrappedParams?.slug;
-  const [isFavorite, setIsFavorite] = useState(false);
   const { fetchProperty, fetchSimilar, isLoading } = useProperties();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [propertyData, setPropertyData] = useState<any>(null);
@@ -236,6 +236,8 @@ export default function PropertyDetailClient({ params }: { params: Promise<{ slu
 
     loadDetail();
   }, [slug, fetchProperty, fetchSimilar]);
+
+  const { isSaved: isFavorite, toggle: toggleFavorite } = useFavorite(propertyData?.id);
 
   if (isLoading || !propertyData) {
     return (
@@ -331,7 +333,7 @@ export default function PropertyDetailClient({ params }: { params: Promise<{ slu
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setIsFavorite(!isFavorite)}
+                  onClick={toggleFavorite}
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] font-semibold transition-colors ${
                     isFavorite ? 'text-[#e03131] bg-red-50' : 'text-gray-600 hover:bg-gray-100'
                   }`}
