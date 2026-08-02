@@ -1,210 +1,134 @@
-'use client';
+import { SITE_NAME, SITE_URL, SITE_DESCRIPTION, absoluteUrl, propertyPath } from '@/lib/site';
 
-import { useEffect } from 'react';
-import Head from 'next/head';
+/**
+ * Dữ liệu có cấu trúc (JSON-LD) cho Google.
+ *
+ * Bản trước của file này KHÔNG chạy được và cũng chưa được dùng ở đâu:
+ * - Bọc thẻ <script> trong `next/head` — đó là API của Pages Router, trong App Router nó không
+ *   render ra gì cả. App Router chỉ cần render thẳng thẻ <script type="application/ld+json">.
+ * - Hardcode tên miền chết `batdongsanquangngai.vn` và URL tin đăng `/tin-dang/{slug}` (404).
+ * - Khai số điện thoại "+84-901-234-567" cùng Facebook/Zalo bịa — khai thông tin sai cho Google
+ *   là rủi ro thật, nên đã bỏ; chỉ khai lại khi có thông tin liên hệ thật.
+ *
+ * Các component dưới đây là server component (không 'use client') để JSON-LD nằm sẵn trong HTML
+ * lần đầu — đúng thứ crawler đọc.
+ */
 
-interface SeoMetadata {
-  title?: string;
-  description?: string;
-  keywords?: string;
-  ogImage?: string;
-  ogType?: string;
-  canonical?: string;
-  noIndex?: boolean;
-}
-
-interface JsonLdProps {
-  data: Record<string, unknown>;
-}
-
-interface PropertyJsonLdProps {
-  property: {
-    id: number;
-    title: string;
-    slug: string;
-    price: number;
-    priceType: 'rent' | 'sell';
-    address: string;
-    latitude?: number;
-    longitude?: number;
-    images: string[];
-    description: string;
-  };
-}
-
-const SITE_NAME = 'BatDongSan Quang Ngai';
-const DEFAULT_DESCRIPTION = 'Bat dong san Quang Ngai - Mua ban, cho thue nha dat, can ho, dat nen. Tin tuc bat dong san, gia nha dat, du an noi bat.';
-const DEFAULT_OG_IMAGE = '/images/og-image.jpg';
-
-export function SeoMetadata({
-  title,
-  description,
-  keywords,
-  ogImage,
-  ogType = 'website',
-  canonical,
-  noIndex = false,
-}: SeoMetadata) {
-  const fullTitle = title ? `${title} | ${SITE_NAME}` : SITE_NAME;
-  const metaDescription = description || DEFAULT_DESCRIPTION;
-  const metaImage = ogImage || DEFAULT_OG_IMAGE;
-
+function JsonLd({ data }: { data: Record<string, unknown> }) {
   return (
-    <Head>
-      <title>{fullTitle}</title>
-      <meta name="description" content={metaDescription} />
-      {keywords && <meta name="keywords" content={keywords} />}
-
-      {/* Open Graph */}
-      <meta property="og:title" content={fullTitle} />
-      <meta property="og:description" content={metaDescription} />
-      <meta property="og:image" content={metaImage} />
-      <meta property="og:type" content={ogType} />
-      <meta property="og:site_name" content={SITE_NAME} />
-      {canonical && <meta property="og:url" content={canonical} />}
-
-      {/* Twitter */}
-      <meta name="twitter:card" content="summary_large_image" />
-      <meta name="twitter:title" content={fullTitle} />
-      <meta name="twitter:description" content={metaDescription} />
-      <meta name="twitter:image" content={metaImage} />
-
-      {/* Canonical */}
-      {canonical && <link rel="canonical" href={canonical} />}
-
-      {/* No Index */}
-      {noIndex && <meta name="robots" content="noindex, nofollow" />}
-    </Head>
-  );
-}
-
-export function JsonLd({ data }: JsonLdProps) {
-  return (
-    <Head>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
-      />
-    </Head>
+    <script
+      type="application/ld+json"
+      // Dữ liệu do mình tự dựng từ DB, không phải input người dùng thô; vẫn chặn `<` để không
+      // thể đóng sớm thẻ script nếu tiêu đề tin có ký tự lạ.
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(data).replace(/</g, '\\u003c') }}
+    />
   );
 }
 
 export function WebsiteJsonLd() {
-  const data = {
-    '@context': 'https://schema.org',
-    '@type': 'WebSite',
-    name: SITE_NAME,
-    url: process.env.NEXT_PUBLIC_SITE_URL || 'https://batdongsanquangngai.vn',
-    description: DEFAULT_DESCRIPTION,
-    potentialAction: {
-      '@type': 'SearchAction',
-      target: {
-        '@type': 'EntryPoint',
-        urlTemplate: `${process.env.NEXT_PUBLIC_SITE_URL}/tim-kiem?q={search_term_string}`,
-      },
-      'query-input': 'required name=search_term_string',
-    },
-  };
-
-  return <JsonLd data={data} />;
+  return (
+    <JsonLd
+      data={{
+        '@context': 'https://schema.org',
+        '@type': 'WebSite',
+        name: SITE_NAME,
+        url: SITE_URL,
+        description: SITE_DESCRIPTION,
+        inLanguage: 'vi-VN',
+        potentialAction: {
+          '@type': 'SearchAction',
+          target: { '@type': 'EntryPoint', urlTemplate: `${SITE_URL}/mua-ban?q={search_term_string}` },
+          'query-input': 'required name=search_term_string',
+        },
+      }}
+    />
+  );
 }
 
 export function OrganizationJsonLd() {
-  const data = {
-    '@context': 'https://schema.org',
-    '@type': 'Organization',
-    name: SITE_NAME,
-    url: process.env.NEXT_PUBLIC_SITE_URL || 'https://batdongsanquangngai.vn',
-    logo: `${process.env.NEXT_PUBLIC_SITE_URL}/images/logo.png`,
-    contactPoint: {
-      '@type': 'ContactPoint',
-      telephone: '+84-901-234-567',
-      contactType: 'customer service',
-      availableLanguage: 'Vietnamese',
-    },
-    sameAs: [
-      'https://facebook.com/batdongsanquangngai',
-      'https://zalo.me/batdongsanquangngai',
-    ],
-  };
-
-  return <JsonLd data={data} />;
+  return (
+    <JsonLd
+      data={{
+        '@context': 'https://schema.org',
+        '@type': 'Organization',
+        name: SITE_NAME,
+        url: SITE_URL,
+        logo: absoluteUrl('/images/logo.png'),
+        areaServed: { '@type': 'AdministrativeArea', name: 'Quảng Ngãi' },
+      }}
+    />
+  );
 }
 
-export function PropertyJsonLd({ property }: PropertyJsonLdProps) {
-  const priceString = property.priceType === 'rent'
-    ? `${property.price} VND/tháng`
-    : `${property.price} VND`;
-
-  const data = {
-    '@context': 'https://schema.org',
-    '@type': 'RealEstateListing',
-    name: property.title,
-    description: property.description,
-    url: `${process.env.NEXT_PUBLIC_SITE_URL}/tin-dang/${property.slug}`,
-    image: property.images,
-    ...(property.latitude && property.longitude
-      ? {
-          geo: {
-            '@type': 'GeoCoordinates',
-            latitude: property.latitude,
-            longitude: property.longitude,
-          },
-        }
-      : {}),
-    address: {
-      '@type': 'PostalAddress',
-      streetAddress: property.address,
-      addressLocality: 'Quang Ngai',
-      addressCountry: 'VN',
-    },
-    offers: {
-      '@type': 'Offer',
-      price: property.price,
-      priceCurrency: 'VND',
-      availability: 'https://schema.org/InStock',
-    },
-  };
-
-  return <JsonLd data={data} />;
+export interface PropertyJsonLdInput {
+  title: string;
+  slug: string;
+  type: string | null;
+  price: number;
+  area?: number | null;
+  address?: string | null;
+  description?: string | null;
+  images?: string[];
+  latitude?: number | null;
+  longitude?: number | null;
+  bedrooms?: number | null;
+  bathrooms?: number | null;
 }
 
-export function BreadcrumbJsonLd({
-  items,
-}: {
-  items: Array<{ name: string; url: string }>;
-}) {
-  const data = {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: items.map((item, index) => ({
-      '@type': 'ListItem',
-      position: index + 1,
-      name: item.name,
-      item: item.url,
-    })),
-  };
-
-  return <JsonLd data={data} />;
+export function PropertyJsonLd({ property }: { property: PropertyJsonLdInput }) {
+  const isRent = property.type === 'rent';
+  return (
+    <JsonLd
+      data={{
+        '@context': 'https://schema.org',
+        '@type': 'RealEstateListing',
+        name: property.title,
+        ...(property.description ? { description: property.description.slice(0, 500) } : {}),
+        url: absoluteUrl(propertyPath(property.type, property.slug)),
+        ...(property.images?.length ? { image: property.images.map((i) => absoluteUrl(i)) } : {}),
+        ...(property.latitude != null && property.longitude != null
+          ? { geo: { '@type': 'GeoCoordinates', latitude: property.latitude, longitude: property.longitude } }
+          : {}),
+        address: {
+          '@type': 'PostalAddress',
+          ...(property.address ? { streetAddress: property.address } : {}),
+          addressRegion: 'Quảng Ngãi',
+          addressCountry: 'VN',
+        },
+        ...(property.area
+          ? { floorSize: { '@type': 'QuantitativeValue', value: property.area, unitCode: 'MTK' } }
+          : {}),
+        ...(property.bedrooms ? { numberOfBedrooms: property.bedrooms } : {}),
+        ...(property.bathrooms ? { numberOfBathroomsTotal: property.bathrooms } : {}),
+        ...(property.price > 0
+          ? {
+              offers: {
+                '@type': 'Offer',
+                price: property.price,
+                priceCurrency: 'VND',
+                availability: 'https://schema.org/InStock',
+                ...(isRent ? { businessFunction: 'https://schema.org/LeaseOut' } : {}),
+              },
+            }
+          : {}),
+      }}
+    />
+  );
 }
 
-export function FAQJsonLd({
-  faqs,
-}: {
-  faqs: Array<{ question: string; answer: string }>;
-}) {
-  const data = {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: faqs.map((faq) => ({
-      '@type': 'Question',
-      name: faq.question,
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: faq.answer,
-      },
-    })),
-  };
-
-  return <JsonLd data={data} />;
+export function BreadcrumbJsonLd({ items }: { items: Array<{ name: string; url: string }> }) {
+  return (
+    <JsonLd
+      data={{
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: items.map((item, i) => ({
+          '@type': 'ListItem',
+          position: i + 1,
+          name: item.name,
+          item: absoluteUrl(item.url),
+        })),
+      }}
+    />
+  );
 }

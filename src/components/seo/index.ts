@@ -1,9 +1,7 @@
 export {
-  SeoMetadata,
-  JsonLd,
   WebsiteJsonLd,
   OrganizationJsonLd,
   PropertyJsonLd,
   BreadcrumbJsonLd,
-  FAQJsonLd,
 } from './SeoComponents';
+export type { PropertyJsonLdInput } from './SeoComponents';
