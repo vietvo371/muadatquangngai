@@ -60,85 +60,6 @@ import { propertyAdminApi, AdminProperty } from '@/lib/admin-api';
 // Dynamic client URL from env
 const CLIENT_URL = process.env.NEXT_PUBLIC_CLIENT_URL || 'http://localhost:3000';
 
-// Mock data fallback with authentic local Quang Ngai listings
-const MOCK_PROPERTIES = [
-  {
-    id: 1,
-    title: 'Căn hộ cao cấp 2PN view biển Mỹ Khê Quảng Ngãi',
-    slug: 'can-ho-cao-cap-2pn-view-bien-my-khe',
-    price: 3500000000,
-    area: 75,
-    thumbnail: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=100&h=100&fit=crop',
-    status: 'active',
-    verification_status: 'verified',
-    type: 'sell',
-    category: 'Căn hộ',
-    province: 'Quảng Ngãi',
-    user: { id: 1, name: 'Nguyễn Văn Anh (Môi giới)' },
-    created_at: '2026-05-15T10:00:00Z',
-  },
-  {
-    id: 2,
-    title: 'Nhà phố 3 tầng mặt tiền Hùng Vương trung tâm TP',
-    slug: 'nha-pho-3-tang-mat-tien-hung-vuong',
-    price: 4500000000,
-    area: 120,
-    thumbnail: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=100&h=100&fit=crop',
-    status: 'pending',
-    verification_status: 'pending',
-    type: 'sell',
-    category: 'Nhà phố',
-    province: 'Quảng Ngãi',
-    user: { id: 2, name: 'Trần Thị Bình' },
-    created_at: '2026-05-18T14:30:00Z',
-  },
-  {
-    id: 3,
-    title: 'Đất nền VSIP Quảng Ngãi kiệt ô tô thông thoáng',
-    slug: 'dat-nen-vsip-quang-ngai-kiet-o-to',
-    price: 1200000000,
-    area: 100,
-    thumbnail: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=100&h=100&fit=crop',
-    status: 'pending',
-    verification_status: 'pending',
-    type: 'sell',
-    category: 'Đất nền',
-    province: 'Quảng Ngãi',
-    user: { id: 3, name: 'Lê Văn Cường' },
-    created_at: '2026-05-19T09:15:00Z',
-  },
-  {
-    id: 4,
-    title: 'Cho thuê shophouse Uhome Quảng Ngãi mặt tiền kinh doanh',
-    slug: 'cho-thue-shophouse-uhome-quang-ngai',
-    price: 15000000,
-    area: 90,
-    thumbnail: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop',
-    status: 'active',
-    verification_status: 'verified',
-    type: 'rent',
-    category: 'Shophouse',
-    province: 'Quảng Ngãi',
-    user: { id: 4, name: 'Phạm Minh Hoàng' },
-    created_at: '2026-05-12T16:00:00Z',
-  },
-  {
-    id: 5,
-    title: 'Bán đất nền ven sông Trà Khúc vị trí đắc địa',
-    slug: 'ban-dat-nen-ven-song-tra-khuc',
-    price: 2600000000,
-    area: 125,
-    thumbnail: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=100&h=100&fit=crop',
-    status: 'inactive',
-    verification_status: 'verified',
-    type: 'sell',
-    category: 'Đất nền',
-    province: 'Quảng Ngãi',
-    user: { id: 5, name: 'Đỗ Mỹ Linh (Đại lý)' },
-    created_at: '2026-05-08T08:00:00Z',
-  }
-];
-
 const verificationConfig = {
   verified: { label: 'Đã xác minh', color: 'bg-green-50 text-green-700 hover:bg-green-100', icon: ShieldCheck },
   pending: { label: 'Chờ xác minh', color: 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100', icon: AlertTriangle },
@@ -175,7 +96,6 @@ export default function PropertiesClient() {
   const queryClient = useQueryClient();
 
   // Mock data states in case of fallback
-  const [mockProperties, setMockProperties] = useState<LocalProperty[]>(MOCK_PROPERTIES as LocalProperty[]);
 
   // Filter states
   const [page, setPage] = useState(1);
@@ -322,43 +242,22 @@ export default function PropertiesClient() {
     setPage(1);
   };
 
-  // Client side fallback filtering if API is down
-  const filteredMockProperties = useMemo(() => {
-    return mockProperties.filter(p => {
-      if (statusFilter !== 'all' && p.status !== statusFilter) return false;
-      if (typeFilter !== 'all' && p.type !== typeFilter) return false;
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase();
-        return (
-          p.title.toLowerCase().includes(query) ||
-          p.category.toLowerCase().includes(query) ||
-          p.user.name.toLowerCase().includes(query)
-        );
-      }
-      return true;
-    });
-  }, [mockProperties, statusFilter, typeFilter, searchQuery]);
+  // CHỈ dùng dữ liệu THẬT. Trước đây khi API lỗi, trang này rơi về MOCK_PROPERTIES và vẫn cho
+  // bấm Duyệt/Từ chối — quản trị viên tưởng đang duyệt tin thật trong khi thao tác trên tin bịa
+  // (và lệnh duyệt gửi lên id không tồn tại). Thà hiện bảng rỗng + báo lỗi tải.
+  const displayProperties = useMemo(() => data?.properties ?? [], [data]);
 
-  const displayProperties = useMemo(() => {
-    if (data?.useRealApi) {
-      return data.properties;
-    }
-    const startIndex = (page - 1) * perPage;
-    return filteredMockProperties.slice(startIndex, startIndex + perPage);
-  }, [data, filteredMockProperties, page, perPage]);
+  const displayTotal = data?.pagination.total ?? 0;
 
-  const displayTotal = useMemo(() => {
-    return data?.useRealApi ? data.pagination.total : filteredMockProperties.length;
-  }, [data, filteredMockProperties]);
+  const displayLastPage = data?.pagination.last_page ?? 1;
 
-  const displayLastPage = useMemo(() => {
-    return data?.useRealApi ? data.pagination.last_page : Math.max(1, Math.ceil(filteredMockProperties.length / perPage));
-  }, [data, filteredMockProperties, perPage]);
+  const pendingCount = useMemo(
+    () => (data?.properties ?? []).filter(p => p.status === 'pending').length,
+    [data]
+  );
 
-  const pendingCount = useMemo(() => {
-    const list = data?.useRealApi ? data.properties : mockProperties;
-    return list.filter(p => p.status === 'pending').length;
-  }, [data, mockProperties]);
+  /** API lỗi → cảnh báo rõ thay vì im lặng hiện bảng rỗng như thể không có tin nào. */
+  const apiFailed = !!data && !data.useRealApi;
 
   // Mutations
   const approveMutation = useMutation({
@@ -369,10 +268,8 @@ export default function PropertiesClient() {
       await queryClient.cancelQueries({ queryKey: ['admin-properties'] });
       const queryKey = ['admin-properties', page, perPage, searchQuery, statusFilter, typeFilter];
       const previousData = queryClient.getQueryData(queryKey);
-      const previousMockProperties = mockProperties;
 
       // Optimistically update states
-      setMockProperties(prev => prev.map(p => p.id === property.id ? { ...p, status: 'active', verification_status: 'verified' } : p));
       queryClient.setQueryData(queryKey, (old: any) => {
         if (!old) return old;
         return {
@@ -381,7 +278,7 @@ export default function PropertiesClient() {
         };
       });
 
-      return { previousData, previousMockProperties };
+      return { previousData };
     },
     onSuccess: (res, property) => {
       if (res && res.success) {
@@ -390,17 +287,14 @@ export default function PropertiesClient() {
         toast.error('Không thể phê duyệt tin đăng.');
       }
     },
+    // Lỗi thì LUÔN báo lỗi. Trước đây nhánh không-có-API lại `toast.success('[Mock] Đã phê
+    // duyệt...')` — quản trị viên tưởng đã duyệt xong trong khi tin vẫn đang chờ.
     onError: (error, property, context: any) => {
-      if (data?.useRealApi) {
-        if (context) {
-          const queryKey = ['admin-properties', page, perPage, searchQuery, statusFilter, typeFilter];
-          queryClient.setQueryData(queryKey, context.previousData);
-          setMockProperties(context.previousMockProperties);
-        }
-        toast.error('Có lỗi xảy ra khi phê duyệt tin đăng.');
-      } else {
-        toast.success(`[Mock] Đã phê duyệt tin đăng "${property.title}"!`);
+      if (context) {
+        const queryKey = ['admin-properties', page, perPage, searchQuery, statusFilter, typeFilter];
+        queryClient.setQueryData(queryKey, context.previousData);
       }
+      toast.error(`Không phê duyệt được tin "${property.title}". Vui lòng thử lại.`);
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-properties'] });
@@ -415,9 +309,7 @@ export default function PropertiesClient() {
       await queryClient.cancelQueries({ queryKey: ['admin-properties'] });
       const queryKey = ['admin-properties', page, perPage, searchQuery, statusFilter, typeFilter];
       const previousData = queryClient.getQueryData(queryKey);
-      const previousMockProperties = mockProperties;
 
-      setMockProperties(prev => prev.map(p => p.id === id ? { ...p, status: 'rejected', verification_status: 'rejected' } : p));
       queryClient.setQueryData(queryKey, (old: any) => {
         if (!old) return old;
         return {
@@ -426,7 +318,7 @@ export default function PropertiesClient() {
         };
       });
 
-      return { previousData, previousMockProperties };
+      return { previousData };
     },
     onSuccess: (res, variables) => {
       if (res && res.success) {
@@ -439,16 +331,11 @@ export default function PropertiesClient() {
       setRejectReason('');
     },
     onError: (error, variables, context: any) => {
-      if (data?.useRealApi) {
-        if (context) {
-          const queryKey = ['admin-properties', page, perPage, searchQuery, statusFilter, typeFilter];
-          queryClient.setQueryData(queryKey, context.previousData);
-          setMockProperties(context.previousMockProperties);
-        }
-        toast.error('Có lỗi xảy ra khi từ chối duyệt tin đăng.');
-      } else {
-        toast.success(`[Mock] Đã từ chối duyệt tin đăng!`);
+      if (context) {
+        const queryKey = ['admin-properties', page, perPage, searchQuery, statusFilter, typeFilter];
+        queryClient.setQueryData(queryKey, context.previousData);
       }
+      toast.error('Không từ chối được tin đăng. Vui lòng thử lại.');
       setShowRejectDialog(false);
       setSelectedProperty(null);
       setRejectReason('');
@@ -466,9 +353,7 @@ export default function PropertiesClient() {
       await queryClient.cancelQueries({ queryKey: ['admin-properties'] });
       const queryKey = ['admin-properties', page, perPage, searchQuery, statusFilter, typeFilter];
       const previousData = queryClient.getQueryData(queryKey);
-      const previousMockProperties = mockProperties;
 
-      setMockProperties(prev => prev.filter(p => p.id !== property.id));
       queryClient.setQueryData(queryKey, (old: any) => {
         if (!old) return old;
         return {
@@ -477,9 +362,9 @@ export default function PropertiesClient() {
         };
       });
 
-      return { previousData, previousMockProperties };
+      return { previousData };
     },
-    onSuccess: (res, property) => {
+    onSuccess: (res) => {
       if (res && res.success) {
         toast.success(res.message || 'Xóa tin đăng thành công!');
       } else {
@@ -487,16 +372,11 @@ export default function PropertiesClient() {
       }
     },
     onError: (error, property, context: any) => {
-      if (data?.useRealApi) {
-        if (context) {
-          const queryKey = ['admin-properties', page, perPage, searchQuery, statusFilter, typeFilter];
-          queryClient.setQueryData(queryKey, context.previousData);
-          setMockProperties(context.previousMockProperties);
-        }
-        toast.error('Có lỗi xảy ra khi xóa tin đăng.');
-      } else {
-        toast.success(`[Mock] Xóa tin đăng "${property.title}" thành công!`);
+      if (context) {
+        const queryKey = ['admin-properties', page, perPage, searchQuery, statusFilter, typeFilter];
+        queryClient.setQueryData(queryKey, context.previousData);
       }
+      toast.error(`Không xóa được tin "${property.title}". Vui lòng thử lại.`);
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-properties'] });
@@ -544,17 +424,23 @@ export default function PropertiesClient() {
         )}
       </div>
 
+      {/* Tải dữ liệu thất bại — nói rõ, KHÔNG hiện bảng rỗng như thể sàn không có tin nào. */}
+      {apiFailed && (
+        <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+          <AlertTriangle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+          <div className="text-[13px] text-red-800">
+            <p className="font-semibold">Không tải được danh sách tin đăng từ máy chủ.</p>
+            <p className="mt-0.5">Bảng bên dưới đang trống do lỗi kết nối, không phải vì sàn không có tin. Vui lòng tải lại trang.</p>
+          </div>
+        </div>
+      )}
+
       {/* Pill Status Tab filters & Controls */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
         {/* Left: Pill Status Filters */}
         <div className="flex flex-wrap gap-1.5 bg-gray-50 p-1 rounded-full w-fit border border-gray-150">
           {statusTabs.map((tab) => {
             const isActive = statusFilter === tab.value;
-            const count = tab.value === 'all'
-              ? displayTotal
-              : (data?.useRealApi 
-                  ? displayTotal // simplify: showing displayTotal or count if we have local list
-                  : mockProperties.filter(p => p.status === tab.value).length);
 
             return (
               <button
@@ -567,11 +453,13 @@ export default function PropertiesClient() {
                 }`}
               >
                 {tab.label}
-                {(!data?.useRealApi || tab.value === 'all') && (
+                {/* Chỉ hiện số khi đang xem đúng tab đó — API trả tổng theo bộ lọc hiện tại, nên
+                    số của các tab khác không có sẵn. Trước đây lấy từ danh sách mock nên hiện sai. */}
+                {(tab.value === 'all' || isActive) && (
                   <span className={`inline-block px-1.5 py-0.5 rounded-full text-[9px] font-extrabold ${
                     isActive ? 'bg-white/20 text-white' : 'bg-gray-200/80 text-gray-600'
                   }`}>
-                    {tab.value === 'all' ? displayTotal : mockProperties.filter(p => p.status === tab.value).length}
+                    {displayTotal}
                   </span>
                 )}
               </button>

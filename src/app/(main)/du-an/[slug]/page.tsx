@@ -620,7 +620,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
         if (hasUnits) {
           setUnitsData(unitsRes.data.map(mapApiUnit));
         } else {
-          const fallbackListings = mapped.relatedListings || mockProject.relatedListings;
+          // CHỈ dùng tin đăng THẬT của dự án. Trước đây fallback về `mockProject.relatedListings`
+          // — tin bịa ("6,5 tỷ / 120m²") kèm link tới slug không tồn tại, khách bấm vào ra 404.
+          const fallbackListings = mapped.relatedListings ?? [];
           setUnitsData(fallbackListings);
 
           // Dự án này chưa có tin đăng nào — lấy 2 dự án mới nhất khác thay vào,
