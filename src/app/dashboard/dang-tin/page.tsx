@@ -1,138 +1,40 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import dynamic from 'next/dynamic';
 import { toast } from 'sonner';
 import api from '@/lib/axios';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { LocationSelect } from '@/components/shared/LocationSelect';
-import { ImageUploader, VideoUploader } from '@/components/shared/ImageUploader';
 import { useAuthStore } from '@/stores/authStore';
 import { usePostDraft, useDraftAutosave } from '@/hooks/usePostDraft';
+import { usePostForm } from '@/hooks/usePostForm';
 import { PostStepper } from '@/components/dashboard/PostStepper';
-import { FORMER_UNITS } from '@/lib/former-admin-units';
 import { PackageCard } from '@/components/dashboard/PackageCard';
+import { BasicInfoFields, AddressMapFields } from '@/components/dashboard/post-form/BasicInfoFields';
+import { TitleDescriptionFields } from '@/components/dashboard/post-form/TitleDescriptionFields';
+import { PriceDetailsFields } from '@/components/dashboard/post-form/PriceDetailsFields';
+import { MediaFields } from '@/components/dashboard/post-form/MediaFields';
+import { ContactFields } from '@/components/dashboard/post-form/ContactFields';
 import {
-  getPropertyGroup,
   isFieldVisible,
-  directionLabel,
-  stripFieldsNotInGroup,
-  DIRECTION_OPTIONS,
-  LEGAL_OPTIONS,
   LEGAL_NEEDS_NOTE,
-  FURNITURE_OPTIONS,
-  PRICE_UNIT_OPTIONS,
   isValidPhone,
   isValidEmail,
   directionText,
   legalText,
+  buildPropertyPayload,
+  type PropertyFormData,
 } from '@/lib/property-form-config';
-import { derivePrices, formatMoneyShort } from '@/lib/formatters';
+import { FORMER_UNITS } from '@/lib/former-admin-units';
 import { ListingPreview, type ListingPreviewData } from '@/components/property/detail/ListingPreview';
-import { 
-  ArrowLeft, 
-  ArrowRight, 
-  Check, 
-  Home,
-  DollarSign,
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
   Loader2,
-  Sparkles,
   Eye
 } from 'lucide-react';
-
-// Bản đồ dùng Leaflet nên phải nạp phía client, không dựng sẵn trên server được.
-const MapPicker = dynamic(() => import('@/components/map/MapPicker').then((m) => m.MapPicker), {
-  ssr: false,
-  loading: () => (
-    <div className="h-[320px] rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-center text-sm text-gray-500">
-      Đang tải bản đồ...
-    </div>
-  ),
-});
-
-// Form data interface
-interface PropertyFormData {
-  // Step 1: Basic Info & Location
-  type: 'sell' | 'rent';
-  category_id: string;
-  title: string;
-  description: string;
-  province_id?: number;
-  district_id?: number;
-  ward_id?: number;
-  // Tên khu vực — chỉ dùng để dựng câu (AI, địa chỉ hiển thị), không gửi lên khi tạo tin.
-  province_name?: string;
-  district_name?: string;
-  ward_name?: string;
-  latitude?: number;
-  longitude?: number;
-  street: string;
-  
-  // Step 2: Media
-  images: Array<{ url: string; thumbnail?: string; name: string; size: number; isPrimary?: boolean }>;
-  videos: Array<{ url: string; thumbnail?: string; name: string; size: number }>;
-  
-  // Step 3: Details & Pricing
-  price: number;
-  price_unit: 'total' | 'per_m2' | 'per_month' | 'negotiable';
-  price_negotiable: boolean;
-  area: number;
-  bedrooms?: number;
-  bathrooms?: number;
-  toilets?: number;
-  floors?: number;
-  direction?: string;
-  balcony_direction?: string;
-  road_width?: number;
-  facade?: number;
-  furniture?: string;
-  legal?: string;
-  /** Mô tả pháp lý tự do — chỉ dùng khi legal = 'other' (feedback 28/07 mục 4). */
-  legal_note?: string;
-  features: number[];
-
-  // Thông tin liên hệ — mặc định lấy từ tài khoản, cho phép sửa (spec mục 4.5)
-  contact_name: string;
-  contact_phone: string;
-  contact_email: string;
-  contact_address: string;
-
-  // Step 4: Package
-  package_id: number | null;
-}
-
-/**
- * Base UI `Select.Value` in ra GIÁ TRỊ THÔ khi không truyền children dạng hàm — với mọi
- * Select dùng id/mã làm value thì người dùng nhìn thấy con số vô nghĩa thay vì tên. Hai
- * helper dưới đây dựng sẵn hàm hiển thị nhãn, để không lặp lại tìm-nhãn ở từng chỗ.
- * Lưu ý: children ghi đè cả prop `placeholder`, nên hàm phải tự trả về nhãn rỗng.
- */
-const optionLabel =
-  (options: readonly { value: string; label: string }[], emptyLabel: string) =>
-  (v: string) =>
-    options.find((o) => o.value === v)?.label ?? emptyLabel;
-
-/** Select số lượng (phòng ngủ, số tầng...) — value là chuỗi số, "0" nghĩa là không có. */
-const countLabel =
-  (zeroLabel: string) =>
-  (v: string) =>
-    !v || v === '0' ? zeroLabel : v;
-
-/** Mốc giá bấm nhanh — đúng 5 mốc trong bản thiết kế kèm feedback 28/07. */
-const PRICE_PRESETS: readonly { label: string; value: number }[] = [
-  { label: '20 triệu', value: 20_000_000 },
-  { label: '200 triệu', value: 200_000_000 },
-  { label: '2 tỷ', value: 2_000_000_000 },
-  { label: '20 tỷ', value: 20_000_000_000 },
-  { label: '200 tỷ', value: 200_000_000_000 },
-];
 
 // 3 bước theo spec mục 2. Trước đây tách làm 4 (cơ bản / ảnh / chi tiết / thanh toán),
 // giờ gộp toàn bộ thông tin BĐS vào bước 1.
@@ -162,8 +64,6 @@ interface PackageOption {
 export default function DangTinPage() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
-  const [apiCategories, setApiCategories] = useState<Array<{id: number; name: string; type: string}>>([]);
-  const [features, setFeatures] = useState<Array<{ id: number; name: string }>>([]);
   const authUser = useAuthStore((s) => s.user);
 
   // Giới hạn media/nội dung do quản trị viên cấu hình (spec mục 7.1). Có giá trị mặc định
@@ -182,7 +82,6 @@ export default function DangTinPage() {
       .catch(() => { /* giữ mặc định */ });
   }, []);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [aiLoading, setAiLoading] = useState(false);
 
   const [packages, setPackages] = useState<PackageOption[]>([]);
   const [balance, setBalance] = useState<number>(0);
@@ -231,6 +130,25 @@ export default function DangTinPage() {
     contact_address: '',
     package_id: null,
   });
+
+  const updateFormData = (updates: Partial<PropertyFormData>) => {
+    setFormData((prev) => ({ ...prev, ...updates }));
+  };
+
+  // Phần logic dùng chung với trang sửa tin: danh mục, tiện ích, đổi danh mục, AI, bản đồ.
+  const {
+    apiCategories,
+    features,
+    group,
+    aiLoading,
+    generateContent,
+    handleCategoryChange,
+    isGeocoding,
+    geocodeNote,
+    handleMapPick,
+    streetAutoFilledRef,
+    pinIsAutoRef,
+  } = usePostForm({ formData, updateFormData });
 
   // Bản nháp (spec mục 13). Chỉ bật autosave sau khi người dùng đã xử lý xong bản nháp
   // cũ (tiếp tục hoặc bỏ), nếu không form rỗng lúc mới mở sẽ ghi đè ngay lên nháp cũ.
@@ -289,120 +207,6 @@ export default function DangTinPage() {
     }));
   }, [authUser]);
 
-  // Fetch categories from API on mount
-  useEffect(() => {
-    const loadCategories = async () => {
-      try {
-        const res = await api.get('/api/v2/categories');
-        const data = res.data?.data || [];
-        setApiCategories(data);
-      } catch (err) {
-        console.error('Failed to load categories:', err);
-        toast.error('Không thể tải danh mục');
-      }
-    };
-    loadCategories();
-  }, []);
-
-  // Nhóm BĐS suy ra từ danh mục — quyết định trường nào hiển thị (spec mục 11).
-  const group = getPropertyGroup(formData.category_id);
-
-  // Tải tiện ích đúng nhóm mỗi khi đổi danh mục.
-  useEffect(() => {
-    const loadFeatures = async () => {
-      try {
-        const res = await api.get(`/api/v2/features?group=${group}`);
-        setFeatures(res.data?.data || []);
-      } catch {
-        setFeatures([]);
-      }
-    };
-    loadFeatures();
-  }, [group]);
-
-  const updateFormData = (updates: Partial<PropertyFormData>) => {
-    setFormData((prev) => ({ ...prev, ...updates }));
-  };
-
-  /**
-   * Đổi danh mục có thể đổi luôn nhóm BĐS. Spec yêu cầu dữ liệu của trường không còn
-   * phù hợp phải bị xoá, không được gửi lên backend — vd. chuyển từ nhà riêng sang đất
-   * nền thì số phòng ngủ / số tầng / nội thất đã nhập phải biến mất.
-   */
-  const handleCategoryChange = (categoryId: string) => {
-    const nextGroup = getPropertyGroup(categoryId);
-    setFormData((prev) => {
-      const cleaned = stripFieldsNotInGroup(nextGroup, { ...prev, category_id: categoryId });
-      return {
-        ...cleaned,
-        category_id: categoryId,
-        // stripFieldsNotInGroup xoá hẳn key; đưa về giá trị rỗng để input vẫn controlled.
-        bedrooms: isFieldVisible(nextGroup, 'bedrooms') ? prev.bedrooms : undefined,
-        bathrooms: isFieldVisible(nextGroup, 'bathrooms') ? prev.bathrooms : undefined,
-        toilets: isFieldVisible(nextGroup, 'toilets') ? prev.toilets : undefined,
-        floors: isFieldVisible(nextGroup, 'floors') ? prev.floors : undefined,
-        direction: isFieldVisible(nextGroup, 'direction') ? prev.direction : '',
-        balcony_direction: isFieldVisible(nextGroup, 'balcony_direction') ? prev.balcony_direction : '',
-        road_width: isFieldVisible(nextGroup, 'road_width') ? prev.road_width : undefined,
-        facade: isFieldVisible(nextGroup, 'facade') ? prev.facade : undefined,
-        legal: isFieldVisible(nextGroup, 'legal') ? prev.legal : '',
-        legal_note: isFieldVisible(nextGroup, 'legal') ? prev.legal_note : '',
-        furniture: isFieldVisible(nextGroup, 'furniture') ? prev.furniture : 'none',
-        features: isFieldVisible(nextGroup, 'utilities') ? prev.features : [],
-      } as PropertyFormData;
-    });
-  };
-
-  /**
-   * Gọi AI viết CẢ tiêu đề lẫn mô tả trong một lượt (feedback 28/07 mục 5 — trước đây tách
-   * làm 2 nút riêng nên phải bấm 2 lần). Spec cũ vẫn giữ nguyên một điểm: "Không tự động ghi
-   * đè nội dung đã nhập mà không có xác nhận" — nên nếu đã có chữ thì hỏi trước.
-   */
-  const generateContent = async () => {
-    const willOverwrite = formData.title.trim() || formData.description.trim();
-    if (willOverwrite && !window.confirm('Nội dung hiện tại sẽ được thay bằng nội dung AI vừa tạo. Bạn có chắc không?')) {
-      return;
-    }
-
-    setAiLoading(true);
-    try {
-      const res = await api.post('/api/v2/ai/generate-listing', {
-        mode: 'both',
-        category_id: formData.category_id,
-        street: formData.street,
-        district_name: formData.district_name,
-        province_name: formData.province_name,
-        price: formData.price,
-        price_unit: formData.price_unit,
-        area: formData.area,
-        bedrooms: formData.bedrooms,
-        bathrooms: formData.bathrooms,
-        toilets: formData.toilets,
-        floors: formData.floors,
-        direction: formData.direction,
-        balcony_direction: formData.balcony_direction,
-        road_width: formData.road_width,
-        facade: formData.facade,
-        legal: formData.legal,
-        furniture: formData.furniture,
-        // Gửi TÊN tiện ích thay vì id để AI hiểu được nội dung.
-        feature_names: features.filter((f) => formData.features.includes(f.id)).map((f) => f.name),
-      });
-      const data = res.data?.data;
-      if (!data?.title && !data?.description) throw new Error('Không nhận được nội dung');
-      updateFormData({
-        ...(data.title ? { title: data.title } : {}),
-        ...(data.description ? { description: data.description } : {}),
-      });
-      toast.success('Đã tạo nội dung. Bạn có thể chỉnh sửa lại tuỳ ý.');
-    } catch (err) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      toast.error(msg || 'Không tạo được nội dung. Vui lòng thử lại.');
-    } finally {
-      setAiLoading(false);
-    }
-  };
-
   const toggleFeature = (featureId: number) => {
     const newFeatures = formData.features.includes(featureId)
       ? formData.features.filter(id => id !== featureId)
@@ -410,144 +214,10 @@ export default function DangTinPage() {
     updateFormData({ features: newFeatures });
   };
 
-  const [isGeocoding, setIsGeocoding] = useState(false);
-  const [geocodeNote, setGeocodeNote] = useState<{ type: 'ok' | 'warn'; text: string } | null>(null);
-
-  // Đánh dấu ô "Địa chỉ cụ thể" đang chứa giá trị TỰ ĐIỀN (từ ghim bản đồ), khác với giá trị
-  // người dùng tự gõ. Chỉ khi đang tự điền mới cho phép lần ghim tiếp theo ghi đè tiếp — nếu
-  // người dùng đã tự sửa tay, coi như họ "chốt" giá trị đó, không tự động đổi nữa.
-  const streetAutoFilledRef = useRef(false);
-
-  // Ghim hiện tại do hệ thống tự đặt (auto-geocode / tâm khu vực từ LocationSelect) hay do
-  // người dùng chủ động click/kéo. Mặc định `true`: chỉ khi người dùng tự thao tác lên bản đồ
-  // mới thành `false`, để việc LocationSelect gán tâm tỉnh không bị nhầm là "người dùng đã ghim".
-  const pinIsAutoRef = useRef(true);
-
-  /**
-   * Người dùng ghim một điểm trên bản đồ (spec: chọn địa chỉ bằng bản đồ thay vì gõ tay).
-   *
-   * Toạ độ luôn được lưu ngay. Địa chỉ và xã/phường chỉ điền khi tra ngược ra kết quả chắc
-   * chắn — không đoán bừa, vì gán sai xã sẽ khiến tin đăng lọt sai khu vực tìm kiếm và người
-   * đăng khó phát hiện.
-   */
-  const handleMapPick = async ({ lat, lng }: { lat: number; lng: number }) => {
-    // Người dùng tự click/kéo ghim → từ giờ auto-geocode không đè lên nữa.
-    pinIsAutoRef.current = false;
-    updateFormData({ latitude: lat, longitude: lng });
-    setIsGeocoding(true);
-    setGeocodeNote(null);
-
-    try {
-      const res = await api.get(`/api/v2/geocode/reverse?lat=${lat}&lng=${lng}`);
-      const d = res.data?.data ?? {};
-
-      if (d.outside_coverage) {
-        setGeocodeNote({
-          type: 'warn',
-          text: `Vị trí bạn ghim nằm ở ${d.province_name ?? 'ngoài tỉnh'}, không thuộc khu vực trang này phục vụ. Vui lòng ghim lại trong Quảng Ngãi.`,
-        });
-        return;
-      }
-
-      const patch: Partial<PropertyFormData> = {};
-      // Điền địa chỉ khi ô đang trống, HOẶC khi giá trị hiện có cũng là do tự điền từ lần ghim
-      // trước (người dùng đang chỉnh lại ghim, không phải đã gõ tay) — không đè lên chữ người
-      // dùng tự gõ.
-      if (d.address && (!formData.street.trim() || streetAutoFilledRef.current)) {
-        patch.street = d.address;
-        streetAutoFilledRef.current = true;
-      }
-
-      if (d.matched && d.district_id) {
-        patch.province_id = d.province_id ?? formData.province_id;
-        patch.district_id = d.district_id;
-        patch.district_name = d.district_name;
-        patch.province_name = d.province_name;
-      }
-
-      if (Object.keys(patch).length > 0) updateFormData(patch);
-
-      setGeocodeNote(
-        d.matched
-          ? { type: 'ok', text: `Đã nhận diện: ${d.district_name}. Bạn có thể sửa lại nếu chưa đúng.` }
-          : {
-              type: 'warn',
-              text: 'Chưa xác định được xã/phường từ vị trí này — vui lòng chọn thủ công ở ô phía trên.',
-            }
-      );
-    } catch {
-      setGeocodeNote({
-        type: 'warn',
-        text: 'Không tra được địa chỉ từ vị trí này. Vị trí vẫn được lưu, bạn nhập địa chỉ thủ công nhé.',
-      });
-    } finally {
-      setIsGeocoding(false);
-    }
-  };
-
-  /**
-   * Tự động ghim vị trí trên bản đồ khi người dùng đã nhập đủ địa chỉ (feedback 28/07 mục 2).
-   *
-   * Chỉ chạy khi:
-   *  - có đủ tỉnh + xã/phường + địa chỉ cụ thể do NGƯỜI DÙNG gõ (streetAutoFilledRef=false,
-   *    nếu không thì street là do reverse-geocode tự điền → geocode ngược lại sẽ thành vòng lặp);
-   *  - người dùng CHƯA tự đặt ghim (chưa có toạ độ, hoặc ghim hiện tại cũng do auto đặt).
-   *
-   * Lùi dần khi không tra được địa chỉ chi tiết: [số nhà + khu vực] → [chỉ khu vực], và ghi
-   * chú rõ là ghim tương đối để người dùng biết kéo lại cho đúng.
-   */
-  useEffect(() => {
-    const street = formData.street.trim();
-    const area = [formData.ward_name, formData.district_name, formData.province_name].filter(Boolean).join(', ');
-
-    // Thiếu dữ liệu tối thiểu, hoặc street do reverse tự điền, hoặc người dùng đã tự ghim → bỏ qua.
-    if (!formData.province_name || !formData.district_name || !street || streetAutoFilledRef.current) return;
-    if (formData.latitude != null && !pinIsAutoRef.current) return;
-
-    let cancelled = false;
-    const timer = setTimeout(async () => {
-      // Thử địa chỉ đầy đủ trước, không ra thì lùi về tâm khu vực.
-      const queries = [[street, area].filter(Boolean).join(', '), area].filter(Boolean);
-      setIsGeocoding(true);
-      try {
-        for (let i = 0; i < queries.length; i++) {
-          const res = await api.get(`/api/v2/geocode/search?q=${encodeURIComponent(queries[i])}`);
-          const hits: Array<{ lat: number; lng: number; in_coverage: boolean }> = res.data?.data ?? [];
-          // Ưu tiên kết quả nằm trong tỉnh phục vụ; không có thì lấy kết quả đầu.
-          const hit = hits.find((h) => h.in_coverage) ?? hits[0];
-          if (cancelled) return;
-          if (hit) {
-            pinIsAutoRef.current = true;
-            updateFormData({ latitude: hit.lat, longitude: hit.lng });
-            setGeocodeNote(
-              i === 0
-                ? { type: 'ok', text: 'Đã tự động ghim theo địa chỉ. Kéo ghim để chỉnh nếu chưa đúng.' }
-                : { type: 'warn', text: `Chưa tra được số nhà — đã ghim tương đối theo ${formData.district_name}. Kéo ghim để chỉnh cho đúng.` }
-            );
-            return;
-          }
-        }
-      } catch {
-        // Geocode hỏng thì im lặng — người dùng vẫn tự ghim tay được, không chặn luồng.
-      } finally {
-        if (!cancelled) setIsGeocoding(false);
-      }
-    }, 800);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- chỉ chạy lại khi địa chỉ thật đổi
-  }, [formData.street, formData.province_name, formData.district_name, formData.ward_name]);
-
   /**
    * Quy đổi giá hiển thị ngay dưới ô nhập (feedback mục 3.3). Chỉ trả về khi có tổng giá
    * thật — thiếu diện tích thì `perM2` là null và phần đó tự ẩn, không hiện "0/m²".
    */
-  const derived = derivePrices(formData.price, formData.price_unit, formData.area);
-  const priceBreakdown = derived.total !== null ? { total: derived.total, perM2: derived.perM2 } : null;
-
   const formerUnits = formData.district_id ? (FORMER_UNITS[formData.district_id] ?? []) : [];
 
   const selectedPackage = packages.find((p) => p.id === formData.package_id) ?? null;
@@ -651,60 +321,10 @@ export default function DangTinPage() {
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
-      // Build address from available data
-      // Ghép địa chỉ từ tên khu vực thật do LocationSelect trả về. Trước đây phần sau dấu
-      // phẩy bị hardcode "Quảng Ngãi" nên tin nào cũng ra địa chỉ giống nhau.
-      const address = [
-        formData.street,
-        formData.ward_name,
-        formData.district_name,
-        formData.province_name,
-      ].filter(Boolean).join(', ');
-
-      // Chỉ gửi trường thuộc nhóm BĐS đang chọn — spec yêu cầu không lưu phòng ngủ /
-      // số tầng / nội thất cho danh mục đất. Lọc ở cả client lẫn server cho chắc.
-      const groupFields = stripFieldsNotInGroup(group, {
-        bedrooms: formData.bedrooms || 0,
-        bathrooms: formData.bathrooms || 0,
-        toilets: formData.toilets,
-        floors: formData.floors || undefined,
-        direction: formData.direction || undefined,
-        balcony_direction: formData.balcony_direction || undefined,
-        road_width: formData.road_width,
-        facade: formData.facade,
-        furniture: formData.furniture || 'none',
-        legal: formData.legal || undefined,
-        utilities: undefined, // chỉ là cờ hiển thị, gửi qua feature_ids bên dưới
-      });
-      delete groupFields.utilities;
+      const shared = buildPropertyPayload(formData, group);
 
       const payload = {
-        title: formData.title,
-        description: formData.description,
-        type: formData.type,
-        category_id: parseInt(formData.category_id, 10),
-        price: formData.price,
-        price_unit: formData.price_unit,
-        price_negotiable: formData.price_negotiable || formData.price_unit === 'negotiable',
-        area: formData.area,
-        ...groupFields,
-        // Chỉ gửi chú thích pháp lý khi loại pháp lý thật sự cần nó — tránh lưu chú thích
-        // mồ côi nếu người dùng gõ rồi đổi lại lựa chọn.
-        legal_note:
-          isFieldVisible(group, 'legal') && formData.legal === LEGAL_NEEDS_NOTE && formData.legal_note?.trim()
-            ? formData.legal_note.trim()
-            : undefined,
-        province_id: formData.province_id,
-        district_id: formData.district_id,
-        ward_id: formData.ward_id || undefined,
-        latitude: formData.latitude ?? undefined,
-        longitude: formData.longitude ?? undefined,
-        street: formData.street || undefined,
-        address: address || formData.street || 'Việt Nam',
-        feature_ids:
-          isFieldVisible(group, 'utilities') && formData.features.length > 0
-            ? formData.features
-            : undefined,
+        ...shared,
         contact_name: formData.contact_name || undefined,
         contact_phone: formData.contact_phone,
         contact_email: formData.contact_email || undefined,
@@ -743,7 +363,7 @@ export default function DangTinPage() {
     } catch (err: any) {
       const errors = err.response?.data?.errors;
       const message = err.response?.data?.message || err.message || 'Có lỗi xảy ra khi đăng tin';
-      
+
       if (errors) {
         // Join all validation error messages
         const errorMessages = Object.values(errors).flat() as string[];
@@ -793,188 +413,59 @@ export default function DangTinPage() {
 
       <Card className="border-0 shadow-xl shadow-gray-200/40 rounded-2xl overflow-hidden">
         <CardContent className="p-6 sm:p-8">
-          
+
           {/* Step 1: Basic Info & Location */}
           {currentStep === 1 && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <section>
-                <h3 className="text-lg font-bold text-gray-900 mb-5 pb-2 border-b">Thông tin cơ bản</h3>
-                
-                <div className="mb-6">
-                  <Label className="mb-3 block font-semibold text-gray-700">Loại tin đăng</Label>
-                  <div className="grid grid-cols-2 gap-4">
-                    <button
-                      type="button"
-                      onClick={() => updateFormData({ type: 'sell', category_id: '' })}
-                      className={`flex flex-col items-center justify-center p-5 border-2 rounded-xl transition-all duration-300 ${
-                        formData.type === 'sell'
-                          ? 'border-primary bg-primary-light text-primary shadow-sm scale-[1.02]'
-                          : 'border-gray-200 hover:border-gray-300 text-gray-500 hover:bg-gray-50'
-                      }`}
-                    >
-                      <Home className="h-7 w-7 mb-2" />
-                      <p className="font-bold">Mua bán</p>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => updateFormData({ type: 'rent', category_id: '' })}
-                      className={`flex flex-col items-center justify-center p-5 border-2 rounded-xl transition-all duration-300 ${
-                        formData.type === 'rent'
-                          ? 'border-[#e03131] bg-red-50 text-[#e03131] shadow-sm scale-[1.02]'
-                          : 'border-gray-200 hover:border-gray-300 text-gray-500 hover:bg-gray-50'
-                      }`}
-                    >
-                      <DollarSign className="h-7 w-7 mb-2" />
-                      <p className="font-bold">Cho thuê</p>
-                    </button>
-                  </div>
-                </div>
+              <BasicInfoFields
+                type={formData.type}
+                categoryId={formData.category_id}
+                apiCategories={apiCategories}
+                onTypeChange={(type) => updateFormData({ type, category_id: '' })}
+                onCategoryChange={handleCategoryChange}
+                categoriesEmpty={apiCategories.filter((c) => c.type === formData.type).length === 0}
+              />
 
-                <div className="mb-6">
-                  <Label className="font-semibold text-gray-700">Danh mục <span className="text-red-500">*</span></Label>
-                  <Select
-                    value={formData.category_id}
-                    onValueChange={(value) => handleCategoryChange(value || '')}
-                  >
-                    <SelectTrigger className="mt-2 h-12 bg-gray-50 border-gray-200 focus:ring-primary focus:border-primary">
-                      <SelectValue>
-                        {(v: string) =>
-                          apiCategories.find((c) => String(c.id) === v)?.name ?? '-- Chọn phân khúc --'
-                        }
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {apiCategories
-                        .filter(c => c.type === formData.type)
-                        .map(cat => (
-                          <SelectItem key={cat.id} value={String(cat.id)}>{cat.name}</SelectItem>
-                        ))
-                      }
-                      {apiCategories.filter(c => c.type === formData.type).length === 0 && (
-                        <div className="px-3 py-6 text-center text-sm text-gray-400">
-                          Đang tải danh mục...
-                        </div>
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-              </section>
-
-              <section>
-                <h3 className="text-lg font-bold text-gray-900 mb-5 pb-2 border-b">Địa chỉ bất động sản</h3>
-                <LocationSelect
-                  value={{
-                    province_id: formData.province_id,
-                    district_id: formData.district_id,
-                    ward_id: formData.ward_id,
-                  }}
-                  onChange={(location) => updateFormData({
-                    province_id: location.province_id,
-                    district_id: location.district_id,
-                    ward_id: location.ward_id,
-                    // LocationSelect trả về toạ độ TÂM TỈNH. Nếu người dùng đã ghim chính xác
-                    // trên bản đồ thì giữ nguyên ghim đó — nếu không, chỉ cần đổi lại xã/phường
-                    // là vị trí chính xác bị đẩy về giữa tỉnh.
-                    latitude: formData.latitude ?? location.latitude,
-                    longitude: formData.longitude ?? location.longitude,
-                    // Giữ lại tên để AI mô tả địa chỉ bằng chữ, không phải id.
-                    province_name: location.province_name,
-                    district_name: location.district_name,
-                    ward_name: location.ward_name,
-                  })}
-                  required
-                />
-                <div className="mt-5">
-                  <Label className="font-semibold text-gray-700">Địa chỉ cụ thể (Số nhà, đường)</Label>
-                  <Input
-                    value={formData.street}
-                    onChange={(e) => {
-                      // Người dùng tự gõ — từ giờ không tự động ghi đè ô này khi ghim lại nữa.
-                      streetAutoFilledRef.current = false;
-                      updateFormData({ street: e.target.value });
-                    }}
-                    placeholder="VD: 123 Đường Trần Phú..."
-                    className="mt-2 h-12 bg-gray-50 border-gray-200 focus:ring-primary focus:border-primary"
-                  />
-                </div>
-
-                {/* Nhắc tên đơn vị hành chính trước sáp nhập 2025 — nhiều người bán vẫn quen
-                    gọi theo tên cũ nên khó nhận ra xã/phường mới có phải khu của mình không. */}
-                {formerUnits.length > 0 && (
-                  <p className="mt-2 text-[13px] text-gray-500">
-                    Trước sáp nhập: {formerUnits.join(', ')}
-                  </p>
-                )}
-
-                {/* Chọn vị trí trên bản đồ — khách hàng muốn ghim thay vì gõ tay. */}
-                <div className="mt-5">
-                  <Label className="font-semibold text-gray-700">Ghim vị trí trên bản đồ</Label>
-                  <p className="text-[13px] text-gray-500 mt-1 mb-2">
-                    Chọn đúng vị trí giúp người mua tìm thấy bất động sản của bạn trên bản đồ.
-                  </p>
-                  <MapPicker
-                    value={
-                      formData.latitude != null && formData.longitude != null
-                        ? { lat: formData.latitude, lng: formData.longitude }
-                        : undefined
-                    }
-                    onChange={handleMapPick}
-                  />
-                  {isGeocoding && (
-                    <p className="text-[13px] text-gray-500 mt-2 flex items-center gap-1.5">
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      Đang tra địa chỉ từ vị trí đã ghim...
-                    </p>
-                  )}
-                  {geocodeNote && !isGeocoding && (
-                    <p
-                      className={`text-[13px] mt-2 ${
-                        geocodeNote.type === 'warn' ? 'text-red-600' : 'text-green-700'
-                      }`}
-                    >
-                      {geocodeNote.text}
-                    </p>
-                  )}
-                </div>
-              </section>
+              <AddressMapFields
+                location={{
+                  province_id: formData.province_id,
+                  district_id: formData.district_id,
+                  ward_id: formData.ward_id,
+                  province_name: formData.province_name,
+                  district_name: formData.district_name,
+                  ward_name: formData.ward_name,
+                  latitude: formData.latitude,
+                  longitude: formData.longitude,
+                }}
+                onLocationChange={(location) => updateFormData(location)}
+                street={formData.street}
+                onStreetChange={(value) => {
+                  // Người dùng tự gõ — từ giờ không tự động ghi đè ô này khi ghim lại nữa.
+                  streetAutoFilledRef.current = false;
+                  updateFormData({ street: value });
+                }}
+                formerUnits={formerUnits}
+                onMapPick={handleMapPick}
+                isGeocoding={isGeocoding}
+                geocodeNote={geocodeNote}
+              />
             </div>
           )}
 
           {/* Step 2: Images */}
           {currentStep === 2 && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <h3 className="text-lg font-bold text-gray-900 mb-2 pb-2 border-b">Hình ảnh & Video</h3>
-              
-              <div className="bg-[#e8f4fb]/50 border border-[#1075b1]/15 rounded-xl p-4 mb-6">
-                <ul className="text-[13px] text-[#1075b1] space-y-1.5 list-disc list-inside">
-                  <li>Tải lên tối thiểu <strong>1 ảnh</strong>, tối đa <strong>{limits.images_limit} ảnh</strong>.</li>
-                  <li>Kéo thả ảnh để thay đổi thứ tự. Ảnh đầu tiên sẽ là ảnh bìa.</li>
-                  <li>Hạn chế ảnh có chứa logo, watermark của các nền tảng khác.</li>
-                </ul>
-              </div>
-
-              <ImageUploader
-                files={formData.images}
-                onChange={(images) => updateFormData({ images })}
-                maxFiles={limits.images_limit}
-                maxSize={limits.image_max_size_mb}
-              />
-
-              {/* Video (spec mục 7.2) — không bắt buộc, chọn tải lên hoặc dán link YouTube. */}
-              <div className="pt-2">
-                <h4 className="text-base font-bold text-gray-900 mb-1">Video giới thiệu</h4>
-                <p className="text-[13px] text-gray-500 mb-3">
-                  Không bắt buộc. Tin có video thường được xem lâu hơn.
-                </p>
-                <VideoUploader
-                  videos={formData.videos}
-                  onChange={(videos) => updateFormData({ videos })}
-                  maxVideos={limits.video_limit}
-                  maxSize={limits.video_max_size_mb}
-                />
-              </div>
-            </div>
+            <MediaFields
+              title="Hình ảnh & Video"
+              images={formData.images}
+              onImagesChange={(images) => updateFormData({ images })}
+              maxFiles={limits.images_limit}
+              maxSize={limits.image_max_size_mb}
+              showVideo
+              videos={formData.videos}
+              onVideosChange={(videos) => updateFormData({ videos })}
+              maxVideos={limits.video_limit}
+              maxVideoSize={limits.video_max_size_mb}
+            />
           )}
 
           {/* Bước 1 (phần 2): Giá, thông số, tiện ích, liên hệ, nội dung tin đăng.
@@ -982,458 +473,31 @@ export default function DangTinPage() {
               tiêu đề/mô tả đặt cuối vì AI cần dữ liệu các mục trên để sinh nội dung. */}
           {currentStep === 1 && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <section>
-                <h3 className="text-lg font-bold text-gray-900 mb-5 pb-2 border-b">Diện tích & Mức giá</h3>
-
-                {/* Diện tích đặt TRƯỚC mức giá (feedback 28/07) — người bán nghĩ theo trình tự
-                    "đất bao nhiêu m² rồi mới bao nhiêu tiền", và phần quy đổi giá/m² bên dưới
-                    cũng cần diện tích mới tính được. */}
-                <div className="mb-6">
-                  <Label className="font-semibold text-gray-700">Diện tích <span className="text-red-500">*</span></Label>
-                  <div className="relative mt-2 shadow-sm rounded-lg overflow-hidden md:w-1/2">
-                    <Input
-                      type="number"
-                      min={0}
-                      value={formData.area || ''}
-                      onChange={(e) => updateFormData({ area: parseFloat(e.target.value) || 0 })}
-                      placeholder="VD: 120"
-                      className="h-12 bg-gray-50 focus:bg-white pr-12"
-                    />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">m²</span>
-                  </div>
-                </div>
-
-                <div className="mb-6">
-                  <div className="grid md:grid-cols-3 gap-4">
-                    <div className="md:col-span-2">
-                      <Label className="font-semibold text-gray-700">Mức giá <span className="text-red-500">*</span></Label>
-                      {/* Ô text chứ không phải type="number": input số không cho chèn dấu phân
-                          cách nghìn, mà "2000000000" thì không ai đọc nổi có đúng 2 tỷ hay không. */}
-                      <Input
-                        type="text"
-                        inputMode="numeric"
-                        value={formData.price ? formData.price.toLocaleString('vi-VN') : ''}
-                        onChange={(e) => {
-                          const digits = e.target.value.replace(/\D/g, '');
-                          updateFormData({ price: digits ? parseInt(digits, 10) : 0 });
-                        }}
-                        placeholder="VD: 2.000.000.000"
-                        className="mt-2 h-12 bg-gray-50 focus:bg-white"
-                      />
-                    </div>
-                    <div>
-                      <Label className="font-semibold text-gray-700">Đơn vị</Label>
-                      <Select
-                        value={formData.price_unit}
-                        onValueChange={(value) => updateFormData({ price_unit: (value || 'total') as PropertyFormData['price_unit'] })}
-                      >
-                        <SelectTrigger className="mt-2 h-12 w-full bg-gray-50 font-medium">
-                          <SelectValue>{optionLabel(PRICE_UNIT_OPTIONS, 'VND')}</SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {PRICE_UNIT_OPTIONS.map(o => (
-                            <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  {/* Mức giá gợi ý nhanh — đúng các mốc trong bản thiết kế feedback. */}
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {PRICE_PRESETS.map((preset) => (
-                      <button
-                        key={preset.value}
-                        type="button"
-                        onClick={() => updateFormData({ price: preset.value, price_unit: 'total' })}
-                        className={`rounded-lg border px-3 py-1.5 text-[13px] font-medium transition-colors ${
-                          formData.price === preset.value && formData.price_unit === 'total'
-                            ? 'border-primary bg-primary-light text-primary'
-                            : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'
-                        }`}
-                      >
-                        {preset.label}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Quy đổi hai chiều, cập nhật ngay khi gõ (feedback mục 3.3). Chỉ hiện khi
-                      quy đổi được thật — thiếu diện tích thì im lặng, không hiện số 0. */}
-                  {priceBreakdown && (
-                    <p className="mt-2.5 text-[13px] text-gray-600">
-                      Tổng trị giá <strong className="text-gray-900">{formatMoneyShort(priceBreakdown.total)}</strong>
-                      {priceBreakdown.perM2 !== null && (
-                        <> (~{formatMoneyShort(priceBreakdown.perM2)}/m²)</>
-                      )}
-                    </p>
-                  )}
-                  {formData.price > 0 && formData.area <= 0 && (
-                    <p className="mt-2.5 text-[13px] text-amber-700">
-                      Nhập diện tích ở trên để hệ thống tự quy đổi giá mỗi m².
-                    </p>
-                  )}
-
-                  <div className="mt-3 flex items-center">
-                    <Checkbox
-                      id="negotiable"
-                      checked={formData.price_negotiable}
-                      onCheckedChange={(checked) => updateFormData({ price_negotiable: !!checked })}
-                    />
-                    <Label htmlFor="negotiable" className="ml-2 cursor-pointer text-sm font-medium text-gray-700">
-                      Giá có thể thương lượng
-                    </Label>
-                  </div>
-                </div>
-              </section>
-
-              {/* Thông tin chi tiết — trường hiển thị phụ thuộc nhóm BĐS (spec mục 11.2).
-                  Nhóm đất không có phòng ngủ/phòng tắm/số tầng/hướng ban công/nội thất. */}
-              <section>
-                <h3 className="text-lg font-bold text-gray-900 mb-5 pb-2 border-b">Thông tin chi tiết</h3>
-
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-5 mb-6">
-                  {isFieldVisible(group, 'bedrooms') && (
-                    <div>
-                      <Label className="text-sm font-medium text-gray-600">Phòng ngủ</Label>
-                      <Select
-                        value={String(formData.bedrooms ?? 0)}
-                        onValueChange={(value) => updateFormData({ bedrooms: parseInt(value || '0') })}
-                      >
-                        <SelectTrigger className="mt-2 h-11 bg-gray-50">
-                          <SelectValue>{countLabel('Không có')}</SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="0">Không có</SelectItem>
-                          {[1,2,3,4,5,6,7,8,9,10].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-
-                  {isFieldVisible(group, 'bathrooms') && (
-                    <div>
-                      <Label className="text-sm font-medium text-gray-600">Phòng tắm</Label>
-                      <Select
-                        value={String(formData.bathrooms ?? 0)}
-                        onValueChange={(value) => updateFormData({ bathrooms: parseInt(value || '0') })}
-                      >
-                        <SelectTrigger className="mt-2 h-11 bg-gray-50">
-                          <SelectValue>{countLabel('Không có')}</SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="0">Không có</SelectItem>
-                          {[1,2,3,4,5,6,7,8].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-
-                  {isFieldVisible(group, 'toilets') && (
-                    <div>
-                      <Label className="text-sm font-medium text-gray-600">Nhà vệ sinh</Label>
-                      <Select
-                        value={String(formData.toilets ?? 0)}
-                        onValueChange={(value) => updateFormData({ toilets: parseInt(value || '0') })}
-                      >
-                        <SelectTrigger className="mt-2 h-11 bg-gray-50">
-                          <SelectValue>{countLabel('Không có')}</SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="0">Không có</SelectItem>
-                          {[1,2,3,4,5,6,7,8].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-
-                  {isFieldVisible(group, 'floors') && (
-                    <div>
-                      <Label className="text-sm font-medium text-gray-600">Số tầng</Label>
-                      <Select
-                        value={String(formData.floors ?? 0)}
-                        onValueChange={(value) => updateFormData({ floors: parseInt(value || '0') })}
-                      >
-                        <SelectTrigger className="mt-2 h-11 bg-gray-50">
-                          <SelectValue>{countLabel('Không xác định')}</SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="0">Không xác định</SelectItem>
-                          {[1,2,3,4,5,6,7,8,9,10].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-
-                  {isFieldVisible(group, 'direction') && (
-                    <div>
-                      <Label className="text-sm font-medium text-gray-600">{directionLabel(group)}</Label>
-                      <Select
-                        value={formData.direction || ''}
-                        onValueChange={(value) => updateFormData({ direction: value || '' })}
-                      >
-                        <SelectTrigger className="mt-2 h-11 bg-gray-50">
-                          <SelectValue>{optionLabel(DIRECTION_OPTIONS, 'Tùy chọn')}</SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {DIRECTION_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-
-                  {isFieldVisible(group, 'balcony_direction') && (
-                    <div>
-                      <Label className="text-sm font-medium text-gray-600">Hướng ban công</Label>
-                      <Select
-                        value={formData.balcony_direction || ''}
-                        onValueChange={(value) => updateFormData({ balcony_direction: value || '' })}
-                      >
-                        <SelectTrigger className="mt-2 h-11 bg-gray-50">
-                          <SelectValue>{optionLabel(DIRECTION_OPTIONS, 'Tùy chọn')}</SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {DIRECTION_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-
-                  {isFieldVisible(group, 'road_width') && (
-                    <div>
-                      <Label className="text-sm font-medium text-gray-600">Đường vào (m)</Label>
-                      <Input
-                        type="number"
-                        min={0}
-                        step="0.1"
-                        value={formData.road_width ?? ''}
-                        onChange={(e) => updateFormData({ road_width: e.target.value === '' ? undefined : parseFloat(e.target.value) })}
-                        placeholder="VD: 5"
-                        className="mt-2 h-11 bg-gray-50"
-                      />
-                    </div>
-                  )}
-
-                  {isFieldVisible(group, 'facade') && (
-                    <div>
-                      <Label className="text-sm font-medium text-gray-600">Mặt tiền (m)</Label>
-                      <Input
-                        type="number"
-                        min={0}
-                        step="0.1"
-                        value={formData.facade ?? ''}
-                        onChange={(e) => updateFormData({ facade: e.target.value === '' ? undefined : parseFloat(e.target.value) })}
-                        placeholder="VD: 4.5"
-                        className="mt-2 h-11 bg-gray-50"
-                      />
-                    </div>
-                  )}
-
-                  {isFieldVisible(group, 'legal') && (
-                    <div>
-                      <Label className="text-sm font-medium text-gray-600">Pháp lý</Label>
-                      <Select
-                        value={formData.legal || ''}
-                        onValueChange={(value) =>
-                          updateFormData({
-                            legal: value || '',
-                            // Đổi sang loại pháp lý khác thì phần mô tả tự do không còn đúng
-                            // ngữ cảnh — xoá luôn để không lưu chú thích lạc đề xuống DB.
-                            ...(value === LEGAL_NEEDS_NOTE ? {} : { legal_note: '' }),
-                          })
-                        }
-                      >
-                        <SelectTrigger className="mt-2 h-11 bg-gray-50">
-                          <SelectValue>{optionLabel(LEGAL_OPTIONS, 'Tùy chọn')}</SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {LEGAL_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-                </div>
-
-                {/* Ô mô tả pháp lý — chỉ hiện khi chọn "Khác" (feedback 28/07 mục 4), lưu vào
-                    cột properties.legal_note đã có sẵn nên không cần migration. */}
-                {isFieldVisible(group, 'legal') && formData.legal === LEGAL_NEEDS_NOTE && (
-                  <div className="mb-6">
-                    <Label className="font-semibold text-gray-700">Mô tả tình trạng pháp lý</Label>
-                    <Input
-                      value={formData.legal_note ?? ''}
-                      onChange={(e) => updateFormData({ legal_note: e.target.value })}
-                      placeholder="VD: Đất đã có quyết định giao đất, đang hoàn thiện thủ tục cấp sổ"
-                      maxLength={500}
-                      className="mt-2 h-11 bg-gray-50"
-                    />
-                    <p className="mt-1.5 text-xs text-gray-500">
-                      Ghi rõ giúp người mua yên tâm hơn. Tối đa 500 ký tự.
-                    </p>
-                  </div>
-                )}
-
-                {isFieldVisible(group, 'furniture') && (
-                  <div className="mb-6">
-                    <Label className="font-semibold text-gray-700">Tình trạng nội thất</Label>
-                    <Select
-                      value={formData.furniture || 'none'}
-                      onValueChange={(value) => updateFormData({ furniture: value || '' })}
-                    >
-                      <SelectTrigger className="mt-2 h-11 bg-gray-50 w-full md:w-1/2">
-                        <SelectValue>{optionLabel(FURNITURE_OPTIONS, 'Chọn tình trạng')}</SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {FURNITURE_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              </section>
+              <PriceDetailsFields
+                data={formData}
+                onChange={updateFormData}
+                group={group}
+                features={features}
+                selectedFeatureIds={formData.features}
+                onToggleFeature={toggleFeature}
+              />
 
               {/* Thông tin liên hệ (spec mục 4.5) — điền sẵn từ tài khoản, cho sửa. */}
-              <section>
-                <h3 className="text-lg font-bold text-gray-900 mb-5 pb-2 border-b">Thông tin liên hệ</h3>
-                <div className="grid md:grid-cols-2 gap-5">
-                  <div>
-                    <Label className="font-semibold text-gray-700">Họ và tên <span className="text-red-500">*</span></Label>
-                    <Input
-                      value={formData.contact_name}
-                      onChange={(e) => updateFormData({ contact_name: e.target.value })}
-                      placeholder="Tên người liên hệ"
-                      className="mt-2 h-11 bg-gray-50"
-                    />
-                  </div>
-                  <div>
-                    <Label className="font-semibold text-gray-700">Số điện thoại <span className="text-red-500">*</span></Label>
-                    <Input
-                      value={formData.contact_phone}
-                      onChange={(e) => updateFormData({ contact_phone: e.target.value })}
-                      placeholder="VD: 0901234567"
-                      className="mt-2 h-11 bg-gray-50"
-                    />
-                    {formData.contact_phone && !isValidPhone(formData.contact_phone) && (
-                      <p className="text-xs text-red-500 mt-1.5">Vui lòng nhập đúng định dạng số điện thoại.</p>
-                    )}
-                  </div>
-                  <div>
-                    <Label className="font-semibold text-gray-700">Email</Label>
-                    <Input
-                      value={formData.contact_email}
-                      onChange={(e) => updateFormData({ contact_email: e.target.value })}
-                      placeholder="Không bắt buộc"
-                      className="mt-2 h-11 bg-gray-50"
-                    />
-                    {formData.contact_email && !isValidEmail(formData.contact_email) && (
-                      <p className="text-xs text-red-500 mt-1.5">Vui lòng nhập đúng định dạng email.</p>
-                    )}
-                  </div>
-                  <div>
-                    <Label className="font-semibold text-gray-700">Địa chỉ liên hệ</Label>
-                    <Input
-                      value={formData.contact_address}
-                      onChange={(e) => updateFormData({ contact_address: e.target.value })}
-                      placeholder="Không bắt buộc"
-                      className="mt-2 h-11 bg-gray-50"
-                    />
-                  </div>
-                </div>
-              </section>
+              <ContactFields data={formData} onChange={updateFormData} />
 
-              {isFieldVisible(group, 'utilities') && (
-                <section>
-                  <h3 className="text-lg font-bold text-gray-900 mb-5 pb-2 border-b">Tiện ích kèm theo</h3>
-                  {features.length === 0 ? (
-                    <p className="text-sm text-gray-400">Đang tải tiện ích...</p>
-                  ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-y-4 gap-x-2">
-                      {features.map((feature) => (
-                        <div key={feature.id} className="flex items-center gap-2.5">
-                          <Checkbox
-                            id={`feature-${feature.id}`}
-                            checked={formData.features.includes(feature.id)}
-                            onCheckedChange={() => toggleFeature(feature.id)}
-                            className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                          />
-                          <Label htmlFor={`feature-${feature.id}`} className="cursor-pointer text-[14px] text-gray-700">
-                            {feature.name}
-                          </Label>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </section>
-              )}
-
-              {/* Nội dung tin đăng — đặt cuối cùng (spec mục 4.6) để nút AI ở đợt sau
-                  có sẵn toàn bộ dữ liệu người dùng vừa nhập làm đầu vào. */}
-              <section>
-                <h3 className="text-lg font-bold text-gray-900 mb-3 pb-2 border-b">Nội dung tin đăng</h3>
-
-                {/* Trợ lý AI (spec mục 4.6) — sinh nội dung từ đúng dữ liệu đã nhập ở trên.
-                    Không tự ghi đè nội dung có sẵn mà hỏi xác nhận trước. */}
-                <div className="mb-6 rounded-xl border border-primary/20 bg-primary-light/40 p-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-gray-800">Để AI viết giúp bạn</p>
-                      <p className="text-[13px] text-gray-500 mt-0.5">
-                        AI dựa trên thông tin bạn vừa nhập ở trên, không tự thêm thông tin khác.
-                      </p>
-                    </div>
-                    {/* Một nút duy nhất (feedback 28/07 mục 5) — trước đây 3 nút Tạo tiêu đề /
-                        Viết mô tả / Tạo cả hai chỉ làm tăng số thao tác mà kết quả mong muốn
-                        gần như luôn là "sinh cả hai". */}
-                    <div className="shrink-0">
-                      <Button
-                        type="button"
-                        disabled={aiLoading || !formData.category_id}
-                        onClick={() => generateContent()}
-                        className="h-10 px-4 bg-primary hover:bg-primary/90 text-white"
-                      >
-                        {aiLoading ? (
-                          <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Đang viết nội dung...</>
-                        ) : (
-                          <><Sparkles className="h-4 w-4 mr-2" />Tạo tiêu đề & mô tả bằng AI</>
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                  {!formData.category_id && (
-                    <p className="text-[13px] text-amber-700 mt-2.5">
-                      Chọn danh mục bất động sản ở trên trước khi dùng AI.
-                    </p>
-                  )}
-                </div>
-
-                <div className="mb-6">
-                  <Label className="font-semibold text-gray-700">Tiêu đề tin đăng <span className="text-red-500">*</span></Label>
-                  <Input
-                    value={formData.title}
-                    onChange={(e) => updateFormData({ title: e.target.value })}
-                    placeholder="VD: Nhà riêng 3 tầng mặt tiền đường Hùng Vương, sổ hồng riêng"
-                    className="mt-2 h-12 bg-gray-50 border-gray-200 focus:ring-primary focus:border-primary"
-                  />
-                  <div className="flex justify-between mt-2">
-                    <p className="text-xs text-gray-500">Tối thiểu 10 ký tự</p>
-                    <p className="text-xs font-medium text-gray-500">{formData.title.length}/99</p>
-                  </div>
-                </div>
-
-                <div>
-                  <Label className="font-semibold text-gray-700">Mô tả chi tiết <span className="text-red-500">*</span></Label>
-                  <Textarea
-                    value={formData.description}
-                    onChange={(e) => updateFormData({ description: e.target.value })}
-                    placeholder="Giới thiệu chi tiết về diện tích, tiện ích, vị trí, tình trạng pháp lý..."
-                    rows={7}
-                    className="mt-2 bg-gray-50 border-gray-200 focus:ring-primary focus:border-primary resize-none"
-                  />
-                  <div className="flex justify-between items-center mt-1.5">
-                    <p className="text-xs text-gray-500">Tối thiểu {limits.description_min} ký tự</p>
-                    <p className={`text-xs font-medium ${formData.description.length < limits.description_min ? 'text-gray-400' : 'text-green-600'}`}>
-                      {formData.description.length}/{limits.description_min}
-                    </p>
-                  </div>
-                </div>
-              </section>
+              {/* Nội dung tin đăng — đặt cuối cùng (spec mục 4.6) để nút AI có sẵn toàn bộ
+                  dữ liệu người dùng vừa nhập làm đầu vào. */}
+              <TitleDescriptionFields
+                variant="callout"
+                title={formData.title}
+                description={formData.description}
+                onTitleChange={(title) => updateFormData({ title })}
+                onDescriptionChange={(description) => updateFormData({ description })}
+                categoryId={formData.category_id}
+                aiLoading={aiLoading}
+                onGenerateAI={generateContent}
+                descriptionMin={limits.description_min}
+              />
             </div>
           )}
 

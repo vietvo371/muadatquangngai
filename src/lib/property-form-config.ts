@@ -189,3 +189,124 @@ export const VALID_DIRECTIONS = DIRECTION_OPTIONS.map((o) => o.value);
 export const VALID_LEGAL = [...LEGAL_OPTIONS.map((o) => o.value), ...Object.keys(LEGACY_LEGAL_LABELS)];
 export const VALID_FURNITURE = FURNITURE_OPTIONS.map((o) => o.value);
 export const VALID_PRICE_UNITS = ['total', 'per_m2', 'per_month', 'negotiable'];
+
+// ---------------------------------------------------------------------------
+// PropertyFormData dùng chung — form đăng tin (dang-tin) + form sửa tin (edit).
+// Superset của cả hai: mỗi trang chỉ render/gửi phần field nó thực sự dùng
+// (vd. edit không có contact_*/videos — field vẫn tồn tại trong kiểu dữ liệu
+// nhưng trang edit không đọc/ghi tới, giữ đúng hành vi hiện tại của từng trang).
+// ---------------------------------------------------------------------------
+
+export interface PropertyFormData {
+  type: 'sell' | 'rent';
+  category_id: string;
+  title: string;
+  description: string;
+  province_id?: number;
+  district_id?: number;
+  ward_id?: number;
+  // Tên khu vực — chỉ dùng để dựng câu (AI, địa chỉ hiển thị), không gửi lên khi tạo tin.
+  province_name?: string;
+  district_name?: string;
+  ward_name?: string;
+  latitude?: number;
+  longitude?: number;
+  street: string;
+
+  images: Array<{ url: string; thumbnail?: string; name: string; size: number; isPrimary?: boolean }>;
+  videos: Array<{ url: string; thumbnail?: string; name: string; size: number }>;
+
+  price: number;
+  price_unit: 'total' | 'per_m2' | 'per_month' | 'negotiable';
+  price_negotiable: boolean;
+  area: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  toilets?: number;
+  floors?: number;
+  direction?: string;
+  balcony_direction?: string;
+  road_width?: number;
+  facade?: number;
+  furniture?: string;
+  legal?: string;
+  /** Mô tả pháp lý tự do — chỉ dùng khi legal = 'other'. */
+  legal_note?: string;
+  features: number[];
+
+  // Chỉ dùng ở form đăng tin (create) — form sửa tin không có bước liên hệ.
+  contact_name: string;
+  contact_phone: string;
+  contact_email: string;
+  contact_address: string;
+
+  // Chỉ dùng ở form đăng tin (create) — number = id gói thật từ /api/v2/packages.
+  package_id: number | null;
+}
+
+/** Tuỳ chọn cho 2 chỗ payload create/edit vốn đã khác nhau — giữ nguyên khác biệt cũ thay vì gộp bừa. */
+export interface BuildPropertyPayloadOptions {
+  /** create: undefined khi rỗng — edit: null khi rỗng. */
+  legalNoteWhenEmpty?: string | null;
+  /** create: undefined khi rỗng — edit: mảng rỗng khi rỗng. */
+  featureIdsWhenEmpty?: number[] | undefined;
+}
+
+/**
+ * Phần payload GIỐNG HỆT NHAU giữa đăng tin (POST) và sửa tin (PUT): thông tin cơ bản,
+ * địa chỉ, các trường riêng theo nhóm BĐS. Không bao gồm images, videos, contact_*,
+ * package_id, idempotency_key — những phần đó mỗi trang tự thêm vì thật sự khác nhau
+ * (edit không gửi ảnh/gói qua payload này, xem PropertyMediaController riêng).
+ */
+export function buildPropertyPayload(
+  formData: PropertyFormData,
+  group: PropertyGroup,
+  options: BuildPropertyPayloadOptions = {}
+) {
+  const address =
+    [formData.street, formData.ward_name, formData.district_name, formData.province_name]
+      .filter(Boolean)
+      .join(', ') || formData.street || 'Việt Nam';
+
+  const groupFields = stripFieldsNotInGroup(group, {
+    bedrooms: formData.bedrooms || 0,
+    bathrooms: formData.bathrooms || 0,
+    toilets: formData.toilets,
+    floors: formData.floors || undefined,
+    direction: formData.direction || undefined,
+    balcony_direction: formData.balcony_direction || undefined,
+    road_width: formData.road_width,
+    facade: formData.facade,
+    furniture: formData.furniture || 'none',
+    legal: formData.legal || undefined,
+    utilities: undefined, // chỉ là cờ hiển thị, gửi qua feature_ids bên dưới
+  });
+  delete groupFields.utilities;
+
+  return {
+    title: formData.title,
+    description: formData.description,
+    type: formData.type,
+    category_id: parseInt(formData.category_id, 10),
+    price: formData.price,
+    price_unit: formData.price_unit,
+    price_negotiable: formData.price_negotiable || formData.price_unit === 'negotiable',
+    area: formData.area,
+    ...groupFields,
+    legal_note:
+      isFieldVisible(group, 'legal') && formData.legal === LEGAL_NEEDS_NOTE && formData.legal_note?.trim()
+        ? formData.legal_note.trim()
+        : options.legalNoteWhenEmpty,
+    province_id: formData.province_id,
+    district_id: formData.district_id,
+    ward_id: formData.ward_id || undefined,
+    street: formData.street || undefined,
+    address,
+    latitude: formData.latitude ?? undefined,
+    longitude: formData.longitude ?? undefined,
+    feature_ids:
+      isFieldVisible(group, 'utilities') && formData.features.length > 0
+        ? formData.features
+        : options.featureIdsWhenEmpty,
+  };
+}
