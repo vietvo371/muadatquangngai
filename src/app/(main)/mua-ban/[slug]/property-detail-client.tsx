@@ -14,7 +14,7 @@ import {
   MessageSquare,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { HeroGallery } from '@/components/property/detail/HeroGallery';
+import { PropertyMediaSection } from '@/components/property/detail/PropertyMediaSection';
 import { SpecBoxes } from '@/components/property/detail/SpecBoxes';
 import { ContactSidebar } from '@/components/property/detail/ContactSidebar';
 import { SimilarListings } from '@/components/property/detail/SimilarListings';
@@ -52,14 +52,22 @@ const mapApiProperty = (apiProp: any) => {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mapApiPropertyDetail = (apiProp: any) => {
-  // Chỉ lấy ảnh cho gallery — media giờ có thêm virtual_tour/floor_plan (feedback I.12/I.13),
-  // đưa cả vào đây làm next/image vỡ vì URL không phải ảnh (domain lạ hoặc PDF).
+  // Tách media theo loại — trước đây chỉ lấy ảnh rồi rút gọn thành mảng URL trần, vứt bỏ hết
+  // image_type/sort_order/is_primary và toàn bộ video/tour360/mặt bằng (feedback Đợt 4: những
+  // thứ này đã lưu được từ form đăng tin nhưng chưa từng hiển thị cho người mua xem).
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const imageMedia = (apiProp.media ?? []).filter((m: any) => m.type === 'image');
-  let mediaUrls = imageMedia.length > 0
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ? imageMedia.map((m: any) => m.url)
-    : [];
+  const allMedia: any[] = apiProp.media ?? [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const images = allMedia
+    .filter((m: any) => m.type === 'image')
+    .sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const videos = allMedia.filter((m: any) => m.type === 'video');
+  const tour360Url = allMedia.find((m: any) => m.type === 'virtual_tour')?.url as string | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const floorPlans = allMedia.filter((m: any) => m.type === 'floor_plan');
+
+  let mediaUrls = images.length > 0 ? images.map((m: any) => m.url) : [];
   if (mediaUrls.length === 0 && apiProp.thumbnail) {
     mediaUrls = [apiProp.thumbnail];
   }
@@ -85,6 +93,13 @@ const mapApiPropertyDetail = (apiProp: any) => {
     legalNote: null,
     description: apiProp.description || '',
     media: mediaUrls,
+    // Đủ metadata cho PropertyMediaSection (Đợt 4) — nhóm ảnh theo loại, video, tour 360, mặt bằng.
+    images,
+    videos,
+    tour360Url,
+    floorPlans,
+    latitude: apiProp.location?.latitude != null ? Number(apiProp.location.latitude) : (apiProp.latitude != null ? Number(apiProp.latitude) : undefined),
+    longitude: apiProp.location?.longitude != null ? Number(apiProp.location.longitude) : (apiProp.longitude != null ? Number(apiProp.longitude) : undefined),
     address: apiProp.address || 'Quảng Ngãi',
     viewCount: Number(apiProp.stats?.view_count || apiProp.view_count || 0),
     publishedAt: apiProp.published_at || apiProp.created_at,
@@ -288,7 +303,15 @@ export default function PropertyDetailClient({ params }: { params: Promise<{ slu
       <div className="max-w-[1200px] mx-auto px-4 py-6">
         
         {/* Gallery */}
-        <HeroGallery images={propertyData.media} />
+        <PropertyMediaSection
+          media={propertyData.media}
+          images={propertyData.images}
+          videos={propertyData.videos}
+          tour360Url={propertyData.tour360Url}
+          floorPlans={propertyData.floorPlans}
+          latitude={propertyData.latitude}
+          longitude={propertyData.longitude}
+        />
 
         <div className="flex flex-col lg:flex-row gap-8 items-start">
           
