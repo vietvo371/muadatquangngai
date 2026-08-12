@@ -16,7 +16,7 @@ const DEFAULTS = {
   images_min: 5,
   images_limit: 50,
   image_max_size_mb: 10,
-  image_min_width: 1280,
+  image_min_width: 1024,
   image_formats: ['jpg', 'jpeg', 'png', 'webp'],
   video_limit: 2,
   video_max_size_mb: 100,
