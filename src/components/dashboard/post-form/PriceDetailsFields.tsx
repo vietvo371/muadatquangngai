@@ -5,7 +5,6 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
-  isFieldVisible,
   directionLabel,
   DIRECTION_OPTIONS,
   LEGAL_OPTIONS,
@@ -14,6 +13,7 @@ import {
   PRICE_UNIT_OPTIONS,
   PRICE_DISPLAY_FORMAT_OPTIONS,
   type PropertyGroup,
+  type GroupField,
 } from '@/lib/property-form-config';
 import { derivePrices, formatMoneyShort, formatPriceByMode } from '@/lib/formatters';
 
@@ -34,14 +34,26 @@ const countLabel =
   (v: string) =>
     !v || v === '0' ? zeroLabel : v;
 
-/** Mốc giá bấm nhanh — đúng 5 mốc trong bản thiết kế kèm feedback 28/07. */
-const PRICE_PRESETS: readonly { label: string; value: number }[] = [
-  { label: '20 triệu', value: 20_000_000 },
-  { label: '200 triệu', value: 200_000_000 },
-  { label: '2 tỷ', value: 2_000_000_000 },
-  { label: '20 tỷ', value: 20_000_000_000 },
-  { label: '200 tỷ', value: 200_000_000_000 },
-];
+/**
+ * Gợi ý giá ĐỘNG theo con số người dùng đang gõ (feedback): gõ "3" → gợi ý 3 triệu / 30 triệu /
+ * 300 triệu / 3 tỷ / 30 tỷ để bấm chọn nhanh, thay vì các mốc cứng cố định. Lấy "chữ số gốc"
+ * bằng cách bỏ hết số 0 ở đuôi (30000000 → 3, 1500000000 → 15) rồi nhân qua 5 bậc.
+ */
+function buildPriceSuggestions(price: number): { label: string; value: number }[] {
+  if (!price || price <= 0) return [];
+  let base = price;
+  while (base >= 10 && base % 10 === 0) base = Math.floor(base / 10);
+  const tiers = [1_000_000, 10_000_000, 100_000_000, 1_000_000_000, 10_000_000_000];
+  const seen = new Set<number>();
+  const out: { label: string; value: number }[] = [];
+  for (const t of tiers) {
+    const value = base * t;
+    if (seen.has(value)) continue;
+    seen.add(value);
+    out.push({ label: formatMoneyShort(value), value });
+  }
+  return out;
+}
 
 export interface PriceDetailsData {
   price: number;
@@ -66,28 +78,35 @@ export interface PriceDetailsData {
 interface PriceDetailsFieldsProps {
   data: PriceDetailsData;
   onChange: (updates: Partial<PriceDetailsData>) => void;
+  /** Nhóm BĐS — chỉ dùng cho nhãn "Hướng nhà/đất". Việc ẩn/hiện field theo `visibleFields`. */
   group: PropertyGroup;
+  /** Field hiển thị cho danh mục đang chọn (feedback #4, admin config qua detail_fields). */
+  visibleFields: GroupField[];
   features: Array<{ id: number; name: string }>;
   selectedFeatureIds: number[];
   onToggleFeature: (featureId: number) => void;
 }
 
 /**
- * Diện tích + Mức giá + Thông tin chi tiết (trường riêng theo nhóm BĐS) + Tiện ích kèm
- * theo. Giống hệt nhau giữa trang đăng tin và trang sửa tin.
+ * Diện tích + Mức giá + Thông tin chi tiết (trường riêng theo danh mục) + Tiện ích kèm theo.
+ * Giống hệt nhau giữa trang đăng tin và trang sửa tin. Field nào hiển thị do `visibleFields`
+ * quyết định (admin cấu hình được cho từng danh mục — feedback #4).
  */
 export function PriceDetailsFields({
   data,
   onChange,
   group,
+  visibleFields,
   features,
   selectedFeatureIds,
   onToggleFeature,
 }: PriceDetailsFieldsProps) {
+  const showField = (f: GroupField) => visibleFields.includes(f);
   /** Quy đổi giá hiển thị ngay dưới ô nhập (feedback mục 3.3). Chỉ trả về khi có tổng giá
    * thật — thiếu diện tích thì `perM2` là null và phần đó tự ẩn, không hiện "0/m²". */
   const derived = derivePrices(data.price, data.price_unit, data.area);
   const priceBreakdown = derived.total !== null ? { total: derived.total, perM2: derived.perM2 } : null;
+  const priceSuggestions = buildPriceSuggestions(data.price);
 
   return (
     <>
@@ -126,7 +145,7 @@ export function PriceDetailsFields({
                   const digits = e.target.value.replace(/\D/g, '');
                   onChange({ price: digits ? parseInt(digits, 10) : 0 });
                 }}
-                placeholder="VD: 2.000.000.000"
+                placeholder="Nhập số, VD: 3"
                 className="mt-2 h-12 bg-gray-50 focus:bg-white"
               />
             </div>
@@ -148,23 +167,29 @@ export function PriceDetailsFields({
             </div>
           </div>
 
-          {/* Mức giá gợi ý nhanh — đúng các mốc trong bản thiết kế feedback. */}
-          <div className="mt-3 flex flex-wrap gap-2">
-            {PRICE_PRESETS.map((preset) => (
-              <button
-                key={preset.value}
-                type="button"
-                onClick={() => onChange({ price: preset.value, price_unit: 'total' })}
-                className={`rounded-lg border px-3 py-1.5 text-[13px] font-medium transition-colors ${
-                  data.price === preset.value && data.price_unit === 'total'
-                    ? 'border-primary bg-primary-light text-primary'
-                    : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                {preset.label}
-              </button>
-            ))}
-          </div>
+          {/* Gợi ý giá ĐỘNG theo số vừa gõ (feedback): gõ "3" → 3 triệu / 30 triệu / 300 triệu /
+              3 tỷ / 30 tỷ. Bấm 1 nút để chốt giá thật. */}
+          {priceSuggestions.length > 0 && (
+            <div className="mt-3">
+              <p className="text-[13px] text-gray-500 mb-1.5">Ý bạn là:</p>
+              <div className="flex flex-wrap gap-2">
+                {priceSuggestions.map((s) => (
+                  <button
+                    key={s.value}
+                    type="button"
+                    onClick={() => onChange({ price: s.value })}
+                    className={`rounded-lg border px-3 py-1.5 text-[13px] font-medium transition-colors ${
+                      data.price === s.value
+                        ? 'border-primary bg-primary-light text-primary'
+                        : 'border-gray-200 text-gray-600 hover:border-primary hover:bg-primary-light hover:text-primary'
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Quy đổi hai chiều, cập nhật ngay khi gõ (feedback mục 3.3). Chỉ hiện khi quy
               đổi được thật — thiếu diện tích thì im lặng, không hiện số 0. */}
@@ -225,7 +250,7 @@ export function PriceDetailsFields({
         <h3 className="text-lg font-bold text-gray-900 mb-5 pb-2 border-b">Thông tin chi tiết</h3>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-5 mb-6">
-          {isFieldVisible(group, 'bedrooms') && (
+          {showField('bedrooms') && (
             <div>
               <Label className="text-sm font-medium text-gray-600">Phòng ngủ</Label>
               <Select
@@ -243,7 +268,7 @@ export function PriceDetailsFields({
             </div>
           )}
 
-          {isFieldVisible(group, 'bathrooms') && (
+          {showField('bathrooms') && (
             <div>
               <Label className="text-sm font-medium text-gray-600">Phòng tắm</Label>
               <Select
@@ -261,7 +286,7 @@ export function PriceDetailsFields({
             </div>
           )}
 
-          {isFieldVisible(group, 'toilets') && (
+          {showField('toilets') && (
             <div>
               <Label className="text-sm font-medium text-gray-600">Nhà vệ sinh</Label>
               <Select
@@ -279,7 +304,7 @@ export function PriceDetailsFields({
             </div>
           )}
 
-          {isFieldVisible(group, 'floors') && (
+          {showField('floors') && (
             <div>
               <Label className="text-sm font-medium text-gray-600">Số tầng</Label>
               <Select
@@ -297,7 +322,7 @@ export function PriceDetailsFields({
             </div>
           )}
 
-          {isFieldVisible(group, 'direction') && (
+          {showField('direction') && (
             <div>
               <Label className="text-sm font-medium text-gray-600">{directionLabel(group)}</Label>
               <Select
@@ -314,7 +339,7 @@ export function PriceDetailsFields({
             </div>
           )}
 
-          {isFieldVisible(group, 'balcony_direction') && (
+          {showField('balcony_direction') && (
             <div>
               <Label className="text-sm font-medium text-gray-600">Hướng ban công</Label>
               <Select
@@ -331,7 +356,7 @@ export function PriceDetailsFields({
             </div>
           )}
 
-          {isFieldVisible(group, 'road_width') && (
+          {showField('road_width') && (
             <div>
               <Label className="text-sm font-medium text-gray-600">Đường vào (m)</Label>
               <Input
@@ -346,7 +371,7 @@ export function PriceDetailsFields({
             </div>
           )}
 
-          {isFieldVisible(group, 'facade') && (
+          {showField('facade') && (
             <div>
               <Label className="text-sm font-medium text-gray-600">Mặt tiền (m)</Label>
               <Input
@@ -361,7 +386,7 @@ export function PriceDetailsFields({
             </div>
           )}
 
-          {isFieldVisible(group, 'legal') && (
+          {showField('legal') && (
             <div>
               <Label className="text-sm font-medium text-gray-600">Pháp lý</Label>
               <Select
@@ -388,7 +413,7 @@ export function PriceDetailsFields({
 
         {/* Ô mô tả pháp lý — chỉ hiện khi chọn "Khác" (feedback 28/07 mục 4), lưu vào cột
             properties.legal_note đã có sẵn nên không cần migration. */}
-        {isFieldVisible(group, 'legal') && data.legal === LEGAL_NEEDS_NOTE && (
+        {showField('legal') && data.legal === LEGAL_NEEDS_NOTE && (
           <div className="mb-6">
             <Label className="font-semibold text-gray-700">Mô tả tình trạng pháp lý</Label>
             <Input
@@ -404,7 +429,7 @@ export function PriceDetailsFields({
           </div>
         )}
 
-        {isFieldVisible(group, 'furniture') && (
+        {showField('furniture') && (
           <div className="mb-6">
             <Label className="font-semibold text-gray-700">Tình trạng nội thất</Label>
             <Select
@@ -422,7 +447,7 @@ export function PriceDetailsFields({
         )}
       </section>
 
-      {isFieldVisible(group, 'utilities') && (
+      {showField('utilities') && (
         <section>
           <h3 className="text-lg font-bold text-gray-900 mb-5 pb-2 border-b">Tiện ích kèm theo</h3>
           {features.length === 0 ? (

@@ -209,7 +209,7 @@ export function LocationSelect({
             type="button"
             onClick={() => !disabled && setOpenProvince(!openProvince)}
             disabled={disabled || isLoadingProvinces}
-            className="w-full h-10 px-3 border rounded-lg bg-white text-left flex items-center justify-between disabled:bg-gray-100 disabled:cursor-not-allowed"
+            className="w-full h-11 px-3 border border-gray-200 rounded-lg bg-gray-50 text-left flex items-center justify-between transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:bg-gray-100 disabled:cursor-not-allowed"
           >
             <span className={selectedProvince ? 'text-gray-900' : 'text-gray-400'}>
               {isLoadingProvinces ? (
@@ -223,14 +223,14 @@ export function LocationSelect({
           </button>
 
           {openProvince && (
-            <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-auto">
+            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg p-1.5 max-h-60 overflow-auto">
               {provinces.map((province) => (
                 <button
                   key={province.id}
                   type="button"
                   onClick={() => handleSelect('province', province.id, province.name)}
-                  className={`w-full px-3 py-2 text-left hover:bg-gray-50 ${
-                    province.id === selectedProvince ? 'bg-blue-50 text-blue-600' : ''
+                  className={`w-full px-3 py-2 text-left rounded-lg transition-colors hover:bg-primary-light hover:text-primary ${
+                    province.id === selectedProvince ? 'bg-primary-light text-primary font-semibold' : ''
                   }`}
                 >
                   {province.name}
@@ -251,7 +251,7 @@ export function LocationSelect({
             type="button"
             onClick={() => !disabled && setOpenDistrict(!openDistrict)}
             disabled={disabled || !selectedProvince || isLoadingDistricts}
-            className="w-full h-10 px-3 border rounded-lg bg-white text-left flex items-center justify-between disabled:bg-gray-100 disabled:cursor-not-allowed"
+            className="w-full h-11 px-3 border border-gray-200 rounded-lg bg-gray-50 text-left flex items-center justify-between transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:bg-gray-100 disabled:cursor-not-allowed"
           >
             <span className={selectedDistrict ? 'text-gray-900' : 'text-gray-400'}>
               {isLoadingDistricts ? (
@@ -265,17 +265,17 @@ export function LocationSelect({
           </button>
 
           {openDistrict && (
-            <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-72 overflow-hidden flex flex-col">
+            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-72 overflow-hidden flex flex-col">
               <input
                 type="text"
                 autoFocus
                 value={districtSearch}
                 onChange={(e) => setDistrictSearch(e.target.value)}
                 placeholder="Tìm xã/phường..."
-                className="w-full px-3 py-2 border-b text-sm focus:outline-none"
+                className="w-full px-3 py-2.5 border-b border-gray-100 text-sm focus:outline-none"
                 onClick={(e) => e.stopPropagation()}
               />
-              <div className="overflow-auto">
+              <div className="overflow-auto p-1.5">
                 {filteredDistricts.length === 0 && (
                   <div className="px-3 py-2 text-sm text-gray-400">Không tìm thấy</div>
                 )}
@@ -284,8 +284,8 @@ export function LocationSelect({
                     key={district.id}
                     type="button"
                     onClick={() => handleSelect('district', district.id, district.name)}
-                    className={`w-full px-3 py-2 text-left hover:bg-gray-50 ${
-                      district.id === selectedDistrict ? 'bg-blue-50 text-blue-600' : ''
+                    className={`w-full px-3 py-2 text-left rounded-lg transition-colors hover:bg-primary-light hover:text-primary ${
+                      district.id === selectedDistrict ? 'bg-primary-light text-primary font-semibold' : ''
                     }`}
                   >
                     {district.name}
@@ -308,7 +308,7 @@ export function LocationSelect({
               type="button"
               onClick={() => !disabled && setOpenWard(!openWard)}
               disabled={disabled || !selectedDistrict || isLoadingWards}
-              className="w-full h-10 px-3 border rounded-lg bg-white text-left flex items-center justify-between disabled:bg-gray-100 disabled:cursor-not-allowed"
+              className="w-full h-11 px-3 border border-gray-200 rounded-lg bg-gray-50 text-left flex items-center justify-between transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:bg-gray-100 disabled:cursor-not-allowed"
             >
               <span className={selectedWard ? 'text-gray-900' : 'text-gray-400'}>
                 {isLoadingWards ? (
@@ -322,7 +322,7 @@ export function LocationSelect({
             </button>
 
             {openWard && (
-              <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-auto">
+              <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg p-1.5 max-h-60 overflow-auto">
                 {wards.map((ward) => (
                   <button
                     key={ward.id}
