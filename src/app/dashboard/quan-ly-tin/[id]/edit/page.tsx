@@ -14,7 +14,6 @@ import { TitleDescriptionFields } from '@/components/dashboard/post-form/TitleDe
 import { PriceDetailsFields } from '@/components/dashboard/post-form/PriceDetailsFields';
 import { MediaFields } from '@/components/dashboard/post-form/MediaFields';
 import {
-  isFieldVisible,
   directionText,
   legalText,
   LEGAL_NEEDS_NOTE,
@@ -101,7 +100,7 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
 
   // Giới hạn ảnh do quản trị viên cấu hình (feedback I.4) — trước đây trang này hardcode
   // 10/10, không đồng bộ với trang đăng tin.
-  const [limits, setLimits] = useState({ images_min: 5, images_limit: 50, image_max_size_mb: 10, image_min_width: 1280 });
+  const [limits, setLimits] = useState({ images_min: 5, images_limit: 50, image_max_size_mb: 10, image_min_width: 1024 });
   useEffect(() => {
     api
       .get('/api/v2/settings/property')
@@ -127,6 +126,7 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
     apiCategories,
     features,
     group,
+    visibleFields,
     aiLoading,
     generateContent,
     handleCategoryChange,
@@ -263,7 +263,7 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
   };
 
   const buildPayload = () => ({
-    ...buildPropertyPayload(formData, group, { legalNoteWhenEmpty: null, featureIdsWhenEmpty: [] }),
+    ...buildPropertyPayload(formData, visibleFields, { legalNoteWhenEmpty: null, featureIdsWhenEmpty: [] }),
     // Ảnh: PUT trước đây không xử lý field này nên ảnh sửa/thêm/xoá ở bước 2 không lưu được
     // xuống DB — server sync toàn bộ (xoá hết ảnh cũ rồi tạo lại đúng thứ tự/bìa/phân loại).
     images: formData.images.map((img, i) => ({
@@ -322,11 +322,11 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
       priceUnit: formData.price_unit,
       priceNegotiable: formData.price_negotiable || formData.price_unit === 'negotiable',
       area: formData.area,
-      bedrooms: isFieldVisible(group, 'bedrooms') ? formData.bedrooms : undefined,
-      bathrooms: isFieldVisible(group, 'bathrooms') ? formData.bathrooms : undefined,
-      direction: isFieldVisible(group, 'direction') && formData.direction ? directionText(formData.direction) : undefined,
-      legalLabel: isFieldVisible(group, 'legal') && formData.legal ? legalText(formData.legal) : undefined,
-      legalNote: isFieldVisible(group, 'legal') && formData.legal === LEGAL_NEEDS_NOTE ? formData.legal_note : undefined,
+      bedrooms: visibleFields.includes('bedrooms') ? formData.bedrooms : undefined,
+      bathrooms: visibleFields.includes('bathrooms') ? formData.bathrooms : undefined,
+      direction: visibleFields.includes('direction') && formData.direction ? directionText(formData.direction) : undefined,
+      legalLabel: visibleFields.includes('legal') && formData.legal ? legalText(formData.legal) : undefined,
+      legalNote: visibleFields.includes('legal') && formData.legal === LEGAL_NEEDS_NOTE ? formData.legal_note : undefined,
       description: formData.description,
       media: formData.images.map((img) => img.url),
       address,
@@ -459,6 +459,7 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
                 data={formData}
                 onChange={updateFormData}
                 group={group}
+                visibleFields={visibleFields}
                 features={features}
                 selectedFeatureIds={formData.features}
                 onToggleFeature={toggleFeature}

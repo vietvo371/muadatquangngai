@@ -7,8 +7,8 @@ import { validateFeatureIds } from '@/lib/api-resources/property-validation';
 import { FieldError, validationErrorResponse, isNumeric, isInteger, isBoolean, inList, isString } from '@/lib/validation';
 import { slugify } from '@/lib/formatters';
 import {
-  getPropertyGroup,
-  isFieldVisible,
+  getCategoryFields,
+  type GroupField,
   VALID_DIRECTIONS,
   VALID_FURNITURE,
   VALID_LEGAL,
@@ -345,10 +345,15 @@ export async function POST(request: Request) {
   const slug = `${slugify(title!)}-${randomSuffix(6)}`;
 
   // Chốt chặn cuối: kể cả client gửi thừa (hoặc gọi API trực tiếp), trường không thuộc
-  // nhóm BĐS của danh mục vẫn không được ghi xuống DB — spec mục 11 yêu cầu rõ điều này.
-  const group = getPropertyGroup(Number(categoryId));
-  const forGroup = <T,>(field: Parameters<typeof isFieldVisible>[1], value: T): T | null =>
-    isFieldVisible(group, field) ? value : null;
+  // danh mục vẫn không được ghi xuống DB. Nguồn field = detail_fields admin cấu hình cho danh
+  // mục (feedback #4), rỗng thì fallback theo nhóm BĐS cũ.
+  const categoryRow = await db.categories.findUnique({
+    where: { id: BigInt(categoryId) },
+    select: { detail_fields: true },
+  });
+  const visibleFields = getCategoryFields(categoryRow?.detail_fields, Number(categoryId));
+  const forGroup = <T,>(field: GroupField, value: T): T | null =>
+    visibleFields.includes(field) ? value : null;
 
   // Trừ tiền, tạo tin, ghi giao dịch và subscription phải cùng sống hoặc cùng chết —
   // không được có chuyện trừ tiền xong mà tin không tạo ra, hay ngược lại (spec mục 8.3).
@@ -451,9 +456,9 @@ export async function POST(request: Request) {
     include: PROPERTY_INCLUDE,
     });
 
-    // Nhóm đất không có mục tiện ích — bỏ qua kể cả khi client cố gửi lên.
+    // Danh mục không bật tiện ích — bỏ qua kể cả khi client cố gửi lên.
     const featureIds: number[] =
-      isFieldVisible(group, 'utilities') && Array.isArray(body.feature_ids) ? body.feature_ids : [];
+      visibleFields.includes('utilities') && Array.isArray(body.feature_ids) ? body.feature_ids : [];
     if (featureIds.length > 0) {
       await tx.property_features.createMany({
         data: featureIds.map((fid) => ({ property_id: property.id, feature_id: BigInt(fid) })),

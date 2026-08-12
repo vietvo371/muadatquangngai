@@ -55,6 +55,7 @@ import {
 } from 'lucide-react';
 import { categoryApi, type Category } from '@/lib/admin-api';
 import { slugify } from '@/lib/formatters';
+import { DETAIL_FIELD_OPTIONS, parseDetailFields } from '@/lib/property-form-config';
 
 type CategoryStatus = 'active' | 'inactive';
 
@@ -200,6 +201,7 @@ export default function CategoriesClient() {
     icon: '',
     sort_order: 0,
     is_active: true,
+    detail_fields: [] as string[],
   });
 
   const loadCategories = useCallback(async () => {
@@ -281,23 +283,25 @@ export default function CategoriesClient() {
     }
     try {
       setIsActionPending(true);
+      // detail_fields ở state là mảng (dễ tick); gửi lên DB dạng CSV chuỗi (feedback #4).
+      const payload = { ...formData, detail_fields: formData.detail_fields.join(',') || null };
       if (editingCategory) {
         if (useRealApi) {
-          await categoryApi.update(editingCategory.id, formData);
+          await categoryApi.update(editingCategory.id, payload);
         }
         setCategories((prev) =>
-          prev.map((c) => (c.id === editingCategory.id ? { ...c, ...formData } : c))
+          prev.map((c) => (c.id === editingCategory.id ? { ...c, ...payload } : c))
         );
         toast.success('Đã cập nhật danh mục thành công!');
       } else {
         let newId = categories.length + 1;
         if (useRealApi) {
-          const res = await categoryApi.create(formData);
+          const res = await categoryApi.create(payload);
           if (res && res.id) newId = res.id;
         }
         const newCat = {
           id: newId,
-          ...formData,
+          ...payload,
           created_at: new Date().toISOString(),
         };
         setCategories((prev) => [...prev, newCat]);
@@ -354,6 +358,7 @@ export default function CategoriesClient() {
       icon: category.icon || '',
       sort_order: category.sort_order || 0,
       is_active: category.is_active,
+      detail_fields: parseDetailFields(category.detail_fields),
     });
     setIsDialogOpen(true);
   };
@@ -367,6 +372,7 @@ export default function CategoriesClient() {
       icon: '',
       sort_order: categories.length + 1,
       is_active: true,
+      detail_fields: [],
     });
     setIsDialogOpen(true);
   };
@@ -818,6 +824,40 @@ export default function CategoriesClient() {
               <label htmlFor="is_active" className="text-xs font-bold text-gray-700 cursor-pointer">
                 Cho phép hoạt động và hiển thị trên bộ lọc trang chủ
               </label>
+            </div>
+
+            {/* Field thông tin chi tiết hiện ở form đăng tin cho danh mục này (feedback #4) —
+                admin tự bật/tắt, không cần dev. Bỏ trống = dùng bộ field mặc định theo nhóm BĐS. */}
+            <div className="space-y-1.5 pt-2 border-t border-gray-100">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                Trường thông tin chi tiết hiển thị khi đăng tin
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-1.5">
+                {DETAIL_FIELD_OPTIONS.map((opt) => {
+                  const checked = formData.detail_fields.includes(opt.value);
+                  return (
+                    <label key={opt.value} className="flex items-center gap-2 cursor-pointer text-xs text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            detail_fields: e.target.checked
+                              ? [...formData.detail_fields, opt.value]
+                              : formData.detail_fields.filter((f) => f !== opt.value),
+                          })
+                        }
+                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                      />
+                      <span className="font-semibold">{opt.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+              <p className="text-[11px] text-gray-400">
+                Ví dụ: chung cư bỏ tick &quot;Mặt tiền&quot;/&quot;Đường vào&quot;; đất chỉ tick hướng/đường/mặt tiền/pháp lý.
+              </p>
             </div>
 
             <div className="flex gap-3 justify-end pt-3 border-t border-gray-100">

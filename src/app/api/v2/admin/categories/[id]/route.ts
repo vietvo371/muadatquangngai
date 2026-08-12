@@ -4,6 +4,16 @@ import { requireAdmin } from '@/lib/auth';
 import { apiError, apiSuccess } from '@/lib/api-response';
 import { mapCategoryResource } from '@/lib/api-resources/category-resource';
 import { FieldError, validationErrorResponse, isString, isBoolean, isInteger, inList } from '@/lib/validation';
+import { ALL_GROUP_FIELDS } from '@/lib/property-form-config';
+
+/** Chuẩn hoá detail_fields → CSV field key hợp lệ (feedback #4), null nếu rỗng. */
+function normalizeDetailFields(raw: unknown): string | null {
+  if (raw === undefined || raw === null) return null;
+  const list = Array.isArray(raw) ? raw : typeof raw === 'string' ? raw.split(',') : [];
+  const set = new Set(list.map((s) => String(s).trim()));
+  const valid = ALL_GROUP_FIELDS.filter((f) => set.has(f));
+  return valid.length > 0 ? valid.join(',') : null;
+}
 
 async function findCategory(id: string) {
   if (!/^\d+$/.test(id)) return null;
@@ -63,6 +73,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   if ('icon' in body) data.icon = body.icon;
   if ('sort_order' in body) data.sort_order = body.sort_order;
   if ('is_active' in body) data.is_active = body.is_active;
+  if ('detail_fields' in body) data.detail_fields = normalizeDetailFields(body.detail_fields);
 
   const updated = await db.categories.update({ where: { id: category.id }, data });
   return apiSuccess(mapCategoryResource(updated), 'Danh mục đã được cập nhật.');

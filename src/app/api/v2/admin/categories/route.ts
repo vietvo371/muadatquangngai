@@ -6,6 +6,7 @@ import { mapCategoryResource } from '@/lib/api-resources/category-resource';
 import { toCarbonDefaultUtc } from '@/lib/api-resources/carbon-format';
 import { FieldError, validationErrorResponse, isString, isBoolean, isInteger, inList } from '@/lib/validation';
 import { slugify } from '@/lib/formatters';
+import { ALL_GROUP_FIELDS } from '@/lib/property-form-config';
 
 /** $request->boolean() của Laravel: "1"/"true"/"on"/"yes" (không phân biệt hoa thường) -> true. */
 function laravelBoolean(value: string | null): boolean {
@@ -48,11 +49,27 @@ export async function GET(request: Request) {
       icon: r.icon,
       sort_order: r.sort_order,
       is_active: r.is_active,
+      // Field hiển thị ở form đăng tin cho danh mục này (admin config, feedback #4).
+      detail_fields: r.detail_fields ?? null,
       created_at: toCarbonDefaultUtc(r.created_at),
       updated_at: toCarbonDefaultUtc(r.updated_at),
     })),
     buildPaginationMeta(total, page, perPage)
   );
+}
+
+/** Chuẩn hoá detail_fields từ body admin: chỉ giữ field key hợp lệ, theo thứ tự chuẩn, trả CSV
+ * (hoặc null nếu rỗng = dùng fallback nhóm). */
+function normalizeDetailFields(raw: unknown): string | null {
+  if (raw === undefined || raw === null) return null;
+  const list = Array.isArray(raw)
+    ? raw
+    : typeof raw === 'string'
+      ? raw.split(',')
+      : [];
+  const set = new Set(list.map((s) => String(s).trim()));
+  const valid = ALL_GROUP_FIELDS.filter((f) => set.has(f));
+  return valid.length > 0 ? valid.join(',') : null;
 }
 
 /** POST /api/v2/admin/categories — port của AdminCategoryController@store. */
@@ -99,6 +116,7 @@ export async function POST(request: Request) {
       icon: body.icon ?? null,
       sort_order: body.sort_order ?? 0,
       is_active: body.is_active ?? true,
+      detail_fields: normalizeDetailFields(body.detail_fields),
       created_at: now,
       updated_at: now,
     },

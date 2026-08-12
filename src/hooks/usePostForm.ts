@@ -5,10 +5,18 @@ import { toast } from 'sonner';
 import api from '@/lib/axios';
 import {
   getPropertyGroup,
-  isFieldVisible,
-  stripFieldsNotInGroup,
+  getCategoryFields,
+  stripFieldsNotInList,
   type PropertyFormData,
+  type GroupField,
 } from '@/lib/property-form-config';
+
+interface ApiCategory {
+  id: number;
+  name: string;
+  type: string;
+  detail_fields?: string | null;
+}
 
 /**
  * Phần logic GIỐNG HỆT NHAU giữa form đăng tin (dang-tin) và form sửa tin (edit):
@@ -28,7 +36,7 @@ export function usePostForm({
   updateFormData: (updates: Partial<PropertyFormData>) => void;
   skipAutoGeocode?: boolean;
 }) {
-  const [apiCategories, setApiCategories] = useState<Array<{ id: number; name: string; type: string }>>([]);
+  const [apiCategories, setApiCategories] = useState<ApiCategory[]>([]);
   const [features, setFeatures] = useState<Array<{ id: number; name: string }>>([]);
   const [aiLoading, setAiLoading] = useState(false);
   const [isGeocoding, setIsGeocoding] = useState(false);
@@ -53,8 +61,13 @@ export function usePostForm({
     loadCategories();
   }, []);
 
-  // Nhóm BĐS suy ra từ danh mục — quyết định trường nào hiển thị.
+  // Nhóm BĐS suy ra từ danh mục — dùng cho nhãn "Hướng đất/nhà" + fetch tiện ích + fallback.
   const group = getPropertyGroup(formData.category_id);
+
+  // Field hiển thị cho danh mục đang chọn (feedback #4): ưu tiên detail_fields admin cấu hình,
+  // rỗng thì fallback theo nhóm BĐS. Là nguồn sự thật cho việc ẩn/hiện field ở form.
+  const currentCategory = apiCategories.find((c) => String(c.id) === String(formData.category_id));
+  const visibleFields: GroupField[] = getCategoryFields(currentCategory?.detail_fields, formData.category_id);
 
   useEffect(() => {
     const loadFeatures = async () => {
@@ -74,25 +87,27 @@ export function usePostForm({
    * / số tầng / nội thất đã nhập phải biến mất).
    */
   const handleCategoryChange = (categoryId: string) => {
-    const nextGroup = getPropertyGroup(categoryId);
+    const nextCategory = apiCategories.find((c) => String(c.id) === String(categoryId));
+    const nextFields = getCategoryFields(nextCategory?.detail_fields, categoryId);
+    const has = (f: GroupField) => nextFields.includes(f);
     updateFormData(
       (() => {
-        const cleaned = stripFieldsNotInGroup(nextGroup, { ...formData, category_id: categoryId });
+        const cleaned = stripFieldsNotInList(nextFields, { ...formData, category_id: categoryId });
         return {
           ...cleaned,
           category_id: categoryId,
-          bedrooms: isFieldVisible(nextGroup, 'bedrooms') ? formData.bedrooms : undefined,
-          bathrooms: isFieldVisible(nextGroup, 'bathrooms') ? formData.bathrooms : undefined,
-          toilets: isFieldVisible(nextGroup, 'toilets') ? formData.toilets : undefined,
-          floors: isFieldVisible(nextGroup, 'floors') ? formData.floors : undefined,
-          direction: isFieldVisible(nextGroup, 'direction') ? formData.direction : '',
-          balcony_direction: isFieldVisible(nextGroup, 'balcony_direction') ? formData.balcony_direction : '',
-          road_width: isFieldVisible(nextGroup, 'road_width') ? formData.road_width : undefined,
-          facade: isFieldVisible(nextGroup, 'facade') ? formData.facade : undefined,
-          legal: isFieldVisible(nextGroup, 'legal') ? formData.legal : '',
-          legal_note: isFieldVisible(nextGroup, 'legal') ? formData.legal_note : '',
-          furniture: isFieldVisible(nextGroup, 'furniture') ? formData.furniture : 'none',
-          features: isFieldVisible(nextGroup, 'utilities') ? formData.features : [],
+          bedrooms: has('bedrooms') ? formData.bedrooms : undefined,
+          bathrooms: has('bathrooms') ? formData.bathrooms : undefined,
+          toilets: has('toilets') ? formData.toilets : undefined,
+          floors: has('floors') ? formData.floors : undefined,
+          direction: has('direction') ? formData.direction : '',
+          balcony_direction: has('balcony_direction') ? formData.balcony_direction : '',
+          road_width: has('road_width') ? formData.road_width : undefined,
+          facade: has('facade') ? formData.facade : undefined,
+          legal: has('legal') ? formData.legal : '',
+          legal_note: has('legal') ? formData.legal_note : '',
+          furniture: has('furniture') ? formData.furniture : 'none',
+          features: has('utilities') ? formData.features : [],
         } as Partial<PropertyFormData>;
       })()
     );
@@ -254,6 +269,7 @@ export function usePostForm({
     apiCategories,
     features,
     group,
+    visibleFields,
     aiLoading,
     generateContent,
     handleCategoryChange,

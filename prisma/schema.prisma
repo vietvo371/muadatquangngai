@@ -56,6 +56,8 @@ model categories {
   icon       String?      @db.VarChar(100)
   sort_order Int          @default(0)
   is_active  Boolean      @default(true)
+  /** CSV field-key hiển thị ở form đăng tin cho danh mục này (admin config, feedback #4). Rỗng = fallback theo nhóm BĐS. */
+  detail_fields String?   @db.Text
   created_at DateTime?    @db.Timestamp(0)
   updated_at DateTime?    @db.Timestamp(0)
   properties properties[]

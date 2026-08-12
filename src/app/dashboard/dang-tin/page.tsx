@@ -17,7 +17,6 @@ import { PriceDetailsFields } from '@/components/dashboard/post-form/PriceDetail
 import { MediaFields } from '@/components/dashboard/post-form/MediaFields';
 import { ContactFields } from '@/components/dashboard/post-form/ContactFields';
 import {
-  isFieldVisible,
   LEGAL_NEEDS_NOTE,
   isValidPhone,
   isValidEmail,
@@ -72,7 +71,7 @@ export default function DangTinPage() {
     images_min: 5,
     images_limit: 50,
     image_max_size_mb: 10,
-    image_min_width: 1280,
+    image_min_width: 1024,
     video_limit: 2,
     video_max_size_mb: 100,
     description_min: 50,
@@ -145,6 +144,7 @@ export default function DangTinPage() {
     apiCategories,
     features,
     group,
+    visibleFields,
     aiLoading,
     generateContent,
     handleCategoryChange,
@@ -243,12 +243,12 @@ export default function DangTinPage() {
       priceUnit: formData.price_unit,
       priceNegotiable: formData.price_negotiable || formData.price_unit === 'negotiable',
       area: formData.area,
-      bedrooms: isFieldVisible(group, 'bedrooms') ? formData.bedrooms : undefined,
-      bathrooms: isFieldVisible(group, 'bathrooms') ? formData.bathrooms : undefined,
-      direction: isFieldVisible(group, 'direction') && formData.direction ? directionText(formData.direction) : undefined,
-      legalLabel: isFieldVisible(group, 'legal') && formData.legal ? legalText(formData.legal) : undefined,
+      bedrooms: visibleFields.includes('bedrooms') ? formData.bedrooms : undefined,
+      bathrooms: visibleFields.includes('bathrooms') ? formData.bathrooms : undefined,
+      direction: visibleFields.includes('direction') && formData.direction ? directionText(formData.direction) : undefined,
+      legalLabel: visibleFields.includes('legal') && formData.legal ? legalText(formData.legal) : undefined,
       legalNote:
-        isFieldVisible(group, 'legal') && formData.legal === LEGAL_NEEDS_NOTE ? formData.legal_note : undefined,
+        visibleFields.includes('legal') && formData.legal === LEGAL_NEEDS_NOTE ? formData.legal_note : undefined,
       description: formData.description,
       media: formData.images.map((img) => img.url),
       address,
@@ -326,7 +326,7 @@ export default function DangTinPage() {
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
-      const shared = buildPropertyPayload(formData, group);
+      const shared = buildPropertyPayload(formData, visibleFields);
 
       const payload = {
         ...shared,
@@ -495,6 +495,7 @@ export default function DangTinPage() {
                 data={formData}
                 onChange={updateFormData}
                 group={group}
+                visibleFields={visibleFields}
                 features={features}
                 selectedFeatureIds={formData.features}
                 onToggleFeature={toggleFeature}

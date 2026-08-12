@@ -68,6 +68,45 @@ export function isFieldVisible(group: PropertyGroup, field: GroupField): boolean
   return GROUP_FIELDS[group].includes(field);
 }
 
+/**
+ * Nhãn tiếng Việt cho từng field — dùng ở trang admin để tích chọn field cho mỗi danh mục
+ * (feedback #4: admin config được, không hardcode). Thứ tự = thứ tự gợi ý hiển thị.
+ */
+export const DETAIL_FIELD_OPTIONS: readonly { value: GroupField; label: string }[] = [
+  { value: 'bedrooms', label: 'Phòng ngủ' },
+  { value: 'bathrooms', label: 'Phòng tắm' },
+  { value: 'toilets', label: 'Nhà vệ sinh' },
+  { value: 'floors', label: 'Số tầng' },
+  { value: 'direction', label: 'Hướng nhà/đất' },
+  { value: 'balcony_direction', label: 'Hướng ban công' },
+  { value: 'road_width', label: 'Đường vào' },
+  { value: 'facade', label: 'Mặt tiền' },
+  { value: 'legal', label: 'Pháp lý' },
+  { value: 'furniture', label: 'Nội thất' },
+  { value: 'utilities', label: 'Tiện ích' },
+];
+
+/** Parse chuỗi CSV `detail_fields` (admin config) → danh sách field hợp lệ, giữ thứ tự chuẩn. */
+export function parseDetailFields(csv: string | null | undefined): GroupField[] {
+  if (!csv || !csv.trim()) return [];
+  const set = new Set(csv.split(',').map((s) => s.trim()));
+  return DETAIL_FIELD_OPTIONS.map((o) => o.value).filter((f) => set.has(f));
+}
+
+/**
+ * Danh sách field hiển thị cho MỘT danh mục — nguồn sự thật cho việc "danh mục nào hiện field
+ * nào" (feedback #4). Ưu tiên `detail_fields` do admin cấu hình; rỗng thì fallback theo nhóm
+ * BĐS cũ (tin/danh mục chưa được config vẫn chạy đúng như trước).
+ */
+export function getCategoryFields(
+  detailFields: string | null | undefined,
+  categoryId: number | string | undefined | null
+): GroupField[] {
+  const parsed = parseDetailFields(detailFields);
+  if (parsed.length > 0) return parsed;
+  return [...GROUP_FIELDS[getPropertyGroup(categoryId)]];
+}
+
 /** Nhãn "Hướng nhà" đổi thành "Hướng đất" ở nhóm đất cho đúng ngữ cảnh. */
 export function directionLabel(group: PropertyGroup): string {
   return group === 'land' ? 'Hướng đất' : 'Hướng nhà';
@@ -85,6 +124,18 @@ export function stripFieldsNotInGroup<T extends Record<string, unknown>>(
   const out = { ...data };
   for (const field of ALL_GROUP_FIELDS) {
     if (!isFieldVisible(group, field)) delete out[field];
+  }
+  return out;
+}
+
+/** Như stripFieldsNotInGroup nhưng theo danh sách field cụ thể của danh mục (feedback #4). */
+export function stripFieldsNotInList<T extends Record<string, unknown>>(
+  fields: GroupField[],
+  data: T
+): T {
+  const out = { ...data };
+  for (const field of ALL_GROUP_FIELDS) {
+    if (!fields.includes(field)) delete out[field];
   }
   return out;
 }
@@ -314,7 +365,7 @@ export interface BuildPropertyPayloadOptions {
  */
 export function buildPropertyPayload(
   formData: PropertyFormData,
-  group: PropertyGroup,
+  visibleFields: GroupField[],
   options: BuildPropertyPayloadOptions = {}
 ) {
   const address =
@@ -322,7 +373,7 @@ export function buildPropertyPayload(
       .filter(Boolean)
       .join(', ') || formData.street || 'Việt Nam';
 
-  const groupFields = stripFieldsNotInGroup(group, {
+  const groupFields = stripFieldsNotInList(visibleFields, {
     bedrooms: formData.bedrooms || 0,
     bathrooms: formData.bathrooms || 0,
     toilets: formData.toilets,
@@ -349,7 +400,7 @@ export function buildPropertyPayload(
     area: formData.area,
     ...groupFields,
     legal_note:
-      isFieldVisible(group, 'legal') && formData.legal === LEGAL_NEEDS_NOTE && formData.legal_note?.trim()
+      visibleFields.includes('legal') && formData.legal === LEGAL_NEEDS_NOTE && formData.legal_note?.trim()
         ? formData.legal_note.trim()
         : options.legalNoteWhenEmpty,
     province_id: formData.province_id,
@@ -360,7 +411,7 @@ export function buildPropertyPayload(
     latitude: formData.latitude ?? undefined,
     longitude: formData.longitude ?? undefined,
     feature_ids:
-      isFieldVisible(group, 'utilities') && formData.features.length > 0
+      visibleFields.includes('utilities') && formData.features.length > 0
         ? formData.features
         : options.featureIdsWhenEmpty,
   };

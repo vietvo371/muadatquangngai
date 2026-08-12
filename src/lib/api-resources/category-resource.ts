@@ -6,6 +6,7 @@ export function mapCategoryResource(category: {
   type: string;
   icon: string | null;
   sort_order: number;
+  detail_fields?: string | null;
 }) {
   return {
     id: category.id,
@@ -14,5 +15,7 @@ export function mapCategoryResource(category: {
     type: category.type,
     icon: category.icon,
     sort_order: category.sort_order,
+    // Field hiển thị ở form đăng tin cho danh mục này (admin config, feedback #4).
+    detail_fields: category.detail_fields ?? null,
   };
 }

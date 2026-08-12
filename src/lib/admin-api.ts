@@ -10,6 +10,9 @@ export interface Category {
   parent_id?: number;
   sort_order: number;
   is_active: boolean;
+  type?: string;
+  /** CSV field-key hiển thị ở form đăng tin cho danh mục này (admin config, feedback #4). */
+  detail_fields?: string | null;
   children?: Category[];
   parent?: Category;
 }
