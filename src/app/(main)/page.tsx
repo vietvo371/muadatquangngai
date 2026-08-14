@@ -14,31 +14,9 @@ import { ProjectCard } from '@/components/home/ProjectCard';
 import { ListingsSection } from '@/components/home/ListingsSection';
 import { NewsCarousel } from '@/components/home/NewsCarousel';
 import { PartnerCarousel } from '@/components/home/PartnerCarousel';
+import { getHomeListings, getFeaturedProjects, getPartners, getHomeNews } from './home-data';
 
-/* ─────────────────────── DATA ─────────────────────── */
-
-const featuredProjects = [
-  {
-    id: 1,
-    name: 'De Palace River - Nam Sông Trà Khúc',
-    area: '1,6 ha',
-    address: 'Đầu cầu Thạch Bích, Quảng Ngãi',
-    status: 'Đang mở bán',
-    image: '/images/image_data/nha-pho-de-palace-river.jpg',
-    slug: 'de-palace-river',
-    developer: 'Công ty CP Địa Ốc Quảng Ngãi',
-  },
-  {
-    id: 2,
-    name: 'Starlight - Bắc Huỳnh Thúc Kháng',
-    area: '1,6 ha',
-    address: 'Huỳnh Thúc Kháng, Ngọc Bảo Viên, Quảng Ngãi',
-    status: 'Đang mở bán',
-    image: '/images/image_data/Starlight---suc-hut-den-tu-vi-tri-dac-dia-nhat-trung-tam-Quang-Ngai-suc-hut-3-1733900371-424-width1000height563.jpg',
-    slug: 'starlight-bac-huynh-thuc-khang',
-    developer: 'Công ty CP Đầu tư Starlight',
-  },
-];
+/* ─────────────────────── STATIC NAV DATA (điều hướng UI, không phải tin đăng) ─────────────────────── */
 
 const locations = [
   {
@@ -71,40 +49,6 @@ const locations = [
     count: '14 tin đăng',
     image: '/images/image_data/images.jpeg',
     href: '/mua-ban?location=mang-den',
-  },
-];
-
-const newsItems = [
-  {
-    id: 1,
-    index: '01',
-    title: 'Đảo Ngọc tại Quảng Ngãi do Sun Group đầu tư',
-    category: 'Dự án',
-    date: '15/04/2026',
-    excerpt: 'Sun Group chính thức công bố kế hoạch phát triển khu du lịch đảo Lý Sơn với tổng vốn đầu tư lên tới 5.000 tỷ đồng.',
-    image: '/images/image_data/Haus-Coastal.jpg',
-    href: '/tin-tuc/dao-ngoc-sun-group',
-    featured: true,
-  },
-  {
-    id: 2,
-    index: '02',
-    title: 'Chủ đầu tư Coastal Quảng Ngãi chính thức khởi công dự án',
-    category: 'Thị trường',
-    date: '12/04/2026',
-    image: '/images/image_data/IMG_5828 2.jpg',
-    href: '/tin-tuc/coastal-quang-ngai-khoi-cong',
-    excerpt: 'Lễ khởi công được tổ chức long trọng với sự tham dự của lãnh đạo tỉnh và các đối tác chiến lược.',
-  },
-  {
-    id: 3,
-    index: '03',
-    title: 'De Palace River Nam Sông Trà – Sản phẩm không dành cho số đông',
-    category: 'Phân tích',
-    date: '10/04/2026',
-    image: '/images/image_data/nha-pho-de-palace-river.jpg',
-    href: '/tin-tuc/de-palace-river-phan-tich',
-    excerpt: 'Phân tích chi tiết về tiềm năng tăng giá và lợi thế vị trí của dự án ven sông Trà Khúc.',
   },
 ];
 
@@ -143,67 +87,6 @@ const utilities = [
   },
 ];
 
-const partners = [
-  { name: 'Địa Ốc Quảng Ngãi', logo: '/images/doanh_nghiep/4.png' },
-  { name: 'Thiên Minh Capital', logo: '/images/doanh_nghiep/5.png' },
-  { name: 'Hoàng Hồ Group', logo: '/images/doanh_nghiep/6.png' },
-  { name: 'Cát Tường Group', logo: '/images/doanh_nghiep/2.png' },
-  { name: 'Starlight Invest', logo: '/images/doanh_nghiep/1.png' },
-  { name: 'Haus Coastal', logo: '/images/doanh_nghiep/3.png' },
-];
-
-
-const pressNews = [
-  {
-    id: 1,
-    title: 'Mua bán nhà đất ở 4 khu vực quan trọng tại Quảng Ngãi',
-    category: 'Thị trường',
-    date: '15/04/2026',
-    image: '/images/image_data/thi_tran_9b705.jpg',
-    href: '/tin-tuc/mua-ban-nha-dat-quang-ngai',
-  },
-  {
-    id: 2,
-    title: 'Bất chấp triều cổ giảm, giá nhà đổi vẫn tăng mạnh',
-    category: 'Phân tích',
-    date: '14/04/2026',
-    image: '/images/image_data/Haus-Coastal.jpg',
-    href: '/tin-tuc/gia-nha-tang-manh',
-  },
-  {
-    id: 3,
-    title: 'Lợi ích cho cả hai bên muốn hoà giải muốn bất động sản 6 tháng',
-    category: 'Pháp lý',
-    date: '13/04/2026',
-    image: '/images/image_data/du-lich-binh-son-quang-ngai-phan-van-travel-1.webp',
-    href: '/tin-tuc/phap-ly-bat-dong-san',
-  },
-  {
-    id: 4,
-    title: 'Công ty mẹ Batdongsan.com.vn lãi 92 tỷ, tăng trưởng ổn định',
-    category: 'Doanh nghiệp',
-    date: '12/04/2026',
-    image: '/images/image_data/nha-pho-de-palace-river.jpg',
-    href: '/tin-tuc/cong-ty-me-bds',
-  },
-  {
-    id: 5,
-    title: 'Starlight Quảng Ngãi – điểm sáng thị trường BDS miền Trung',
-    category: 'Dự án',
-    date: '11/04/2026',
-    image: '/images/image_data/Starlight---suc-hut-den-tu-vi-tri-dac-dia-nhat-trung-tam-Quang-Ngai-suc-hut-3-1733900371-424-width1000height563.jpg',
-    href: '/tin-tuc/starlight-quang-ngai',
-  },
-  {
-    id: 6,
-    title: 'Lý Sơn – Hòn đảo bất động sản tiếp theo cần theo dõi năm 2026',
-    category: 'Phân tích',
-    date: '10/04/2026',
-    image: '/images/image_data/shutterstock2065827521lyson-1701400873758.jpg',
-    href: '/tin-tuc/ly-son-bat-dong-san-2026',
-  },
-];
-
 const quickCategories = [
   { label: 'Nhà phố', href: '/mua-ban?cat=nha-pho' },
   { label: 'Đất nền', href: '/mua-ban?cat=dat-nen' },
@@ -215,7 +98,20 @@ const quickCategories = [
 
 /* ─────────────────────── PAGE ─────────────────────── */
 
-export default function HomePage() {
+export default async function HomePage() {
+  const [listings, featuredProjects, partners, news] = await Promise.all([
+    getHomeListings(),
+    getFeaturedProjects(),
+    getPartners(),
+    getHomeNews(),
+  ]);
+
+  // Section "Tin tức" chính dùng bài đầu (featured) + tối đa 2 bài phụ; carousel bên dưới
+  // dùng phần còn lại để không trùng lặp. Cả hai ẩn khi không có bài (prod hiện 0 bài).
+  const newsFeatured = news[0] ?? null;
+  const newsSidebar = news.slice(1, 3);
+  const newsCarousel = news.slice(3);
+
   return (
     <div className="flex flex-col bg-white">
 
@@ -278,26 +174,28 @@ export default function HomePage() {
       {/* ══════════════════════════════════
           SECTION 2 — DỰ ÁN NỔI BẬT
       ══════════════════════════════════ */}
-      <section className="py-14 md:py-20 px-4 bg-white relative z-0">
-        <div className="max-w-6xl mx-auto">
-          <SectionHeading
-            title="Dự án nổi bật"
-            subtitle="Những dự án được quan tâm nhất tại Quảng Ngãi"
-            href="/du-an"
-            linkLabel="Tất cả dự án"
-          />
-          <div className="flex flex-col gap-5">
-            {featuredProjects.map((project) => (
-              <ProjectCard key={project.id} {...project} />
-            ))}
+      {featuredProjects.length > 0 && (
+        <section className="py-14 md:py-20 px-4 bg-white relative z-0">
+          <div className="max-w-6xl mx-auto">
+            <SectionHeading
+              title="Dự án nổi bật"
+              subtitle="Những dự án được quan tâm nhất tại Quảng Ngãi"
+              href="/du-an"
+              linkLabel="Tất cả dự án"
+            />
+            <div className="flex flex-col gap-5">
+              {featuredProjects.map((project) => (
+                <ProjectCard key={project.id} {...project} />
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* ══════════════════════════════════
           SECTION 3 — BDS DÀNH CHO BẠN
       ══════════════════════════════════ */}
-      <ListingsSection />
+      <ListingsSection sale={listings.sale} rent={listings.rent} />
 
       {/* ══════════════════════════════════
           SECTION 4 — CTA BANNER
@@ -389,75 +287,77 @@ export default function HomePage() {
       {/* ══════════════════════════════════
           SECTION 6 — TIN TỨC BDS
       ══════════════════════════════════ */}
-      <section className="py-14 md:py-20 px-4 bg-white">
-        <div className="max-w-6xl mx-auto">
-          <SectionHeading
-            title="Tin tức bất động sản"
-            subtitle="Cập nhật thông tin mới nhất về thị trường BDS Quảng Ngãi"
-            href="/tin-tuc"
-            linkLabel="Xem tất cả"
-          />
+      {newsFeatured && (
+        <section className="py-14 md:py-20 px-4 bg-white">
+          <div className="max-w-6xl mx-auto">
+            <SectionHeading
+              title="Tin tức bất động sản"
+              subtitle="Cập nhật thông tin mới nhất về thị trường BDS Quảng Ngãi"
+              href="/tin-tuc"
+              linkLabel="Xem tất cả"
+            />
 
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-            {/* Featured news — large */}
-            <Link href={newsItems[0].href} className="group lg:col-span-3">
-              <div className="relative h-64 md:h-80 rounded-2xl overflow-hidden mb-4 shadow-md">
-                <Image
-                  src={newsItems[0].image}
-                  alt={newsItems[0].title}
-                  fill
-                  className="object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                <div className="absolute bottom-4 left-4 right-4">
-                  <span className="inline-block bg-primary text-white text-xs font-bold px-3 py-1 rounded-full mb-2">
-                    {newsItems[0].category}
-                  </span>
-                  <h3 className="text-white font-bold text-lg leading-snug drop-shadow-sm line-clamp-2 group-hover:text-white/80 transition-colors">
-                    {newsItems[0].title}
-                  </h3>
-                </div>
-              </div>
-              <p className="text-xs text-gray-400 mb-1">{newsItems[0].date}</p>
-              {newsItems[0].excerpt && (
-                <p className="text-sm text-gray-500 line-clamp-2 leading-relaxed">{newsItems[0].excerpt}</p>
-              )}
-            </Link>
-
-            {/* Sidebar news */}
-            <div className="lg:col-span-2 flex flex-col gap-0 divide-y divide-gray-100">
-              {newsItems.slice(1).map((news) => (
-                <Link key={news.id} href={news.href} className="group flex gap-4 items-start py-4 first:pt-0">
-                  <div className="relative w-28 h-20 rounded-xl overflow-hidden shrink-0 shadow-sm">
-                    <Image
-                      src={news.image}
-                      alt={news.title}
-                      fill
-                      className="object-cover group-hover:scale-110 transition-transform duration-500"
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <span className="bg-primary-light text-primary text-xs font-semibold px-2 py-0.5 rounded-md">
-                        {news.category}
-                      </span>
-                      <span className="text-xs text-gray-400">{news.date}</span>
-                    </div>
-                    <h3 className="text-sm font-semibold text-gray-900 leading-snug group-hover:text-primary transition-colors line-clamp-3">
-                      {news.title}
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+              {/* Featured news — large */}
+              <Link href={newsFeatured.href} className="group lg:col-span-3">
+                <div className="relative h-64 md:h-80 rounded-2xl overflow-hidden mb-4 shadow-md">
+                  <Image
+                    src={newsFeatured.image}
+                    alt={newsFeatured.title}
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                  <div className="absolute bottom-4 left-4 right-4">
+                    <span className="inline-block bg-primary text-white text-xs font-bold px-3 py-1 rounded-full mb-2">
+                      {newsFeatured.category}
+                    </span>
+                    <h3 className="text-white font-bold text-lg leading-snug drop-shadow-sm line-clamp-2 group-hover:text-white/80 transition-colors">
+                      {newsFeatured.title}
                     </h3>
                   </div>
-                </Link>
-              ))}
-              <div className="pt-4">
-                <Link href="/tin-tuc" className="flex items-center gap-1 text-sm font-semibold text-primary hover:gap-2 transition-all">
-                  Xem tất cả tin tức <ArrowRight className="h-4 w-4" />
-                </Link>
+                </div>
+                <p className="text-xs text-gray-400 mb-1">{newsFeatured.date}</p>
+                {newsFeatured.excerpt && (
+                  <p className="text-sm text-gray-500 line-clamp-2 leading-relaxed">{newsFeatured.excerpt}</p>
+                )}
+              </Link>
+
+              {/* Sidebar news */}
+              <div className="lg:col-span-2 flex flex-col gap-0 divide-y divide-gray-100">
+                {newsSidebar.map((item) => (
+                  <Link key={item.id} href={item.href} className="group flex gap-4 items-start py-4 first:pt-0">
+                    <div className="relative w-28 h-20 rounded-xl overflow-hidden shrink-0 shadow-sm">
+                      <Image
+                        src={item.image}
+                        alt={item.title}
+                        fill
+                        className="object-cover group-hover:scale-110 transition-transform duration-500"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="bg-primary-light text-primary text-xs font-semibold px-2 py-0.5 rounded-md">
+                          {item.category}
+                        </span>
+                        <span className="text-xs text-gray-400">{item.date}</span>
+                      </div>
+                      <h3 className="text-sm font-semibold text-gray-900 leading-snug group-hover:text-primary transition-colors line-clamp-3">
+                        {item.title}
+                      </h3>
+                    </div>
+                  </Link>
+                ))}
+                <div className="pt-4">
+                  <Link href="/tin-tuc" className="flex items-center gap-1 text-sm font-semibold text-primary hover:gap-2 transition-all">
+                    Xem tất cả tin tức <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* ══════════════════════════════════
           SECTION 7 — HỖ TRỢ TIỆN ÍCH
@@ -502,37 +402,41 @@ export default function HomePage() {
       {/* ══════════════════════════════════
           SECTION 8 — DOANH NGHIỆP TIÊU BIỂU
       ══════════════════════════════════ */}
-      <section className="py-12 md:py-14 px-4 bg-gray-50 border-y border-gray-100">
-        <div className="max-w-6xl mx-auto">
-          <SectionHeading
-            title="Doanh nghiệp tiêu biểu"
-            subtitle="Các đối tác & chủ đầu tư uy tín tại Quảng Ngãi"
-          />
-          <PartnerCarousel partners={partners} />
-        </div>
-      </section>
+      {partners.length > 0 && (
+        <section className="py-12 md:py-14 px-4 bg-gray-50 border-y border-gray-100">
+          <div className="max-w-6xl mx-auto">
+            <SectionHeading
+              title="Doanh nghiệp tiêu biểu"
+              subtitle="Các đối tác & chủ đầu tư uy tín tại Quảng Ngãi"
+            />
+            <PartnerCarousel partners={partners} />
+          </div>
+        </section>
+      )}
 
       {/* ══════════════════════════════════
-          SECTION 9 — BÁO CHÍ NÓI VỀ (CAROUSEL)
+          SECTION 9 — TIN TỨC NỔI BẬT (CAROUSEL)
       ══════════════════════════════════ */}
-      <section className="py-14 md:py-16 px-4 bg-white">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex items-end justify-between mb-6">
-            <div>
-              <div className="w-8 h-1 bg-primary rounded-full mb-3" />
-              <h2 className="text-xl md:text-2xl font-bold tracking-tight text-gray-900">
-                Báo chí nói về Batdongsan.com.vn
-              </h2>
-              <p className="text-sm text-gray-400 mt-1">Tin tức thị trường từ các nguồn uy tín</p>
+      {newsCarousel.length > 0 && (
+        <section className="py-14 md:py-16 px-4 bg-white">
+          <div className="max-w-6xl mx-auto">
+            <div className="flex items-end justify-between mb-6">
+              <div>
+                <div className="w-8 h-1 bg-primary rounded-full mb-3" />
+                <h2 className="text-xl md:text-2xl font-bold tracking-tight text-gray-900">
+                  Tin tức thị trường
+                </h2>
+                <p className="text-sm text-gray-400 mt-1">Cập nhật xu hướng và phân tích thị trường BDS Quảng Ngãi</p>
+              </div>
+              <Link href="/tin-tuc" className="hidden sm:flex items-center gap-1 text-sm font-semibold text-primary hover:gap-2 transition-all shrink-0">
+                Tất cả tin tức <ArrowRight className="h-4 w-4" />
+              </Link>
             </div>
-            <Link href="/tin-tuc" className="hidden sm:flex items-center gap-1 text-sm font-semibold text-primary hover:gap-2 transition-all shrink-0">
-              Tất cả tin tức <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
 
-          <NewsCarousel items={pressNews} />
-        </div>
-      </section>
+            <NewsCarousel items={newsCarousel} />
+          </div>
+        </section>
+      )}
 
     </div>
   );
