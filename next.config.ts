@@ -51,6 +51,17 @@ const nextConfig: NextConfig = {
         hostname: "batdongsanquangngai.s3.ap-southeast-1.amazonaws.com",
       },
       {
+        // Ảnh tin đăng upload thẳng lên Cloudinary (fileUploadApi.upload) — thiếu host này
+        // thì next/image từ chối optimize → ảnh vỡ trên card trang chủ/danh sách.
+        protocol: "https",
+        hostname: "res.cloudinary.com",
+      },
+      {
+        // Avatar tài khoản đăng nhập bằng Google OAuth.
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+      },
+      {
         protocol: "https",
         hostname: "*.cloudfront.net",
       },
