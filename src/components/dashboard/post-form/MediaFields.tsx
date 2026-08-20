@@ -7,6 +7,7 @@ import { ImageUploader, VideoUploader, type UploadedFile } from '@/components/sh
 import { ImagePreviewLightbox } from './ImagePreviewLightbox';
 import { Tour360Field } from './Tour360Field';
 import { FloorPlanUploader, type FloorPlanFile } from './FloorPlanUploader';
+import { StreetViewPreview } from './StreetViewPreview';
 
 interface MediaFieldsProps {
   title: string;
@@ -18,6 +19,11 @@ interface MediaFieldsProps {
   maxSize: number;
   /** Cảnh báo (không chặn) khi ảnh nhỏ hơn chiều rộng này — feedback I.9. */
   minWidth?: number;
+  /** Danh mục Đất không cần phân loại ảnh — ẩn ô chọn phân loại trong từng thẻ ảnh. */
+  hideImageType?: boolean;
+  /** Toạ độ BĐS — dùng nhúng Google Street View bên dưới phần ảnh/video. */
+  latitude?: number;
+  longitude?: number;
   /** Trang sửa tin KHÔNG có video — quyết định có chủ đích, không phải thiếu sót. */
   showVideo: boolean;
   videos?: UploadedFile[];
@@ -45,6 +51,9 @@ export function MediaFields({
   maxFiles,
   maxSize,
   minWidth,
+  hideImageType = false,
+  latitude,
+  longitude,
   showVideo,
   videos = [],
   onVideosChange,
@@ -92,7 +101,14 @@ export function MediaFields({
         </p>
       )}
 
-      <ImageUploader files={images} onChange={onImagesChange} maxFiles={maxFiles} maxSize={maxSize} minWidth={minWidth} />
+      <ImageUploader
+        files={images}
+        onChange={onImagesChange}
+        maxFiles={maxFiles}
+        maxSize={maxSize}
+        minWidth={minWidth}
+        showImageType={!hideImageType}
+      />
 
       {/* Video (spec mục 7.2) — không bắt buộc, chọn tải lên hoặc dán link YouTube. Chỉ trang
           đăng tin có mục này. */}
@@ -122,6 +138,17 @@ export function MediaFields({
           Không bắt buộc. Tải lên ảnh hoặc file PDF sơ đồ mặt bằng.
         </p>
         <FloorPlanUploader files={floorPlans} onChange={onFloorPlansChange} />
+      </div>
+
+      {/* Google Street View — tự nhận diện khu vực có ảnh Street View hay không (dựa trên
+          toạ độ đã ghim ở bước địa chỉ). Không có ảnh / không có key / chưa ghim thì hiện
+          thông báo gọn thay vì khung trống. */}
+      <div className="pt-2">
+        <h4 className="text-base font-bold text-gray-900 mb-1">Google Street View</h4>
+        <p className="text-[13px] text-gray-500 mb-3">
+          Xem trước hình ảnh đường phố tại vị trí đã ghim trên bản đồ.
+        </p>
+        <StreetViewPreview latitude={latitude} longitude={longitude} />
       </div>
 
       {previewOpen && (

@@ -213,7 +213,7 @@ function AdminLayoutContent({
         {/* Main Content */}
         <div
           className={`transition-all duration-300 ${
-            sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'
+            sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-72'
           }`}
         >
           {/* Top Bar / Header */}

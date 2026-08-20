@@ -296,6 +296,54 @@ export default function DangTinPage() {
     }
   };
 
+  /**
+   * Danh sách nhãn trường còn thiếu ở BƯỚC HIỆN TẠI. `canProceed()` vẫn là nguồn sự thật
+   * quyết định qua bước được hay không — hàm này chỉ để nói CHO người dùng biết còn thiếu gì.
+   */
+  const getMissingFields = (): string[] => {
+    const missing: string[] = [];
+    if (currentStep === 1) {
+      if (!formData.category_id) missing.push('Danh mục');
+      if (!formData.province_id) missing.push('Tỉnh/Thành phố');
+      if (!formData.district_id) missing.push('Xã/Phường/Đặc khu');
+      if (formData.price_unit !== 'negotiable' && !(formData.price > 0)) missing.push('Mức giá');
+      if (!(formData.area > 0)) missing.push('Diện tích');
+      if (!formData.contact_name.trim()) missing.push('Họ và tên');
+      if (!isValidPhone(formData.contact_phone)) missing.push('Số điện thoại hợp lệ');
+      if (formData.contact_email && !isValidEmail(formData.contact_email)) missing.push('Email hợp lệ');
+      if (formData.title.length < 10) missing.push('Tiêu đề (tối thiểu 10 ký tự)');
+      if (formData.description.length < limits.description_min)
+        missing.push(`Mô tả (tối thiểu ${limits.description_min} ký tự)`);
+    } else if (currentStep === 2) {
+      if (formData.images.length < limits.images_min)
+        missing.push(`Tối thiểu ${limits.images_min} ảnh`);
+    } else if (currentStep === 3) {
+      if (!selectedPackage) missing.push('Chọn gói đăng tin');
+      else if (selectedPackage.price > 0 && balance < selectedPackage.price)
+        missing.push('Nạp thêm tiền vào tài khoản (số dư không đủ)');
+    }
+    return missing;
+  };
+
+  /** Bấm "Tiếp tục"/"Đăng tin" khi còn thiếu trường → báo rõ nhóm thiếu, không cho qua bước. */
+  const handleNextClick = () => {
+    const missing = getMissingFields();
+    if (missing.length > 0) {
+      toast.error('Vui lòng nhập: ' + missing.join(', '));
+      return;
+    }
+    nextStep();
+  };
+
+  const handleSubmitClick = () => {
+    const missing = getMissingFields();
+    if (missing.length > 0) {
+      toast.error('Vui lòng nhập: ' + missing.join(', '));
+      return;
+    }
+    handleSubmit();
+  };
+
   const nextStep = () => {
     if (canProceed() && currentStep < LAST_STEP) {
       const next = currentStep + 1;
@@ -474,6 +522,9 @@ export default function DangTinPage() {
               maxFiles={limits.images_limit}
               maxSize={limits.image_max_size_mb}
               minWidth={limits.image_min_width}
+              hideImageType={group === 'land'}
+              latitude={formData.latitude}
+              longitude={formData.longitude}
               showVideo
               videos={formData.videos}
               onVideosChange={(videos) => updateFormData({ videos })}
@@ -647,8 +698,7 @@ export default function DangTinPage() {
 
           {currentStep < LAST_STEP ? (
           <Button
-            onClick={nextStep}
-            disabled={!canProceed()}
+            onClick={handleNextClick}
             className="gap-2 h-11 px-6 bg-gray-900 hover:bg-black text-white font-semibold rounded-xl transition-all"
           >
             Tiếp tục
@@ -656,8 +706,8 @@ export default function DangTinPage() {
           </Button>
         ) : (
           <Button
-            onClick={handleSubmit}
-            disabled={!canProceed() || isSubmitting}
+            onClick={handleSubmitClick}
+            disabled={isSubmitting}
             className="gap-2 h-11 px-8 bg-cta hover:bg-cta-dark text-white font-bold rounded-xl transition-all shadow-md shadow-red-500/20"
           >
             {isSubmitting ? (

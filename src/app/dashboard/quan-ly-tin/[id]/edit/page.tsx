@@ -248,6 +248,46 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
     }
   };
 
+  /**
+   * Nhãn trường còn thiếu ở BƯỚC HIỆN TẠI. `canProceed()` vẫn là nguồn sự thật — hàm này
+   * chỉ để báo cho người dùng biết còn thiếu gì thay vì disable nút câm lặng.
+   */
+  const getMissingFields = (): string[] => {
+    const missing: string[] = [];
+    if (currentStep === 1) {
+      if (!formData.category_id) missing.push('Danh mục');
+      if (formData.title.length < 10) missing.push('Tiêu đề (tối thiểu 10 ký tự)');
+      if (formData.description.length < 50) missing.push('Mô tả (tối thiểu 50 ký tự)');
+      if (!formData.province_id) missing.push('Tỉnh/Thành phố');
+      if (!formData.district_id) missing.push('Xã/Phường/Đặc khu');
+    } else if (currentStep === 2) {
+      if (formData.images.length < limits.images_min)
+        missing.push(`Tối thiểu ${limits.images_min} ảnh`);
+    } else if (currentStep === 3) {
+      if (!(formData.price > 0)) missing.push('Mức giá');
+      if (!(formData.area > 0)) missing.push('Diện tích');
+    }
+    return missing;
+  };
+
+  const handleNextClick = () => {
+    const missing = getMissingFields();
+    if (missing.length > 0) {
+      toast.error('Vui lòng nhập: ' + missing.join(', '));
+      return;
+    }
+    nextStep();
+  };
+
+  const handleSubmitClick = () => {
+    const missing = getMissingFields();
+    if (missing.length > 0) {
+      toast.error('Vui lòng nhập: ' + missing.join(', '));
+      return;
+    }
+    handleSubmit();
+  };
+
   const nextStep = () => {
     if (canProceed() && currentStep < 4) {
       setCurrentStep((prev) => prev + 1);
@@ -442,6 +482,9 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
               maxFiles={limits.images_limit}
               maxSize={limits.image_max_size_mb}
               minWidth={limits.image_min_width}
+              hideImageType={group === 'land'}
+              latitude={formData.latitude}
+              longitude={formData.longitude}
               showVideo={false}
               noteBoxClassName="bg-[#e8f4fb] border border-primary/20 rounded-xl p-4 mb-6"
               noteTextClassName="text-[13px] text-primary space-y-1.5 list-disc list-inside"
@@ -554,8 +597,7 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
 
           {currentStep < 4 ? (
             <Button
-              onClick={nextStep}
-              disabled={!canProceed()}
+              onClick={handleNextClick}
               className="gap-2 h-11 px-6 bg-gray-900 hover:bg-black text-white font-semibold rounded-xl transition-all"
             >
               Tiếp tục
@@ -563,8 +605,8 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
             </Button>
           ) : (
             <Button
-              onClick={handleSubmit}
-              disabled={!canProceed() || isSubmitting}
+              onClick={handleSubmitClick}
+              disabled={isSubmitting}
               className="gap-2 h-11 px-8 bg-cta hover:bg-cta-dark text-white font-bold rounded-xl transition-all shadow-md shadow-red-500/20"
             >
               {isSubmitting ? (

@@ -63,7 +63,7 @@ export function BasicInfoFields({
       <h3 className="text-lg font-bold text-gray-900 mb-5 pb-2 border-b">Thông tin cơ bản</h3>
 
       <div className="mb-6">
-        <Label className="mb-3 block font-semibold text-gray-700">Loại tin đăng</Label>
+        <Label className="mb-3 block font-semibold text-gray-700">Loại tin đăng <span className="text-red-500">*</span></Label>
         <div className="grid grid-cols-2 gap-4">
           <button
             type="button"

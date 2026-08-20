@@ -254,7 +254,7 @@ export function Sidebar({
       <aside
         className={cn(
           'hidden lg:block fixed left-0 top-0 z-40 h-screen bg-white border-r transition-all duration-300',
-          collapsed ? 'w-16' : 'w-64'
+          collapsed ? 'w-16' : 'w-72'
         )}
       >
         {sidebarContent}
@@ -269,7 +269,7 @@ export function Sidebar({
             onClick={onMobileClose}
           />
           {/* Drawer */}
-          <aside className="absolute left-0 top-0 h-full w-64 bg-white shadow-xl">
+          <aside className="absolute left-0 top-0 h-full w-72 bg-white shadow-xl">
             {sidebarContent}
           </aside>
         </div>

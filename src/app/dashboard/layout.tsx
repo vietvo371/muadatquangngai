@@ -36,7 +36,7 @@ export default function DashboardLayout({
       {/* Main Content */}
       <div
         className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${
-          sidebarCollapsed ? 'lg:ml-[72px]' : 'lg:ml-64'
+          sidebarCollapsed ? 'lg:ml-[72px]' : 'lg:ml-72'
         }`}
       >
         {/* Top Bar */}

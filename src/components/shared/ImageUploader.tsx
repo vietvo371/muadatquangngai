@@ -32,6 +32,8 @@ interface ImageUploaderProps {
   maxSize?: number; // in MB
   /** Cảnh báo (không chặn) khi ảnh nhỏ hơn chiều rộng này — feedback I.9. */
   minWidth?: number;
+  /** Cho hiện ô chọn phân loại ảnh trong mỗi thẻ. Danh mục Đất không cần nên tắt được. */
+  showImageType?: boolean;
   disabled?: boolean;
   className?: string;
 }
@@ -42,6 +44,7 @@ export function ImageUploader({
   maxFiles = 10,
   maxSize = 10,
   minWidth,
+  showImageType = true,
   disabled = false,
   className = '',
 }: ImageUploaderProps) {
@@ -421,7 +424,8 @@ export function ImageUploader({
                   </button>
                 )}
 
-                {/* Phân loại ảnh (feedback I.5) */}
+                {/* Phân loại ảnh (feedback I.5) — ẩn với danh mục Đất (showImageType=false). */}
+                {showImageType && (
                 <div onClick={(e) => e.stopPropagation()}>
                   <Select value={file.imageType ?? ''} onValueChange={(v) => setImageType(index, v)}>
                     <SelectTrigger
@@ -442,6 +446,7 @@ export function ImageUploader({
                     </SelectContent>
                   </Select>
                 </div>
+                )}
 
                 {/* Remove */}
                 <button
@@ -459,7 +464,7 @@ export function ImageUploader({
 
               {/* Nhãn phân loại đã chọn — hiện thường trực (không cần hover) để biết ảnh nào
                   đã gắn phân loại mà không phải hover từng tấm. */}
-              {file.imageType && (
+              {showImageType && file.imageType && (
                 <div className="absolute bottom-2 left-8 z-10 px-1.5 py-0.5 rounded bg-black/55 text-white text-[10px] font-medium truncate max-w-[70%]">
                   {IMAGE_CATEGORY_OPTIONS.find((o) => o.value === file.imageType)?.label}
                 </div>
