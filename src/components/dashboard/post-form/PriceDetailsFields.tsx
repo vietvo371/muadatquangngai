@@ -11,11 +11,10 @@ import {
   LEGAL_NEEDS_NOTE,
   FURNITURE_OPTIONS,
   PRICE_UNIT_OPTIONS,
-  PRICE_DISPLAY_FORMAT_OPTIONS,
   type PropertyGroup,
   type GroupField,
 } from '@/lib/property-form-config';
-import { derivePrices, formatMoneyShort, formatPriceByMode } from '@/lib/formatters';
+import { derivePrices, formatMoneyShort } from '@/lib/formatters';
 
 /**
  * Base UI `Select.Value` in ra GIÁ TRỊ THÔ khi không truyền children dạng hàm — với mọi
@@ -218,29 +217,6 @@ export function PriceDetailsFields({
             </Label>
           </div>
 
-          {/* Cách hiển thị giá cho người mua xem (feedback I.3) — chỉ đổi CÁCH VIẾT, không
-              đổi số tiền thật. Ẩn khi thoả thuận vì lúc đó không hiện số. */}
-          {!data.price_negotiable && data.price_unit !== 'negotiable' && data.price > 0 && (
-            <div className="mt-4">
-              <Label className="font-semibold text-gray-700">Cách hiển thị giá cho người mua</Label>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {PRICE_DISPLAY_FORMAT_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => onChange({ price_display_format: opt.value as PriceDetailsData['price_display_format'] })}
-                    className={`rounded-lg border px-3 py-1.5 text-[13px] font-medium transition-colors ${
-                      data.price_display_format === opt.value
-                        ? 'border-primary bg-primary-light text-primary'
-                        : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    {formatPriceByMode(data.price, opt.value as PriceDetailsData['price_display_format'])}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </section>
 
