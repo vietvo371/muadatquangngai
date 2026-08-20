@@ -21,7 +21,10 @@ import {
  */
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const MODEL = 'llama-3.3-70b-versatile';
+// llama-3.3-70b-versatile bị Groq gỡ (404 model_not_found) → dùng gpt-oss-120b (còn khả dụng
+// cho key này, hỗ trợ response_format json_object). Kiểm tra lại danh sách model qua
+// GET https://api.groq.com/openai/v1/models nếu lại lỗi model_not_found.
+const MODEL = 'openai/gpt-oss-120b';
 
 /** Giới hạn theo spec mục 10.2 — tiêu đề ngắn, mô tả vừa đủ đọc. */
 const TITLE_MAX = 99;
