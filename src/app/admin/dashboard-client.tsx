@@ -30,88 +30,11 @@ const AREA_BAR_SHADES = ['bg-primary', 'bg-primary/80', 'bg-primary/60', 'bg-pri
 
 interface AreaStat { name: string; count: number; percent: number; }
 
-// Mock data fallbacks
-const MOCK_STATS = [
-  { label: 'Doanh thu gói VIP', value: '18,500,000 đ', change: '+15% tháng này', icon: Coins, color: 'text-emerald-600 bg-emerald-50' },
-  { label: 'Tin chờ duyệt', value: '24', change: 'Cần xử lý gấp', icon: AlertTriangle, color: 'text-amber-600 bg-amber-50' },
-  { label: 'Môi giới chờ duyệt', value: '8', change: 'Yêu cầu xác thực mới', icon: ShieldCheck, color: 'text-primary bg-primary-light/50' },
-  { label: 'Tổng tin đăng', value: '1,420', change: '+32 hôm nay', icon: Building2, color: 'text-blue-600 bg-blue-50' },
-];
-
-const MOCK_RECENT_PROPERTIES = [
-  { title: 'Đất nền dự án Sun River City Quảng Ngãi', status: 'pending', time: '5 phút trước' },
-  { title: 'Nhà riêng 3 tầng mặt tiền Lê Lợi, Quảng Ngãi', status: 'active', time: '12 phút trước' },
-  { title: 'Căn hộ chung cư Phú Mỹ Hưng Nghĩa Chánh', status: 'active', time: '35 phút trước' },
-];
-
-const MOCK_RECENT_VERIFICATIONS: Verification[] = [
-  {
-    id: 101,
-    user_id: 1,
-    type: 'agent',
-    status: 'pending',
-    license_number: 'CC-098-QN',
-    created_at: new Date().toISOString(),
-    user: { id: 1, name: 'Nguyễn Minh Hoàng', email: 'hoang.nguyen@gmail.com', role: 'agent' }
-  },
-  {
-    id: 102,
-    user_id: 2,
-    type: 'agency',
-    status: 'pending',
-    agency_name: 'BĐS Sông Trà Land',
-    created_at: new Date(Date.now() - 3600000).toISOString(),
-    user: { id: 2, name: 'Trần Thanh Sơn', email: 'son.tran@songtraland.vn', role: 'agent' }
-  },
-  {
-    id: 103,
-    user_id: 3,
-    type: 'agent',
-    status: 'approved',
-    license_number: 'CC-112-QN',
-    created_at: new Date(Date.now() - 7200000).toISOString(),
-    user: { id: 3, name: 'Lê Thị Thu Thảo', email: 'thao.le@gmail.com', role: 'agent' }
-  }
-];
-
-const MOCK_RECENT_TRANSACTIONS: Transaction[] = [
-  {
-    id: 501,
-    user_id: 1,
-    type: 'purchase_package',
-    method: 'bank_transfer',
-    amount: 800000,
-    status: 'success',
-    description: 'Nâng cấp Gói VIP Kim Cương (Diamond)',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    user: { id: 1, name: 'Nguyễn Minh Hoàng', email: 'hoang.nguyen@gmail.com' }
-  },
-  {
-    id: 502,
-    user_id: 2,
-    type: 'purchase_package',
-    method: 'momo',
-    amount: 350000,
-    status: 'success',
-    description: 'Nâng cấp Gói VIP+ Tiêu Điểm',
-    created_at: new Date(Date.now() - 1800000).toISOString(),
-    updated_at: new Date(Date.now() - 1800000).toISOString(),
-    user: { id: 2, name: 'Trần Thanh Sơn', email: 'son.tran@songtraland.vn' }
-  },
-  {
-    id: 503,
-    user_id: 4,
-    type: 'purchase_package',
-    method: 'bank_transfer',
-    amount: 150000,
-    status: 'pending',
-    description: 'Nâng cấp Gói VIP Quảng Ngãi',
-    created_at: new Date(Date.now() - 5400000).toISOString(),
-    updated_at: new Date(Date.now() - 5400000).toISOString(),
-    user: { id: 4, name: 'Phạm Quốc Bảo', email: 'bao.pham@gmail.com' }
-  }
-];
+interface RecentPropertyRow {
+  title: string;
+  status: string;
+  time: string;
+}
 
 interface DashboardStat {
   label: string;
@@ -122,11 +45,15 @@ interface DashboardStat {
 }
 
 export default function DashboardClient() {
-  const [stats, setStats] = useState<DashboardStat[]>(MOCK_STATS);
-  const [recentProperties, setRecentProperties] = useState<typeof MOCK_RECENT_PROPERTIES>(MOCK_RECENT_PROPERTIES);
-  const [recentVerifications, setRecentVerifications] = useState<Verification[]>(MOCK_RECENT_VERIFICATIONS);
-  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>(MOCK_RECENT_TRANSACTIONS);
+  // CHỈ dùng dữ liệu THẬT. Trước đây các khối này khởi tạo bằng số liệu bịa hardcode (doanh thu
+  // 18.500.000 đ, 24 tin chờ duyệt, giao dịch và hồ sơ môi giới không tồn tại) và khi API lỗi thì
+  // vẫn giữ nguyên các số đó — quản trị viên đọc ra báo cáo hoàn toàn không có thật.
+  const [stats, setStats] = useState<DashboardStat[]>([]);
+  const [recentProperties, setRecentProperties] = useState<RecentPropertyRow[]>([]);
+  const [recentVerifications, setRecentVerifications] = useState<Verification[]>([]);
+  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   // Phân bố tin đăng theo xã/phường — số thật từ DB. Trước đây khối này hardcode
   // 45/20/15/12/8% kèm tên huyện/thị xã đã bị xoá sau sáp nhập 2025.
   const [areaStats, setAreaStats] = useState<AreaStat[]>([]);
@@ -135,6 +62,7 @@ export default function DashboardClient() {
     const loadDashboardData = async () => {
       try {
         setLoading(true);
+        setLoadFailed(false);
         
         // 1. Fetch dashboard stats
         const statsRes = await dashboardApi.getStats();
@@ -167,7 +95,7 @@ export default function DashboardClient() {
             },
             { 
               label: 'Môi giới chờ duyệt', 
-              value: pendingVerificationsCount > 0 ? pendingVerificationsCount.toString() : '8', 
+              value: pendingVerificationsCount.toString(), 
               change: 'Hồ sơ xác thực mới', 
               icon: ShieldCheck,
               color: 'text-primary bg-primary-light/50 border-primary-100/50'
@@ -240,8 +168,10 @@ export default function DashboardClient() {
         }
 
       } catch (error) {
-        console.error('Error loading admin dashboard stats:', error);
-        setStats(MOCK_STATS);
+        console.error('Không tải được số liệu tổng quan:', error);
+        // Lỗi thì để trống + cảnh báo, KHÔNG lấp bằng số liệu bịa.
+        setStats([]);
+        setLoadFailed(true);
       } finally {
         setLoading(false);
       }
@@ -290,6 +220,17 @@ export default function DashboardClient() {
           Cập nhật: Mới nhất
         </div>
       </div>
+
+      {/* Tải dữ liệu thất bại — nói rõ, KHÔNG hiện số liệu bịa như thể đó là báo cáo thật. */}
+      {loadFailed && (
+        <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+          <AlertTriangle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+          <div className="text-[13px] text-red-800">
+            <p className="font-semibold">Không tải được số liệu tổng quan từ máy chủ.</p>
+            <p className="mt-0.5">Các khối bên dưới đang để trống do lỗi kết nối. Vui lòng tải lại trang.</p>
+          </div>
+        </div>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -458,6 +399,9 @@ export default function DashboardClient() {
             </div>
             
             <div className="space-y-3">
+              {recentTransactions.length === 0 && (
+                <p className="text-xs text-gray-400 py-2">Chưa có giao dịch nào để hiển thị.</p>
+              )}
               {recentTransactions.map((item) => (
                 <div key={item.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0 last:pb-0">
                   <div className="min-w-0 pr-3">
@@ -501,6 +445,9 @@ export default function DashboardClient() {
             </div>
             
             <div className="space-y-3">
+              {recentVerifications.length === 0 && (
+                <p className="text-xs text-gray-400 py-2">Chưa có yêu cầu xác thực nào để hiển thị.</p>
+              )}
               {recentVerifications.map((item) => (
                 <div key={item.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0 last:pb-0">
                   <div className="min-w-0 pr-3">
@@ -553,6 +500,9 @@ export default function DashboardClient() {
             </div>
             
             <div className="space-y-3">
+              {recentProperties.length === 0 && (
+                <p className="text-xs text-gray-400 py-2">Chưa có tin đăng nào để hiển thị.</p>
+              )}
               {recentProperties.map((item, i) => (
                 <div key={i} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0 last:pb-0">
                   <div className="min-w-0 pr-4">

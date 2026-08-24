@@ -95,8 +95,6 @@ export default function PropertiesClient() {
   const confirm = useConfirm();
   const queryClient = useQueryClient();
 
-  // Mock data states in case of fallback
-
   // Filter states
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(5);
@@ -146,11 +144,11 @@ export default function PropertiesClient() {
               per_page: res.meta.per_page || perPage,
               total: res.meta.total || 0,
             },
-            useRealApi: true,
+            loaded: true,
           };
         }
       } catch (error) {
-        console.error('Error fetching admin properties, using mock data:', error);
+        console.error('Không tải được danh sách tin đăng:', error);
       }
       return {
         properties: [],
@@ -160,14 +158,14 @@ export default function PropertiesClient() {
           per_page: perPage,
           total: 0,
         },
-        useRealApi: false,
+        loaded: false,
       };
     }
   });
 
   // Prefetch the next page of properties if available
   useEffect(() => {
-    if (data?.useRealApi && page < data.pagination.last_page) {
+    if (data?.loaded && page < data.pagination.last_page) {
       const nextPage = page + 1;
       const params: Record<string, string | number> = {
         page: nextPage,
@@ -206,7 +204,7 @@ export default function PropertiesClient() {
                   per_page: res.meta.per_page || perPage,
                   total: res.meta.total || 0,
                 },
-                useRealApi: true,
+                loaded: true,
               };
             }
           } catch (error) {
@@ -220,7 +218,7 @@ export default function PropertiesClient() {
               per_page: perPage,
               total: 0,
             },
-            useRealApi: false,
+            loaded: false,
           };
         }
       });
@@ -242,8 +240,8 @@ export default function PropertiesClient() {
     setPage(1);
   };
 
-  // CHỈ dùng dữ liệu THẬT. Trước đây khi API lỗi, trang này rơi về MOCK_PROPERTIES và vẫn cho
-  // bấm Duyệt/Từ chối — quản trị viên tưởng đang duyệt tin thật trong khi thao tác trên tin bịa
+  // CHỈ dùng dữ liệu THẬT. Trước đây khi API lỗi, trang này rơi về danh sách tin bịa hardcode và
+  // vẫn cho bấm Duyệt/Từ chối — quản trị viên tưởng đang duyệt tin thật trong khi thao tác tin bịa
   // (và lệnh duyệt gửi lên id không tồn tại). Thà hiện bảng rỗng + báo lỗi tải.
   const displayProperties = useMemo(() => data?.properties ?? [], [data]);
 
@@ -257,7 +255,7 @@ export default function PropertiesClient() {
   );
 
   /** API lỗi → cảnh báo rõ thay vì im lặng hiện bảng rỗng như thể không có tin nào. */
-  const apiFailed = !!data && !data.useRealApi;
+  const apiFailed = !!data && !data.loaded;
 
   // Mutations
   const approveMutation = useMutation({
@@ -287,8 +285,8 @@ export default function PropertiesClient() {
         toast.error('Không thể phê duyệt tin đăng.');
       }
     },
-    // Lỗi thì LUÔN báo lỗi. Trước đây nhánh không-có-API lại `toast.success('[Mock] Đã phê
-    // duyệt...')` — quản trị viên tưởng đã duyệt xong trong khi tin vẫn đang chờ.
+    // Lỗi thì LUÔN báo lỗi. Trước đây nhánh không-có-API lại báo thành công giả — quản trị viên
+    // tưởng đã duyệt xong trong khi tin vẫn đang chờ.
     onError: (error, property, context: any) => {
       if (context) {
         const queryKey = ['admin-properties', page, perPage, searchQuery, statusFilter, typeFilter];
@@ -454,7 +452,7 @@ export default function PropertiesClient() {
               >
                 {tab.label}
                 {/* Chỉ hiện số khi đang xem đúng tab đó — API trả tổng theo bộ lọc hiện tại, nên
-                    số của các tab khác không có sẵn. Trước đây lấy từ danh sách mock nên hiện sai. */}
+                    số của các tab khác không có sẵn. Trước đây lấy từ danh sách bịa nên hiện sai. */}
                 {(tab.value === 'all' || isActive) && (
                   <span className={`inline-block px-1.5 py-0.5 rounded-full text-[9px] font-extrabold ${
                     isActive ? 'bg-white/20 text-white' : 'bg-gray-200/80 text-gray-600'

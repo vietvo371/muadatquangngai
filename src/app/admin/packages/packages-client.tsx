@@ -36,6 +36,7 @@ import {
   ChevronsRight,
   Sparkles,
   Package as PackageIcon,
+  AlertTriangle,
 } from 'lucide-react';
 import { packageApi, type Package } from '@/lib/admin-api';
 import { formatPrice } from '@/lib/formatters';
@@ -52,53 +53,6 @@ const VIP_LABELS: Record<string, string> = {
   diamond: 'Diamond',
 };
 
-const MOCK_PACKAGES: Package[] = [
-  {
-    id: 1,
-    name: 'Tin Thường Quảng Ngãi',
-    type: 'vip',
-    price: 0,
-    duration_days: 30,
-    highlight_color: '#94a3b8',
-    features: ['Đăng tin hiển thị tiêu chuẩn', 'Hỗ trợ hiển thị 30 ngày', 'Tải lên tối đa 5 hình ảnh'],
-    sort_order: 1,
-    is_active: true,
-  },
-  {
-    id: 2,
-    name: 'Tin VIP Quảng Ngãi',
-    type: 'vip',
-    price: 150000,
-    duration_days: 15,
-    highlight_color: '#1075b1',
-    features: ['Đứng đầu trên tin thường', 'Đánh dấu nhãn VIP xanh nổi bật', 'Hỗ trợ hiển thị 15 ngày', 'Tải lên tối đa 15 hình ảnh', 'Hỗ trợ chia sẻ mạng xã hội'],
-    sort_order: 2,
-    is_active: true,
-  },
-  {
-    id: 3,
-    name: 'Tin VIP+ Tiêu Điểm',
-    type: 'vip_plus',
-    price: 350000,
-    duration_days: 10,
-    highlight_color: '#e03131',
-    features: ['Đứng đầu danh mục & trang chủ', 'Đánh dấu nhãn VIP+ đỏ thu hút', 'Đẩy tin tự động 1 lần/ngày', 'Hỗ trợ hiển thị 10 ngày', 'Tải lên tối đa 25 hình ảnh', 'Báo cáo lượt xem tin đăng'],
-    sort_order: 3,
-    is_active: true,
-  },
-  {
-    id: 4,
-    name: 'Tin Kim Cương (Diamond)',
-    type: 'diamond',
-    price: 800000,
-    duration_days: 7,
-    highlight_color: '#3b82f6',
-    features: ['Vị trí độc quyền Banner đầu trang', 'Đánh dấu nhãn Diamond lấp lánh', 'Đẩy tin tự động 3 lần/ngày', 'Hỗ trợ hiển thị 7 ngày', 'Hỗ trợ chụp ảnh & quay flycam', 'Tải hình ảnh / video không giới hạn', 'Nhân viên hỗ trợ riêng 24/7'],
-    sort_order: 4,
-    is_active: true,
-  },
-];
-
 const statusTabs = [
   { value: 'all', label: 'Tất cả gói' },
   { value: 'active', label: 'Đang hoạt động' },
@@ -113,7 +67,10 @@ export default function PackagesClient() {
   const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFiltering, setIsFiltering] = useState(false);
-  const [useRealApi, setUseRealApi] = useState(true);
+  // CHỈ dùng dữ liệu THẬT. Trước đây khi API lỗi (hoặc trả rỗng), trang này nạp danh sách gói bịa
+  // hardcode và một cờ nội bộ khiến mọi lệnh Sửa/Xoá/Bật-tắt BỎ QUA API nhưng vẫn báo thành
+  // công — quản trị viên tưởng đã đổi giá gói trong khi máy chủ không nhận được gì.
+  const [loadFailed, setLoadFailed] = useState(false);
 
   // Filters & Search
   const [statusFilter, setStatusFilter] = useState('all');
@@ -143,18 +100,13 @@ export default function PackagesClient() {
   const loadPackages = useCallback(async () => {
     try {
       setLoading(true);
+      setLoadFailed(false);
       const response = await packageApi.list();
-      if (response && response.data && response.data.length > 0) {
-        setPackages(response.data);
-        setUseRealApi(true);
-      } else {
-        setPackages(MOCK_PACKAGES);
-        setUseRealApi(false);
-      }
+      setPackages(response?.data ?? []);
     } catch (error) {
-      console.error('Error fetching packages:', error);
-      setPackages(MOCK_PACKAGES);
-      setUseRealApi(false);
+      console.error('Không tải được danh sách gói dịch vụ:', error);
+      setPackages([]);
+      setLoadFailed(true);
     } finally {
       setLoading(false);
     }
@@ -215,29 +167,23 @@ export default function PackagesClient() {
     try {
       setIsActionPending(true);
       if (editingPackage) {
-        if (useRealApi) {
-          await packageApi.update(editingPackage.id, formData);
-        }
+        await packageApi.update(editingPackage.id, formData);
         setPackages((prev) =>
           prev.map((p) => (p.id === editingPackage.id ? { ...p, ...formData } : p))
         );
         toast.success('Đã cập nhật gói dịch vụ thành công!');
       } else {
-        let newId = packages.length + 1;
-        if (useRealApi) {
-          const res = await packageApi.create(formData);
-          if (res && res.id) newId = res.id;
-        }
+        const res = await packageApi.create(formData);
         const newPkg = {
-          id: newId,
           ...formData,
+          id: res?.id ?? 0,
         };
         setPackages((prev) => [...prev, newPkg]);
         toast.success('Đã tạo gói dịch vụ mới thành công!');
       }
       setIsDialogOpen(false);
     } catch {
-      toast.error('Có lỗi xảy ra khi lưu gói dịch vụ.');
+      toast.error('Không lưu được gói dịch vụ. Máy chủ chưa ghi nhận thay đổi, vui lòng thử lại.');
     } finally {
       setIsActionPending(false);
     }
@@ -252,9 +198,7 @@ export default function PackagesClient() {
     });
     if (!isConfirmed) return;
     try {
-      if (useRealApi) {
-        await packageApi.delete(id);
-      }
+      await packageApi.delete(id);
       setPackages((prev) => prev.filter((p) => p.id !== id));
       toast.success('Đã xóa gói dịch vụ thành công.');
     } catch (error: unknown) {
@@ -265,15 +209,13 @@ export default function PackagesClient() {
 
   const handleToggle = async (id: number) => {
     try {
-      if (useRealApi) {
-        await packageApi.toggle(id);
-      }
+      await packageApi.toggle(id);
       setPackages((prev) =>
         prev.map((p) => (p.id === id ? { ...p, is_active: !p.is_active } : p))
       );
       toast.success('Đã cập nhật trạng thái hoạt động gói dịch vụ thành công!');
     } catch {
-      toast.error('Có lỗi xảy ra khi cập nhật trạng thái.');
+      toast.error('Không cập nhật được trạng thái gói dịch vụ. Trạng thái cũ vẫn giữ nguyên, vui lòng thử lại.');
     }
   };
 
@@ -338,6 +280,17 @@ export default function PackagesClient() {
           Thêm gói dịch vụ mới
         </Button>
       </div>
+
+      {/* Tải dữ liệu thất bại — nói rõ, KHÔNG hiện danh sách gói bịa. */}
+      {loadFailed && (
+        <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+          <AlertTriangle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+          <div className="text-[13px] text-red-800">
+            <p className="font-semibold">Không tải được danh sách gói dịch vụ từ máy chủ.</p>
+            <p className="mt-0.5">Danh sách bên dưới đang trống do lỗi kết nối, không phải vì chưa có gói nào. Vui lòng tải lại trang.</p>
+          </div>
+        </div>
+      )}
 
       {/* Analytics Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

@@ -67,121 +67,6 @@ import { userAdminApi, type AdminUser } from '@/lib/admin-api';
 type UserRole = 'admin' | 'agent' | 'user';
 type UserStatus = 'active' | 'inactive' | 'banned';
 
-// Mock users with authentic Quảng Ngãi real estate broker contexts
-const MOCK_USERS = [
-  {
-    id: 1,
-    name: 'Lê Hoài Nam',
-    email: 'hoainam.moducland@gmail.com',
-    phone: '0914 234 567',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop',
-    role: 'agent',
-    status: 'active',
-    total_listings: 45,
-    created_at: '2025-06-15T10:00:00Z',
-  },
-  {
-    id: 2,
-    name: 'Nguyễn Quốc Bảo',
-    email: 'quocbao.datquangngai@gmail.com',
-    phone: '0905 123 456',
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop',
-    role: 'agent',
-    status: 'active',
-    total_listings: 28,
-    created_at: '2025-08-20T15:45:00Z',
-  },
-  {
-    id: 3,
-    name: 'Phạm Thu Thảo',
-    email: 'thuthao.binhson@gmail.com',
-    phone: '0983 998 877',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop',
-    role: 'user',
-    status: 'active',
-    total_listings: 2,
-    created_at: '2026-01-10T09:20:00Z',
-  },
-  {
-    id: 4,
-    name: 'Vũ Đức Trọng',
-    email: 'ductrong.ducpho@gmail.com',
-    phone: '0912 443 322',
-    avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=100&h=100&fit=crop',
-    role: 'user',
-    status: 'inactive',
-    total_listings: 5,
-    created_at: '2026-02-15T11:10:00Z',
-  },
-  {
-    id: 5,
-    name: 'Công ty BDS Thịnh Phát',
-    email: 'contact@thinhphatquangngai.vn',
-    phone: '0255 3888 999',
-    avatar: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop',
-    role: 'agent',
-    status: 'active',
-    total_listings: 112,
-    created_at: '2025-01-01T08:00:00Z',
-  },
-  {
-    id: 6,
-    name: 'Trần Minh Quân',
-    email: 'minhquan.tunghia@gmail.com',
-    phone: '0979 667 788',
-    avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=100&h=100&fit=crop',
-    role: 'user',
-    status: 'banned',
-    ban_reason: 'Đăng tin giả mạo lặp đi lặp lại nhiều lần dù đã bị cảnh cáo.',
-    total_listings: 0,
-    created_at: '2025-05-18T14:30:00Z',
-  },
-  {
-    id: 7,
-    name: 'Nguyễn Văn Đạt',
-    email: 'vandat.diaoc@gmail.com',
-    phone: '0935 443 311',
-    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop',
-    role: 'agent',
-    status: 'active',
-    total_listings: 34,
-    created_at: '2025-09-12T10:00:00Z',
-  },
-  {
-    id: 8,
-    name: 'Lê Thanh Bình',
-    email: 'thanhbinh.datquang@gmail.com',
-    phone: '0919 554 433',
-    avatar: null,
-    role: 'user',
-    status: 'active',
-    total_listings: 1,
-    created_at: '2026-03-01T16:20:00Z',
-  },
-  {
-    id: 9,
-    name: 'Phan Thanh Hải',
-    email: 'thanhhai.sontinh@gmail.com',
-    phone: '0903 778 899',
-    avatar: null,
-    role: 'agent',
-    status: 'inactive',
-    total_listings: 12,
-    created_at: '2025-11-05T09:40:00Z',
-  },
-  {
-    id: 10,
-    name: 'Super Admin',
-    email: 'admin@batdongsanquangngai.vn',
-    phone: '0909 999 999',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop',
-    role: 'admin',
-    status: 'active',
-    total_listings: 0,
-    created_at: '2024-01-01T00:00:00Z',
-  }
-];
-
 const roleConfig: Record<UserRole, { label: string; color: string; icon: React.ElementType }> = {
   admin: { label: 'Quản trị', color: 'bg-blue-50 text-blue-700 border-blue-200/50', icon: ShieldAlert },
   agent: { label: 'Môi giới / Đại lý', color: 'bg-primary-light text-primary border-primary-200/40', icon: UserCheck },
@@ -204,9 +89,6 @@ const statusTabs = [
 export default function UsersClient() {
   const confirm = useConfirm();
   const queryClient = useQueryClient();
-
-  // Local mock users to support mock fallback interactions
-  const [mockUsers, setMockUsers] = useState<AdminUser[]>(MOCK_USERS as AdminUser[]);
 
   // Filters state
   const [statusFilter, setStatusFilter] = useState('all');
@@ -263,21 +145,22 @@ export default function UsersClient() {
       try {
         const res = await userAdminApi.list();
         if (res && res.data) {
-          return { users: res.data, useRealApi: true };
+          return { users: res.data, loaded: true };
         }
       } catch (error) {
-        console.error('Error fetching admin users, using mock data:', error);
+        console.error('Không tải được danh sách người dùng:', error);
       }
-      return { users: [] as AdminUser[], useRealApi: false };
+      return { users: [] as AdminUser[], loaded: false };
     }
   });
 
-  const users = useMemo(() => {
-    if (data?.useRealApi) {
-      return data.users;
-    }
-    return mockUsers;
-  }, [data, mockUsers]);
+  // CHỈ dùng dữ liệu THẬT. Trước đây khi API lỗi, trang này rơi về danh sách người dùng bịa và
+  // vẫn cho bấm Khoá/Đổi vai trò — quản trị viên thao tác trên tài khoản không tồn tại.
+  // Thà hiện bảng rỗng + báo lỗi tải.
+  const users = useMemo(() => data?.users ?? [], [data]);
+
+  /** Tải danh sách thất bại → cảnh báo rõ thay vì im lặng hiện bảng rỗng. */
+  const loadFailed = !!data && !data.loaded;
 
   // Client-side combined filtering
   const filteredUsers = useMemo(() => {
@@ -314,10 +197,11 @@ export default function UsersClient() {
   }, [filteredUsers, startIndex, endIndex]);
 
   // Quick stats calculation
-  const totalUsersCount = users.length;
-  const agentsCount = users.filter((u) => u.role === 'agent').length;
-  const normalCount = users.filter((u) => u.role === 'user').length;
-  const bannedCount = users.filter((u) => u.status === 'banned' || u.status === 'inactive').length;
+  // Lỗi tải thì hiện dấu gạch ngang — số 0 sẽ bị đọc thành "sàn không có người dùng nào".
+  const totalUsersCount = loadFailed ? '—' : users.length;
+  const agentsCount = loadFailed ? '—' : users.filter((u) => u.role === 'agent').length;
+  const normalCount = loadFailed ? '—' : users.filter((u) => u.role === 'user').length;
+  const bannedCount = loadFailed ? '—' : users.filter((u) => u.status === 'banned' || u.status === 'inactive').length;
 
   // Mutations
   const banMutation = useMutation({
@@ -328,15 +212,6 @@ export default function UsersClient() {
     onMutate: async ({ id, reason }) => {
       await queryClient.cancelQueries({ queryKey: ['admin-users'] });
       const previousData = queryClient.getQueryData(['admin-users']);
-      const previousMockUsers = mockUsers;
-
-      setMockUsers((prev) =>
-        prev.map((u) =>
-          u.id === id
-            ? { ...u, status: 'banned', ban_reason: reason }
-            : u
-        )
-      );
 
       queryClient.setQueryData(['admin-users'], (old: any) => {
         if (!old) return old;
@@ -348,7 +223,7 @@ export default function UsersClient() {
         };
       });
 
-      return { previousData, previousMockUsers };
+      return { previousData };
     },
     onSuccess: () => {
       toast.success('Đã khóa tài khoản người dùng thành công.');
@@ -356,16 +231,12 @@ export default function UsersClient() {
       setSelectedUser(null);
       setBanReason('');
     },
+    // Lỗi thì LUÔN báo lỗi — trước đây nhánh không-có-API lại báo thành công giả.
     onError: (error, variables, context: any) => {
-      if (data?.useRealApi) {
-        if (context) {
-          queryClient.setQueryData(['admin-users'], context.previousData);
-          setMockUsers(context.previousMockUsers);
-        }
-        toast.error('Có lỗi xảy ra khi khóa tài khoản người dùng.');
-      } else {
-        toast.success('[Mock] Đã khóa tài khoản người dùng thành công.');
+      if (context) {
+        queryClient.setQueryData(['admin-users'], context.previousData);
       }
+      toast.error('Không khóa được tài khoản. Tài khoản vẫn đang hoạt động, vui lòng thử lại.');
       setShowBanDialog(false);
       setSelectedUser(null);
       setBanReason('');
@@ -382,11 +253,6 @@ export default function UsersClient() {
     onMutate: async (id: number) => {
       await queryClient.cancelQueries({ queryKey: ['admin-users'] });
       const previousData = queryClient.getQueryData(['admin-users']);
-      const previousMockUsers = mockUsers;
-
-      setMockUsers((prev) =>
-        prev.map((u) => (u.id === id ? { ...u, status: 'active', ban_reason: null } : u))
-      );
 
       queryClient.setQueryData(['admin-users'], (old: any) => {
         if (!old) return old;
@@ -398,21 +264,16 @@ export default function UsersClient() {
         };
       });
 
-      return { previousData, previousMockUsers };
+      return { previousData };
     },
     onSuccess: () => {
       toast.success('Đã mở khóa tài khoản thành công!');
     },
     onError: (error, id, context: any) => {
-      if (data?.useRealApi) {
-        if (context) {
-          queryClient.setQueryData(['admin-users'], context.previousData);
-          setMockUsers(context.previousMockUsers);
-        }
-        toast.error('Có lỗi xảy ra khi mở khóa tài khoản.');
-      } else {
-        toast.success('[Mock] Đã mở khóa tài khoản thành công!');
+      if (context) {
+        queryClient.setQueryData(['admin-users'], context.previousData);
       }
+      toast.error('Không mở khóa được tài khoản. Tài khoản vẫn đang bị khóa, vui lòng thử lại.');
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
@@ -426,11 +287,6 @@ export default function UsersClient() {
     onMutate: async ({ id, role }) => {
       await queryClient.cancelQueries({ queryKey: ['admin-users'] });
       const previousData = queryClient.getQueryData(['admin-users']);
-      const previousMockUsers = mockUsers;
-
-      setMockUsers((prev) =>
-        prev.map((u) => (u.id === id ? { ...u, role: role } : u))
-      );
 
       queryClient.setQueryData(['admin-users'], (old: any) => {
         if (!old) return old;
@@ -442,21 +298,16 @@ export default function UsersClient() {
         };
       });
 
-      return { previousData, previousMockUsers };
+      return { previousData };
     },
     onSuccess: () => {
       toast.success('Đã cập nhật vai trò người dùng thành công!');
     },
     onError: (error, variables, context: any) => {
-      if (data?.useRealApi) {
-        if (context) {
-          queryClient.setQueryData(['admin-users'], context.previousData);
-          setMockUsers(context.previousMockUsers);
-        }
-        toast.error('Có lỗi xảy ra khi cập nhật vai trò người dùng.');
-      } else {
-        toast.success('[Mock] Đã cập nhật vai trò người dùng thành công!');
+      if (context) {
+        queryClient.setQueryData(['admin-users'], context.previousData);
       }
+      toast.error('Không cập nhật được vai trò người dùng. Vai trò cũ vẫn được giữ nguyên, vui lòng thử lại.');
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
@@ -470,11 +321,11 @@ export default function UsersClient() {
     onMutate: async (newUser) => {
       await queryClient.cancelQueries({ queryKey: ['admin-users'] });
       const previousData = queryClient.getQueryData(['admin-users']);
-      const previousMockUsers = mockUsers;
 
-      const mockId = Math.max(...mockUsers.map((u) => u.id), 0) + 1;
+      // Id tạm cho hàng optimistic; onSettled sẽ invalidate để lấy id thật từ máy chủ.
+      const optimisticId = Math.max(...(data?.users ?? []).map((u) => u.id), 0) + 1;
       const createdUser: AdminUser = {
-        id: mockId,
+        id: optimisticId,
         name: newUser.name || '',
         email: newUser.email || '',
         phone: newUser.phone || '',
@@ -485,8 +336,6 @@ export default function UsersClient() {
         total_listings: 0,
       };
 
-      setMockUsers((prev) => [createdUser, ...prev]);
-
       queryClient.setQueryData(['admin-users'], (old: any) => {
         if (!old) return old;
         return {
@@ -495,7 +344,7 @@ export default function UsersClient() {
         };
       });
 
-      return { previousData, previousMockUsers };
+      return { previousData };
     },
     onSuccess: () => {
       toast.success('Đã thêm tài khoản mới thành công.');
@@ -503,15 +352,10 @@ export default function UsersClient() {
       resetForm();
     },
     onError: (error, variables, context: any) => {
-      if (data?.useRealApi) {
-        if (context) {
-          queryClient.setQueryData(['admin-users'], context.previousData);
-          setMockUsers(context.previousMockUsers);
-        }
-        toast.error('Có lỗi xảy ra khi tạo tài khoản mới.');
-      } else {
-        toast.success('[Mock] Đã thêm tài khoản mới thành công.');
+      if (context) {
+        queryClient.setQueryData(['admin-users'], context.previousData);
       }
+      toast.error('Không tạo được tài khoản mới. Chưa có tài khoản nào được thêm, vui lòng thử lại.');
       setShowCreateDialog(false);
       resetForm();
     },
@@ -527,11 +371,6 @@ export default function UsersClient() {
     onMutate: async ({ id, payload }) => {
       await queryClient.cancelQueries({ queryKey: ['admin-users'] });
       const previousData = queryClient.getQueryData(['admin-users']);
-      const previousMockUsers = mockUsers;
-
-      setMockUsers((prev) =>
-        prev.map((u) => (u.id === id ? { ...u, ...payload } : u))
-      );
 
       queryClient.setQueryData(['admin-users'], (old: any) => {
         if (!old) return old;
@@ -541,7 +380,7 @@ export default function UsersClient() {
         };
       });
 
-      return { previousData, previousMockUsers };
+      return { previousData };
     },
     onSuccess: () => {
       toast.success('Đã cập nhật thông tin tài khoản thành công!');
@@ -550,15 +389,10 @@ export default function UsersClient() {
       resetForm();
     },
     onError: (error, variables, context: any) => {
-      if (data?.useRealApi) {
-        if (context) {
-          queryClient.setQueryData(['admin-users'], context.previousData);
-          setMockUsers(context.previousMockUsers);
-        }
-        toast.error('Có lỗi xảy ra khi cập nhật tài khoản.');
-      } else {
-        toast.success('[Mock] Đã cập nhật thông tin tài khoản thành công!');
+      if (context) {
+        queryClient.setQueryData(['admin-users'], context.previousData);
       }
+      toast.error('Không cập nhật được tài khoản. Thông tin cũ vẫn được giữ nguyên, vui lòng thử lại.');
       setShowEditDialog(false);
       setSelectedUserForEdit(null);
       resetForm();
@@ -660,6 +494,17 @@ export default function UsersClient() {
           Thêm tài khoản mới
         </Button>
       </div>
+
+      {/* Tải dữ liệu thất bại — nói rõ, KHÔNG hiện bảng rỗng như thể sàn không có tài khoản nào. */}
+      {loadFailed && (
+        <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+          <AlertTriangle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+          <div className="text-[13px] text-red-800">
+            <p className="font-semibold">Không tải được danh sách người dùng từ máy chủ.</p>
+            <p className="mt-0.5">Bảng bên dưới đang trống và các ô thống kê hiển thị dấu gạch ngang do lỗi kết nối, không phải vì sàn không có tài khoản. Vui lòng tải lại trang.</p>
+          </div>
+        </div>
+      )}
 
       {/* Analytics Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">

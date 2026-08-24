@@ -61,132 +61,6 @@ import { transactionApi, type Transaction } from '@/lib/admin-api';
 type TransactionStatus = 'pending' | 'success' | 'failed' | 'refunded';
 type TransactionType = 'deposit' | 'purchase' | 'withdraw' | 'refund';
 
-// Mock transactions dataset with local real estate brokers in Quang Ngai
-const MOCK_TRANSACTIONS = [
-  {
-    id: 1,
-    type: 'deposit',
-    amount: 5000000,
-    status: 'pending',
-    user: {
-      id: 201,
-      name: 'Nguyễn Văn Hùng',
-      email: 'vanhung.bdsquangngai@gmail.com',
-    },
-    created_at: '2026-05-20T10:30:00Z',
-  },
-  {
-    id: 2,
-    type: 'purchase',
-    amount: 1200000,
-    status: 'pending',
-    user: {
-      id: 202,
-      name: 'Phạm Thị Minh Trang',
-      email: 'minhtrang.ducpholand@gmail.com',
-    },
-    created_at: '2026-05-19T15:45:00Z',
-  },
-  {
-    id: 3,
-    type: 'deposit',
-    amount: 10000000,
-    status: 'success',
-    user: {
-      id: 203,
-      name: 'Lê Quốc Khánh',
-      email: 'khanh.leland@gmail.com',
-    },
-    created_at: '2026-05-18T09:20:00Z',
-  },
-  {
-    id: 4,
-    type: 'purchase',
-    amount: 3500000,
-    status: 'success',
-    user: {
-      id: 204,
-      name: 'Trần Minh Hải',
-      email: 'minhhai@binhsonhouse.vn',
-    },
-    created_at: '2026-05-17T11:10:00Z',
-  },
-  {
-    id: 5,
-    type: 'deposit',
-    amount: 2000000,
-    status: 'failed',
-    user: {
-      id: 205,
-      name: 'Võ Thị Bé',
-      email: 'vothibe1992@gmail.com',
-    },
-    reject_reason: 'Mã giao dịch ngân hàng không khớp, tài khoản chuyển tiền không đúng tên môi giới.',
-    created_at: '2026-05-15T14:10:00Z',
-  },
-  {
-    id: 6,
-    type: 'purchase',
-    amount: 2000000,
-    status: 'refunded',
-    user: {
-      id: 206,
-      name: 'Huỳnh Tấn Đạt',
-      email: 'tandat.moducland@gmail.com',
-    },
-    created_at: '2026-05-14T08:15:00Z',
-  },
-  {
-    id: 7,
-    type: 'deposit',
-    amount: 15000000,
-    status: 'success',
-    user: {
-      id: 207,
-      name: 'Nguyễn Văn An',
-      email: 'vanan@diaocnghiahanh.com',
-    },
-    created_at: '2026-05-13T10:00:00Z',
-  },
-  {
-    id: 8,
-    type: 'purchase',
-    amount: 800000,
-    status: 'success',
-    user: {
-      id: 208,
-      name: 'Trương Thị Kim Chi',
-      email: 'kimchi.bdsquangngai@gmail.com',
-    },
-    created_at: '2026-05-12T16:20:00Z',
-  },
-  {
-    id: 9,
-    type: 'deposit',
-    amount: 3000000,
-    status: 'pending',
-    user: {
-      id: 209,
-      name: 'Phan Thanh Bình',
-      email: 'thanhbinh.trabong@gmail.com',
-    },
-    created_at: '2026-05-11T09:40:00Z',
-  },
-  {
-    id: 10,
-    type: 'purchase',
-    amount: 1200000,
-    status: 'failed',
-    user: {
-      id: 210,
-      name: 'Bùi Tấn Lực',
-      email: 'tanluc.bato@gmail.com',
-    },
-    reject_reason: 'Số dư ví không đủ để thực hiện thanh toán mua tin VIP Diamond.',
-    created_at: '2026-05-10T14:15:00Z',
-  }
-];
-
 const statusConfig: Record<TransactionStatus, { label: string; color: string; icon: React.ElementType }> = {
   pending: { label: 'Chờ duyệt', color: 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100/60 border-yellow-200/50', icon: Clock },
   success: { label: 'Thành công', color: 'bg-green-50 text-green-700 hover:bg-green-100/60 border-green-200/50', icon: CheckCircle },
@@ -213,9 +87,6 @@ export default function TransactionsClient() {
   const confirm = useConfirm();
   const queryClient = useQueryClient();
 
-  // Local mock state to support fallback mock interactions
-  const [mockTransactions, setMockTransactions] = useState<Transaction[]>(MOCK_TRANSACTIONS as Transaction[]);
-
   // Filters state
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
@@ -241,12 +112,12 @@ export default function TransactionsClient() {
 
         const res = await transactionApi.list(params);
         if (res && res.data) {
-          return { transactions: res.data, useRealApi: true };
+          return { transactions: res.data, loaded: true };
         }
       } catch (error) {
-        console.error('Error fetching transactions, using mock data:', error);
+        console.error('Không tải được danh sách giao dịch:', error);
       }
-      return { transactions: [] as Transaction[], useRealApi: false };
+      return { transactions: [] as Transaction[], loaded: false };
     }
   });
 
@@ -261,45 +132,35 @@ export default function TransactionsClient() {
             total_revenue: Number(res.total_revenue || 0),
             total_transactions: Number(res.total_transactions || 0),
             pending_count: Number(res.pending_count || 0),
-            useRealApi: true
+            loaded: true
           };
         }
       } catch (error) {
-        console.error('Error fetching transaction stats:', error);
+        console.error('Không tải được thống kê giao dịch:', error);
       }
       return {
         total_revenue: 0,
         total_transactions: 0,
         pending_count: 0,
-        useRealApi: false
+        loaded: false
       };
     }
   });
 
-  const transactions = useMemo(() => {
-    if (listData?.useRealApi) {
-      return listData.transactions;
-    }
-    return mockTransactions;
-  }, [listData, mockTransactions]);
+  // CHỈ dùng dữ liệu THẬT. Trước đây khi API lỗi, trang này rơi về danh sách giao dịch bịa và
+  // panel doanh thu được tính từ chính số bịa đó — quản trị viên đọc ra con số tiền không tồn tại
+  // và bấm Phê duyệt/Hoàn tiền trên id không có thật. Thà hiện bảng rỗng + báo lỗi tải.
+  const transactions = useMemo(() => listData?.transactions ?? [], [listData]);
 
-  const stats = useMemo(() => {
-    if (statsData?.useRealApi) {
-      return statsData;
-    }
-    // Calculate local fallback stats
-    const successRevenue = mockTransactions
-      .filter(tx => tx.status === 'success' && tx.type === 'deposit')
-      .reduce((sum, tx) => sum + (tx.amount || 0), 0);
+  /** Tải danh sách thất bại → cảnh báo rõ thay vì im lặng hiện bảng rỗng. */
+  const listFailed = !!listData && !listData.loaded;
 
-    return {
-      total_revenue: successRevenue,
-      total_transactions: mockTransactions.length,
-      pending_count: mockTransactions.filter(tx => tx.status === 'pending').length,
-    };
-  }, [statsData, mockTransactions]);
+  /** Thống kê thất bại → hiện dấu gạch ngang, tuyệt đối không hiện số tự tính. */
+  const statsFailed = !!statsData && !statsData.loaded;
 
-  // Client-side combined filtering (for mock fallbacks & local quick filter)
+  const stats = statsData ?? { total_revenue: 0, total_transactions: 0, pending_count: 0 };
+
+  // Lọc phía client trên dữ liệu thật đã tải về (tìm nhanh theo từ khoá)
   const filteredTransactions = useMemo(() => {
     return transactions.filter((tx) => {
       const matchStatus = statusFilter === 'all' || tx.status === statusFilter;
@@ -333,11 +194,6 @@ export default function TransactionsClient() {
       await queryClient.cancelQueries({ queryKey: ['admin-transactions'] });
       const queryKey = ['admin-transactions', statusFilter, typeFilter];
       const previousData = queryClient.getQueryData(queryKey);
-      const previousMockTransactions = mockTransactions;
-
-      setMockTransactions((prev) =>
-        prev.map((tx) => (tx.id === id ? { ...tx, status: 'success' } : tx))
-      );
 
       queryClient.setQueryData(queryKey, (old: any) => {
         if (!old) return old;
@@ -349,21 +205,17 @@ export default function TransactionsClient() {
         };
       });
 
-      return { previousData, previousMockTransactions };
+      return { previousData };
     },
     onSuccess: () => {
       toast.success('Đã phê duyệt giao dịch thành công!');
     },
+    // Lỗi thì LUÔN báo lỗi — trước đây nhánh không-có-API lại báo thành công giả.
     onError: (error, id, context: any) => {
-      if (listData?.useRealApi) {
-        if (context) {
-          queryClient.setQueryData(['admin-transactions', statusFilter, typeFilter], context.previousData);
-          setMockTransactions(context.previousMockTransactions);
-        }
-        toast.error('Có lỗi xảy ra khi phê duyệt giao dịch.');
-      } else {
-        toast.success('[Mock] Đã phê duyệt giao dịch thành công!');
+      if (context) {
+        queryClient.setQueryData(['admin-transactions', statusFilter, typeFilter], context.previousData);
       }
+      toast.error(`Không phê duyệt được giao dịch #${id}. Giao dịch vẫn đang chờ duyệt, vui lòng thử lại.`);
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-transactions'] });
@@ -379,15 +231,6 @@ export default function TransactionsClient() {
       await queryClient.cancelQueries({ queryKey: ['admin-transactions'] });
       const queryKey = ['admin-transactions', statusFilter, typeFilter];
       const previousData = queryClient.getQueryData(queryKey);
-      const previousMockTransactions = mockTransactions;
-
-      setMockTransactions((prev) =>
-        prev.map((tx) =>
-          tx.id === id
-            ? { ...tx, status: 'failed', reject_reason: reason }
-            : tx
-        )
-      );
 
       queryClient.setQueryData(queryKey, (old: any) => {
         if (!old) return old;
@@ -399,7 +242,7 @@ export default function TransactionsClient() {
         };
       });
 
-      return { previousData, previousMockTransactions };
+      return { previousData };
     },
     onSuccess: () => {
       toast.success('Đã từ chối giao dịch thành công.');
@@ -408,15 +251,10 @@ export default function TransactionsClient() {
       setRejectReason('');
     },
     onError: (error, variables, context: any) => {
-      if (listData?.useRealApi) {
-        if (context) {
-          queryClient.setQueryData(['admin-transactions', statusFilter, typeFilter], context.previousData);
-          setMockTransactions(context.previousMockTransactions);
-        }
-        toast.error('Có lỗi xảy ra khi từ chối giao dịch.');
-      } else {
-        toast.success('[Mock] Đã từ chối giao dịch thành công.');
+      if (context) {
+        queryClient.setQueryData(['admin-transactions', statusFilter, typeFilter], context.previousData);
       }
+      toast.error(`Không từ chối được giao dịch #${variables.id}. Trạng thái giao dịch chưa thay đổi, vui lòng thử lại.`);
       setShowRejectDialog(false);
       setSelectedTx(null);
       setRejectReason('');
@@ -435,11 +273,6 @@ export default function TransactionsClient() {
       await queryClient.cancelQueries({ queryKey: ['admin-transactions'] });
       const queryKey = ['admin-transactions', statusFilter, typeFilter];
       const previousData = queryClient.getQueryData(queryKey);
-      const previousMockTransactions = mockTransactions;
-
-      setMockTransactions((prev) =>
-        prev.map((tx) => (tx.id === id ? { ...tx, status: 'refunded' } : tx))
-      );
 
       queryClient.setQueryData(queryKey, (old: any) => {
         if (!old) return old;
@@ -451,21 +284,16 @@ export default function TransactionsClient() {
         };
       });
 
-      return { previousData, previousMockTransactions };
+      return { previousData };
     },
     onSuccess: () => {
       toast.success('Đã thực hiện hoàn tiền giao dịch thành công.');
     },
     onError: (error, id, context: any) => {
-      if (listData?.useRealApi) {
-        if (context) {
-          queryClient.setQueryData(['admin-transactions', statusFilter, typeFilter], context.previousData);
-          setMockTransactions(context.previousMockTransactions);
-        }
-        toast.error('Có lỗi xảy ra khi hoàn tiền giao dịch.');
-      } else {
-        toast.success('[Mock] Đã thực hiện hoàn tiền giao dịch thành công.');
+      if (context) {
+        queryClient.setQueryData(['admin-transactions', statusFilter, typeFilter], context.previousData);
       }
+      toast.error(`Không hoàn tiền được giao dịch #${id}. Chưa có khoản tiền nào được hoàn, vui lòng thử lại.`);
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-transactions'] });
@@ -516,6 +344,27 @@ export default function TransactionsClient() {
         </div>
       </div>
 
+      {/* Tải dữ liệu thất bại — nói rõ, KHÔNG hiện bảng rỗng như thể chưa có giao dịch nào. */}
+      {listFailed && (
+        <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+          <AlertTriangle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+          <div className="text-[13px] text-red-800">
+            <p className="font-semibold">Không tải được danh sách giao dịch từ máy chủ.</p>
+            <p className="mt-0.5">Bảng bên dưới đang trống do lỗi kết nối, không phải vì hệ thống không có giao dịch. Vui lòng tải lại trang.</p>
+          </div>
+        </div>
+      )}
+
+      {statsFailed && (
+        <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+          <AlertTriangle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+          <div className="text-[13px] text-red-800">
+            <p className="font-semibold">Không tải được số liệu doanh thu từ máy chủ.</p>
+            <p className="mt-0.5">Các ô thống kê đang hiển thị dấu gạch ngang thay vì số liệu. Vui lòng tải lại trang.</p>
+          </div>
+        </div>
+      )}
+
       {/* Analytics Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card className="border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.02)] rounded-2xl bg-white overflow-hidden">
@@ -524,7 +373,7 @@ export default function TransactionsClient() {
               <TrendingUp className="h-5.5 w-5.5" />
             </div>
             <div>
-              <p className="text-2xl font-black text-gray-900">{formatPrice(stats.total_revenue)}</p>
+              <p className="text-2xl font-black text-gray-900">{statsFailed ? '—' : formatPrice(stats.total_revenue)}</p>
               <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-0.5">Tổng doanh thu nạp</p>
             </div>
           </CardContent>
@@ -536,7 +385,7 @@ export default function TransactionsClient() {
               <History className="h-5.5 w-5.5" />
             </div>
             <div>
-              <p className="text-2xl font-black text-gray-900">{stats.total_transactions}</p>
+              <p className="text-2xl font-black text-gray-900">{statsFailed ? '—' : stats.total_transactions}</p>
               <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-0.5">Tổng số giao dịch</p>
             </div>
           </CardContent>
@@ -548,7 +397,7 @@ export default function TransactionsClient() {
               <Clock className="h-5.5 w-5.5" />
             </div>
             <div>
-              <p className="text-2xl font-black text-gray-900">{stats.pending_count}</p>
+              <p className="text-2xl font-black text-gray-900">{statsFailed ? '—' : stats.pending_count}</p>
               <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-0.5">Giao dịch chờ duyệt</p>
             </div>
           </CardContent>

@@ -52,116 +52,13 @@ import {
   ChevronsLeft,
   ChevronsRight,
   FolderOpen,
+  AlertTriangle,
 } from 'lucide-react';
 import { categoryApi, type Category } from '@/lib/admin-api';
 import { slugify } from '@/lib/formatters';
 import { DETAIL_FIELD_OPTIONS, parseDetailFields } from '@/lib/property-form-config';
 
 type CategoryStatus = 'active' | 'inactive';
-
-// Mock categories for Quảng Ngãi market context
-const MOCK_CATEGORIES = [
-  {
-    id: 1,
-    name: 'Bán Đất Nền',
-    slug: 'ban-dat-nen',
-    description: 'Mua bán đất nền dự án, đất nền thổ cư, sổ đỏ trao tay tại các khu vực Quảng Ngãi.',
-    icon: 'map',
-    sort_order: 1,
-    is_active: true,
-    created_at: '2026-01-01T08:00:00Z',
-  },
-  {
-    id: 2,
-    name: 'Bán Nhà Riêng',
-    slug: 'ban-nha-rieng',
-    description: 'Bán nhà phố liền kề, nhà cấp 4, biệt thự phố chính chủ tại các quận huyện.',
-    icon: 'home',
-    sort_order: 2,
-    is_active: true,
-    created_at: '2026-01-02T09:00:00Z',
-  },
-  {
-    id: 3,
-    name: 'Bán Căn Hộ',
-    slug: 'ban-can-ho',
-    description: 'Mua bán căn hộ chung cư cao cấp, nhà ở xã hội đầy đủ tiện ích view sông view biển.',
-    icon: 'building',
-    sort_order: 3,
-    is_active: true,
-    created_at: '2026-01-05T10:00:00Z',
-  },
-  {
-    id: 4,
-    name: 'Bán Shophouse',
-    slug: 'ban-shophouse',
-    description: 'Nhà phố thương mại shophouse đắc địa kinh doanh sầm uất mặt tiền đại lộ lớn.',
-    icon: 'store',
-    sort_order: 4,
-    is_active: true,
-    created_at: '2026-01-10T14:30:00Z',
-  },
-  {
-    id: 5,
-    name: 'Đất Biệt Thự Nghỉ Dưỡng',
-    slug: 'dat-biet-thu-nghi-duong',
-    description: 'Biệt thự sinh thái ven sông Trà Khúc, ven biển Mỹ Khê nghỉ dưỡng cao cấp.',
-    icon: 'palmtree',
-    sort_order: 5,
-    is_active: true,
-    created_at: '2026-01-12T09:20:00Z',
-  },
-  {
-    id: 6,
-    name: 'Cho Thuê Nhà Nguyên Căn',
-    slug: 'cho-thue-nha-nguyen-can',
-    description: 'Cho thuê nhà nguyên căn mặt tiền rộng rãi kinh doanh tốt, nhà kiệt ô tô ở gia đình.',
-    icon: 'key',
-    sort_order: 6,
-    is_active: true,
-    created_at: '2026-02-15T11:10:00Z',
-  },
-  {
-    id: 7,
-    name: 'Cho Thuê Mặt Bằng',
-    slug: 'cho-thue-mat-bang',
-    description: 'Cho thuê mặt bằng thương mại, ki ốt sầm uất trung tâm thành phố Quảng Ngãi.',
-    icon: 'warehouse',
-    sort_order: 7,
-    is_active: true,
-    created_at: '2026-02-20T16:00:00Z',
-  },
-  {
-    id: 8,
-    name: 'Cho Thuê Phòng Trọ',
-    slug: 'cho-thue-phong-tro',
-    description: 'Phòng trọ sinh viên giá rẻ, nhà trọ công nhân gần các KCN VSIP, Dung Quất.',
-    icon: 'bed',
-    sort_order: 8,
-    is_active: true,
-    created_at: '2026-03-01T08:00:00Z',
-  },
-  {
-    id: 9,
-    name: 'Dự Án Quy Hoạch',
-    slug: 'du-an-quy-hoach',
-    description: 'Thông tin quy hoạch sử dụng đất mới nhất phục vụ nhà đầu tư trung và dài hạn.',
-    icon: 'map-pin',
-    sort_order: 9,
-    is_active: false,
-    created_at: '2026-03-05T10:20:00Z',
-  },
-  {
-    id: 10,
-    name: 'Mặt Bằng Văn Phòng',
-    slug: 'mat-bang-van-phong',
-    description: 'Cho thuê văn phòng làm việc trọn gói, chỗ ngồi chia sẻ chuyên nghiệp.',
-    icon: 'briefcase',
-    sort_order: 10,
-    is_active: true,
-    created_at: '2026-03-12T14:15:00Z',
-  }
-];
 
 const statusConfig: Record<CategoryStatus, { label: string; color: string; icon: React.ElementType }> = {
   active: { label: 'Hoạt động', color: 'bg-green-50 text-green-700 hover:bg-green-100/60 border-green-200/50', icon: CheckCircle },
@@ -179,7 +76,10 @@ export default function CategoriesClient() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFiltering, setIsFiltering] = useState(false);
-  const [useRealApi, setUseRealApi] = useState(true);
+  // CHỈ dùng dữ liệu THẬT. Trước đây khi API lỗi, trang này nạp danh mục bịa hardcode và một cờ
+  // nội bộ khiến mọi lệnh Thêm/Sửa/Xoá/Bật-tắt BỎ QUA API nhưng vẫn báo thành công — quản trị viên
+  // tưởng đã đổi cấu hình danh mục trong khi máy chủ không nhận được gì.
+  const [loadFailed, setLoadFailed] = useState(false);
 
   // Filter & Search states
   const [statusFilter, setStatusFilter] = useState('all');
@@ -207,18 +107,13 @@ export default function CategoriesClient() {
   const loadCategories = useCallback(async () => {
     try {
       setLoading(true);
+      setLoadFailed(false);
       const response = await categoryApi.list({ parent_only: true });
-      if (response && response.data) {
-        setCategories(response.data);
-        setUseRealApi(true);
-      } else {
-        setCategories(MOCK_CATEGORIES);
-        setUseRealApi(false);
-      }
+      setCategories(response?.data ?? []);
     } catch (error) {
-      console.error('Error fetching categories:', error);
-      setCategories(MOCK_CATEGORIES);
-      setUseRealApi(false);
+      console.error('Không tải được danh sách danh mục:', error);
+      setCategories([]);
+      setLoadFailed(true);
     } finally {
       setLoading(false);
     }
@@ -286,22 +181,16 @@ export default function CategoriesClient() {
       // detail_fields ở state là mảng (dễ tick); gửi lên DB dạng CSV chuỗi (feedback #4).
       const payload = { ...formData, detail_fields: formData.detail_fields.join(',') || null };
       if (editingCategory) {
-        if (useRealApi) {
-          await categoryApi.update(editingCategory.id, payload);
-        }
+        await categoryApi.update(editingCategory.id, payload);
         setCategories((prev) =>
           prev.map((c) => (c.id === editingCategory.id ? { ...c, ...payload } : c))
         );
         toast.success('Đã cập nhật danh mục thành công!');
       } else {
-        let newId = categories.length + 1;
-        if (useRealApi) {
-          const res = await categoryApi.create(payload);
-          if (res && res.id) newId = res.id;
-        }
+        const res = await categoryApi.create(payload);
         const newCat = {
-          id: newId,
           ...payload,
+          id: res?.id ?? 0,
           created_at: new Date().toISOString(),
         };
         setCategories((prev) => [...prev, newCat]);
@@ -309,7 +198,7 @@ export default function CategoriesClient() {
       }
       setIsDialogOpen(false);
     } catch {
-      toast.error('Có lỗi xảy ra khi xử lý danh mục.');
+      toast.error('Không lưu được danh mục. Máy chủ chưa ghi nhận thay đổi, vui lòng thử lại.');
     } finally {
       setIsActionPending(false);
     }
@@ -324,9 +213,7 @@ export default function CategoriesClient() {
     });
     if (!isConfirmed) return;
     try {
-      if (useRealApi) {
-        await categoryApi.delete(id);
-      }
+      await categoryApi.delete(id);
       setCategories((prev) => prev.filter((c) => c.id !== id));
       toast.success('Đã xóa danh mục thành công.');
     } catch (error: unknown) {
@@ -337,15 +224,13 @@ export default function CategoriesClient() {
 
   const handleToggle = async (id: number) => {
     try {
-      if (useRealApi) {
-        await categoryApi.toggle(id);
-      }
+      await categoryApi.toggle(id);
       setCategories((prev) =>
         prev.map((c) => (c.id === id ? { ...c, is_active: !c.is_active } : c))
       );
       toast.success('Đã thay đổi trạng thái hoạt động danh mục thành công!');
     } catch {
-      toast.error('Có lỗi xảy ra khi thay đổi trạng thái.');
+      toast.error('Không thay đổi được trạng thái danh mục. Trạng thái cũ vẫn giữ nguyên, vui lòng thử lại.');
     }
   };
 
@@ -394,6 +279,17 @@ export default function CategoriesClient() {
           Thêm danh mục mới
         </Button>
       </div>
+
+      {/* Tải dữ liệu thất bại — nói rõ, KHÔNG hiện danh mục bịa. */}
+      {loadFailed && (
+        <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+          <AlertTriangle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+          <div className="text-[13px] text-red-800">
+            <p className="font-semibold">Không tải được danh sách danh mục từ máy chủ.</p>
+            <p className="mt-0.5">Danh sách bên dưới đang trống do lỗi kết nối, không phải vì chưa có danh mục nào. Vui lòng tải lại trang.</p>
+          </div>
+        </div>
+      )}
 
       {/* Analytics Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

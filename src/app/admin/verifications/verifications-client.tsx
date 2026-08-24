@@ -61,189 +61,6 @@ import { verificationApi, type Verification } from '@/lib/admin-api';
 type VerificationStatus = 'pending' | 'approved' | 'rejected';
 type VerificationType = 'agent' | 'agency';
 
-// Mock data fallback with authentic local Quang Ngai agents/agencies
-const MOCK_VERIFICATIONS = [
-  {
-    id: 1,
-    type: 'agent',
-    status: 'pending',
-    license_number: 'MG-2026-QN-089',
-    agency_name: null,
-    documents: [
-      'https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?w=500&h=400&fit=crop',
-      'https://images.unsplash.com/photo-1450133064473-71024230f91b?w=500&h=400&fit=crop'
-    ],
-    user: {
-      id: 101,
-      name: 'Nguyễn Hoàng Sơn',
-      email: 'hoangson.datquangngai@gmail.com',
-      phone: '0914 123 456',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop'
-    },
-    created_at: '2026-05-20T10:30:00Z'
-  },
-  {
-    id: 2,
-    type: 'agency',
-    status: 'pending',
-    license_number: 'GPKD-570298831',
-    agency_name: 'Bất Động Sản Đức Phổ Land',
-    documents: [
-      'https://images.unsplash.com/photo-1450133064473-71024230f91b?w=500&h=400&fit=crop'
-    ],
-    user: {
-      id: 102,
-      name: 'Phạm Thị Minh Trang',
-      email: 'minhtrang.ducpholand@gmail.com',
-      phone: '0905 987 654',
-      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop'
-    },
-    created_at: '2026-05-19T15:45:00Z'
-  },
-  {
-    id: 3,
-    type: 'agent',
-    status: 'approved',
-    license_number: 'MG-2025-QN-012',
-    agency_name: null,
-    documents: [
-      'https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?w=500&h=400&fit=crop'
-    ],
-    user: {
-      id: 103,
-      name: 'Lê Quốc Khánh',
-      email: 'khanh.leland@gmail.com',
-      phone: '0983 234 567',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop'
-    },
-    created_at: '2026-05-18T09:20:00Z'
-  },
-  {
-    id: 4,
-    type: 'agency',
-    status: 'approved',
-    license_number: 'GPKD-570992338',
-    agency_name: 'Bình Sơn House',
-    documents: [
-      'https://images.unsplash.com/photo-1450133064473-71024230f91b?w=500&h=400&fit=crop'
-    ],
-    user: {
-      id: 104,
-      name: 'Trần Minh Hải',
-      email: 'minhhai@binhsonhouse.vn',
-      phone: '0919 778 899',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop'
-    },
-    created_at: '2026-05-17T11:10:00Z'
-  },
-  {
-    id: 5,
-    type: 'agent',
-    status: 'rejected',
-    license_number: 'MG-2024-QN-998',
-    agency_name: null,
-    documents: [],
-    user: {
-      id: 105,
-      name: 'Võ Thị Bé',
-      email: 'vothibe1992@gmail.com',
-      phone: '0966 333 444',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop'
-    },
-    reject_reason: 'Chứng chỉ hành nghề đã hết hạn sử dụng từ năm 2025. Tài liệu đính kèm mờ không thể đọc rõ thông tin.',
-    created_at: '2026-05-15T14:10:00Z'
-  },
-  {
-    id: 6,
-    type: 'agent',
-    status: 'pending',
-    license_number: 'MG-2026-QN-102',
-    agency_name: null,
-    documents: [
-      'https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?w=500&h=400&fit=crop'
-    ],
-    user: {
-      id: 106,
-      name: 'Huỳnh Tấn Đạt',
-      email: 'tandat.moducland@gmail.com',
-      phone: '0977 456 789',
-      avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=100&h=100&fit=crop'
-    },
-    created_at: '2026-05-14T08:15:00Z'
-  },
-  {
-    id: 7,
-    type: 'agency',
-    status: 'approved',
-    license_number: 'GPKD-570119934',
-    agency_name: 'Địa Ốc Nghĩa Hành',
-    documents: [
-      'https://images.unsplash.com/photo-1450133064473-71024230f91b?w=500&h=400&fit=crop'
-    ],
-    user: {
-      id: 107,
-      name: 'Nguyễn Văn An',
-      email: 'vanan@diaocnghiahanh.com',
-      phone: '0912 345 678',
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop'
-    },
-    created_at: '2026-05-13T10:00:00Z'
-  },
-  {
-    id: 8,
-    type: 'agent',
-    status: 'approved',
-    license_number: 'MG-2026-QN-005',
-    agency_name: null,
-    documents: [
-      'https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?w=500&h=400&fit=crop'
-    ],
-    user: {
-      id: 108,
-      name: 'Trương Thị Kim Chi',
-      email: 'kimchi.bdsquangngai@gmail.com',
-      phone: '0903 555 666',
-      avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&h=100&fit=crop'
-    },
-    created_at: '2026-05-12T16:20:00Z'
-  },
-  {
-    id: 9,
-    type: 'agent',
-    status: 'pending',
-    license_number: 'MG-2026-QN-114',
-    agency_name: null,
-    documents: [
-      'https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?w=500&h=400&fit=crop'
-    ],
-    user: {
-      id: 109,
-      name: 'Phan Thanh Bình',
-      email: 'thanhbinh.trabong@gmail.com',
-      phone: '0989 112 233',
-      avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=100&h=100&fit=crop'
-    },
-    created_at: '2026-05-11T09:40:00Z'
-  },
-  {
-    id: 10,
-    type: 'agent',
-    status: 'rejected',
-    license_number: 'MG-2024-QN-412',
-    agency_name: null,
-    documents: [],
-    user: {
-      id: 110,
-      name: 'Bùi Tấn Lực',
-      email: 'tanluc.bato@gmail.com',
-      phone: '0979 445 566',
-      avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop'
-    },
-    reject_reason: 'Ảnh chứng minh nhân dân/CCCD không khớp với thông tin đăng ký tài khoản.',
-    created_at: '2026-05-10T14:15:00Z'
-  }
-];
-
 const statusConfig: Record<VerificationStatus, { label: string; color: string; icon: React.ElementType }> = {
   pending: { label: 'Chờ duyệt', color: 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100/60 border-yellow-200/50', icon: Eye },
   approved: { label: 'Đã duyệt', color: 'bg-green-50 text-green-700 hover:bg-green-100/60 border-green-200/50', icon: CheckCircle },
@@ -265,9 +82,6 @@ const statusTabs = [
 export default function VerificationsClient() {
   const confirm = useConfirm();
   const queryClient = useQueryClient();
-
-  // Local mock state to support fallback mock interactions
-  const [mockVerifications, setMockVerifications] = useState<Verification[]>(MOCK_VERIFICATIONS as Verification[]);
 
   // Filter & search states
   const [statusFilter, setStatusFilter] = useState('all');
@@ -293,21 +107,21 @@ export default function VerificationsClient() {
 
         const res = await verificationApi.list(params);
         if (res && res.data) {
-          return { verifications: res.data, useRealApi: true };
+          return { verifications: res.data, loaded: true };
         }
       } catch (error) {
-        console.error('Error fetching verifications, using mock data:', error);
+        console.error('Không tải được danh sách yêu cầu xác thực:', error);
       }
-      return { verifications: [] as Verification[], useRealApi: false };
+      return { verifications: [] as Verification[], loaded: false };
     }
   });
 
-  const verifications = useMemo(() => {
-    if (data?.useRealApi) {
-      return data.verifications;
-    }
-    return mockVerifications;
-  }, [data, mockVerifications]);
+  // CHỈ dùng dữ liệu THẬT. Trước đây khi API lỗi, trang này rơi về danh sách hồ sơ bịa và vẫn cho
+  // bấm Duyệt/Từ chối — quản trị viên tưởng đã xử lý hồ sơ thật. Thà hiện bảng rỗng + báo lỗi tải.
+  const verifications = useMemo(() => data?.verifications ?? [], [data]);
+
+  /** Tải danh sách thất bại → cảnh báo rõ thay vì im lặng hiện bảng rỗng. */
+  const loadFailed = !!data && !data.loaded;
 
   // Filter logic (combined)
   const filteredVerifications = useMemo(() => {
@@ -336,9 +150,10 @@ export default function VerificationsClient() {
   }, [filteredVerifications, startIndex, endIndex]);
 
   // Stats calculation
-  const pendingCount = verifications.filter((v) => v.status === 'pending').length;
-  const approvedCount = verifications.filter((v) => v.status === 'approved').length;
-  const rejectedCount = verifications.filter((v) => v.status === 'rejected').length;
+  // Lỗi tải thì hiện dấu gạch ngang — số 0 sẽ bị đọc thành "không còn hồ sơ nào chờ duyệt".
+  const pendingCount = loadFailed ? '—' : verifications.filter((v) => v.status === 'pending').length;
+  const approvedCount = loadFailed ? '—' : verifications.filter((v) => v.status === 'approved').length;
+  const rejectedCount = loadFailed ? '—' : verifications.filter((v) => v.status === 'rejected').length;
 
   // Mutations
   const approveMutation = useMutation({
@@ -349,11 +164,6 @@ export default function VerificationsClient() {
       await queryClient.cancelQueries({ queryKey: ['admin-verifications'] });
       const queryKey = ['admin-verifications', statusFilter];
       const previousData = queryClient.getQueryData(queryKey);
-      const previousMockVerifications = mockVerifications;
-
-      setMockVerifications((prev) =>
-        prev.map((v) => (v.id === id ? { ...v, status: 'approved' } : v))
-      );
 
       queryClient.setQueryData(queryKey, (old: any) => {
         if (!old) return old;
@@ -365,22 +175,18 @@ export default function VerificationsClient() {
         };
       });
 
-      return { previousData, previousMockVerifications };
+      return { previousData };
     },
     onSuccess: (res, id) => {
       toast.success('Đã duyệt yêu cầu xác thực thành công!');
       setSelectedVerification(null);
     },
+    // Lỗi thì LUÔN báo lỗi — trước đây nhánh không-có-API lại báo thành công giả.
     onError: (error, id, context: any) => {
-      if (data?.useRealApi) {
-        if (context) {
-          queryClient.setQueryData(['admin-verifications', statusFilter], context.previousData);
-          setMockVerifications(context.previousMockVerifications);
-        }
-        toast.error('Có lỗi xảy ra khi phê duyệt yêu cầu xác thực.');
-      } else {
-        toast.success('[Mock] Đã duyệt yêu cầu xác thực thành công!');
+      if (context) {
+        queryClient.setQueryData(['admin-verifications', statusFilter], context.previousData);
       }
+      toast.error(`Không duyệt được yêu cầu xác thực #${id}. Hồ sơ vẫn đang chờ duyệt, vui lòng thử lại.`);
       setSelectedVerification(null);
     },
     onSettled: () => {
@@ -396,15 +202,6 @@ export default function VerificationsClient() {
       await queryClient.cancelQueries({ queryKey: ['admin-verifications'] });
       const queryKey = ['admin-verifications', statusFilter];
       const previousData = queryClient.getQueryData(queryKey);
-      const previousMockVerifications = mockVerifications;
-
-      setMockVerifications((prev) =>
-        prev.map((v) =>
-          v.id === id
-            ? { ...v, status: 'rejected', reject_reason: reason }
-            : v
-        )
-      );
 
       queryClient.setQueryData(queryKey, (old: any) => {
         if (!old) return old;
@@ -418,7 +215,7 @@ export default function VerificationsClient() {
         };
       });
 
-      return { previousData, previousMockVerifications };
+      return { previousData };
     },
     onSuccess: (res, variables) => {
       toast.success('Đã từ chối yêu cầu xác thực thành công.');
@@ -427,15 +224,10 @@ export default function VerificationsClient() {
       setRejectReason('');
     },
     onError: (error, variables, context: any) => {
-      if (data?.useRealApi) {
-        if (context) {
-          queryClient.setQueryData(['admin-verifications', statusFilter], context.previousData);
-          setMockVerifications(context.previousMockVerifications);
-        }
-        toast.error('Có lỗi xảy ra khi từ chối yêu cầu xác thực.');
-      } else {
-        toast.success('[Mock] Đã từ chối yêu cầu xác thực thành công.');
+      if (context) {
+        queryClient.setQueryData(['admin-verifications', statusFilter], context.previousData);
       }
+      toast.error(`Không từ chối được yêu cầu xác thực #${variables.id}. Trạng thái hồ sơ chưa thay đổi, vui lòng thử lại.`);
       setShowRejectDialog(false);
       setSelectedVerification(null);
       setRejectReason('');
@@ -477,6 +269,17 @@ export default function VerificationsClient() {
           <p className="text-sm text-gray-500 mt-1">Duyệt hồ sơ đăng ký môi giới cá nhân và công ty đại lý bất động sản Quảng Ngãi</p>
         </div>
       </div>
+
+      {/* Tải dữ liệu thất bại — nói rõ, KHÔNG hiện bảng rỗng như thể không còn hồ sơ nào. */}
+      {loadFailed && (
+        <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+          <AlertTriangle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+          <div className="text-[13px] text-red-800">
+            <p className="font-semibold">Không tải được danh sách yêu cầu xác thực từ máy chủ.</p>
+            <p className="mt-0.5">Bảng bên dưới đang trống và các ô thống kê hiển thị dấu gạch ngang do lỗi kết nối, không phải vì không còn hồ sơ nào. Vui lòng tải lại trang.</p>
+          </div>
+        </div>
+      )}
 
       {/* Modern Analytics Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

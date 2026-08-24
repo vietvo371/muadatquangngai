@@ -159,7 +159,7 @@ export default function ProjectsClient() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFiltering, setIsFiltering] = useState(false);
-  // useRealApi đã bỏ — luôn dùng real API, không có mock fallback
+  // Đã bỏ cờ chuyển-đổi-dữ-liệu-giả — luôn dùng API thật, không có dữ liệu dự phòng bịa
 
   // Filters state
   const [statusFilter, setStatusFilter] = useState('all');
