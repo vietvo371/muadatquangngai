@@ -52,6 +52,7 @@ interface PaymentInfo {
   bank_holder: string | null;
   hotline: string | null;
   configured: boolean;
+  simulate_mode: boolean;
 }
 
 const STATUS_LABEL: Record<string, { text: string; className: string }> = {
@@ -121,7 +122,13 @@ export default function NapTienPage() {
       if (!tx) throw new Error('Phản hồi không hợp lệ');
       setCreated(tx);
       loadHistory();
-      toast.success('Đã ghi nhận yêu cầu nạp tiền.');
+      if (tx.status === 'success') {
+        // Chế độ thử nghiệm cộng tiền ngay -> nạp lại số dư để hiển thị đúng.
+        loadBalance();
+        toast.success('Chế độ thử nghiệm: đã cộng tiền vào ví.');
+      } else {
+        toast.success('Đã ghi nhận yêu cầu nạp tiền.');
+      }
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
@@ -163,6 +170,17 @@ export default function NapTienPage() {
         </CardContent>
       </Card>
 
+      {/* Nói thẳng đang ở chế độ thử nghiệm — người dùng phải biết tiền này không phải nạp thật. */}
+      {payment?.simulate_mode && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 flex gap-2 text-sm">
+          <Info className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+          <span className="text-gray-700">
+            <span className="font-bold">Chế độ thử nghiệm đang bật.</span> Tiền sẽ được cộng vào ví
+            ngay khi bấm, không cần chuyển khoản thật. Dùng để chạy thử luồng nạp tiền.
+          </span>
+        </div>
+      )}
+
       {/* Yêu cầu vừa tạo — nêu rõ CHƯA cộng tiền, tránh gây hiểu là đã nạp xong. */}
       {created && (
         <Card className="rounded-2xl border-amber-200 bg-amber-50/60 shadow-sm">
@@ -170,17 +188,30 @@ export default function NapTienPage() {
             <div className="flex items-start gap-3">
               <Clock className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
               <div>
-                <p className="font-bold text-gray-900">Yêu cầu nạp tiền đã được ghi nhận</p>
-                <p className="text-sm text-gray-600 mt-1">
-                  Mã yêu cầu <span className="font-bold text-gray-900">{created.code}</span> —
-                  số tiền <span className="font-bold text-gray-900">{formatPrice(created.amount)}</span>.
-                  Số dư sẽ được cộng <span className="font-semibold">sau khi quản trị viên xác nhận</span> đã nhận
-                  được chuyển khoản.
-                </p>
+                {created.status === 'success' ? (
+                  <>
+                    <p className="font-bold text-gray-900">Đã cộng tiền vào ví (thử nghiệm)</p>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Giao dịch <span className="font-bold text-gray-900">{created.code}</span> —
+                      <span className="font-bold text-gray-900"> {formatPrice(created.amount)}</span> đã được
+                      cộng ngay vì hệ thống đang ở chế độ thử nghiệm. Đây KHÔNG phải giao dịch nạp tiền thật.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-bold text-gray-900">Yêu cầu nạp tiền đã được ghi nhận</p>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Mã yêu cầu <span className="font-bold text-gray-900">{created.code}</span> —
+                      số tiền <span className="font-bold text-gray-900">{formatPrice(created.amount)}</span>.
+                      Số dư sẽ được cộng <span className="font-semibold">sau khi quản trị viên xác nhận</span> đã
+                      nhận được chuyển khoản.
+                    </p>
+                  </>
+                )}
               </div>
             </div>
 
-            {payment?.configured ? (
+            {created.status === 'success' ? null : payment?.configured ? (
               <div className="rounded-xl bg-white border border-gray-200 p-4 space-y-2 text-sm">
                 <p className="font-bold text-gray-900 mb-1">Thông tin chuyển khoản</p>
                 <div className="flex justify-between gap-3">

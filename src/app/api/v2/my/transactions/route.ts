@@ -102,6 +102,46 @@ export async function POST(request: Request) {
   }
 
   const now = new Date();
+
+  // Chế độ thử nghiệm (DEPOSIT_SIMULATE=true): cộng tiền ngay để chạy thử luồng khi chưa có
+  // thông tin ngân hàng thật. Ghi rõ trong `note` là giao dịch giả lập để sau này lọc/đối chiếu
+  // được, và cộng tiền trong cùng transaction với việc tạo giao dịch.
+  const simulate = process.env.DEPOSIT_SIMULATE === 'true';
+
+  if (simulate) {
+    const created = await db.$transaction(async (tx) => {
+      const row = await tx.transactions.create({
+        data: {
+          uuid: crypto.randomUUID(),
+          user_id: user.id,
+          type: 'deposit',
+          method,
+          amount,
+          status: 'success',
+          idempotency_key: idempotencyKey,
+          note: 'Nạp giả lập (chế độ thử nghiệm)',
+          created_at: now,
+          updated_at: now,
+        },
+        select: {
+          id: true, uuid: true, type: true, method: true, amount: true,
+          status: true, note: true, created_at: true,
+        },
+      });
+      await tx.users.update({
+        where: { id: user.id },
+        data: { balance: { increment: amount }, updated_at: new Date() },
+      });
+      return row;
+    });
+
+    return apiSuccess(
+      mapOwnTransaction(created),
+      'Chế độ thử nghiệm: đã cộng tiền vào ví ngay, không cần chuyển khoản thật.',
+      201
+    );
+  }
+
   const created = await db.transactions.create({
     data: {
       uuid: crypto.randomUUID(),

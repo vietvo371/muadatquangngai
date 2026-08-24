@@ -33,5 +33,12 @@ export async function GET() {
     hotline: val('payment_hotline'),
     /** UI dựa vào cờ này để biết có đủ thông tin hiển thị hướng dẫn chuyển khoản hay không. */
     configured: Boolean(bankName && bankAccount && bankHolder),
+    /**
+     * Chế độ thử nghiệm: yêu cầu nạp được cộng tiền NGAY, không cần chuyển khoản thật — để chủ
+     * site chạy thử luồng khi chưa có thông tin ngân hàng. Bật bằng biến môi trường
+     * DEPOSIT_SIMULATE=true. UI PHẢI hiển thị rõ đang thử nghiệm, và chỉ nên bật khi chưa mở
+     * cho người dùng thật vì lúc bật thì ai cũng tự cộng tiền cho mình được.
+     */
+    simulate_mode: process.env.DEPOSIT_SIMULATE === 'true',
   });
 }
