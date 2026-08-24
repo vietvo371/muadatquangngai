@@ -1,345 +1,366 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
 import {
-  CreditCard,
   Wallet,
+  Landmark,
+  CreditCard,
   Smartphone,
-  CheckCircle,
-  ShieldCheck,
   Clock,
-  Gift,
-  ArrowRight,
-  Star
+  Copy,
+  Info,
+  Loader2,
 } from 'lucide-react';
+import api from '@/lib/axios';
 import { formatPrice } from '@/lib/formatters';
 
-// Packages
-const packages = [
-  {
-    id: 'vip_7',
-    name: 'Gói VIP Thường',
-    duration: 7,
-    price: 50000,
-    originalPrice: null,
-    features: [
-      'Nổi bật trên trang chủ 7 ngày',
-      'Huy hiệu VIP vàng',
-      'Đẩy tin 1 lần/ngày',
-    ],
-    popular: false,
-    color: 'text-yellow-600',
-    bg: 'bg-yellow-50',
-    border: 'border-yellow-200'
-  },
-  {
-    id: 'vip_30',
-    name: 'Gói VIP Plus',
-    duration: 30,
-    price: 150000,
-    originalPrice: 200000,
-    features: [
-      'Nổi bật trên trang chủ 30 ngày',
-      'Huy hiệu VIP+ cam',
-      'Đẩy tin 3 lần/ngày',
-      'Khung tin đăng nổi bật',
-    ],
-    popular: true,
-    color: 'text-[#1075b1]',
-    bg: 'bg-[#e8f4fb]',
-    border: 'border-[#1075b1]/20'
-  },
-  {
-    id: 'diamond_30',
-    name: 'Gói Diamond',
-    duration: 30,
-    price: 300000,
-    originalPrice: 450000,
-    features: [
-      'Ghim vị trí số 1 trang chủ',
-      'Huy hiệu Diamond đỏ kim cương',
-      'Đẩy tin không giới hạn',
-      'Tiếp cận khách hàng tối đa',
-    ],
-    popular: false,
-    color: 'text-[#e03131]',
-    bg: 'bg-red-50',
-    border: 'border-red-200'
-  },
-];
+/**
+ * Nạp tiền vào ví.
+ *
+ * Bản trước của trang này là GIẢ HOÀN TOÀN: bấm thanh toán chỉ `setTimeout` 2 giây rồi hiện
+ * "Thanh toán thành công!", không gọi API, không ghi giao dịch, không cộng số dư — người dùng
+ * chuyển khoản thật xong sẽ tin là đã nạp được tiền. Các gói VIP hiển thị ở đó cũng không khớp
+ * bảng `packages` thật.
+ *
+ * Nay: tạo yêu cầu nạp THẬT (`POST /api/v2/my/transactions`) ở trạng thái chờ, admin xác nhận
+ * mới cộng số dư. Việc mua gói VIP không nằm ở đây — nó đã có luồng thật ở bước 3 của trang
+ * đăng tin (trừ số dư + ghi giao dịch trong cùng transaction).
+ */
 
-// Payment methods
-const paymentMethods = [
-  { id: 'vnpay', name: 'VNPay', icon: CreditCard, description: 'Quét mã VNPay-QR' },
-  { id: 'momo', name: 'MoMo', icon: Smartphone, description: 'Quét mã qua ứng dụng MoMo' },
-  { id: 'banking', name: 'Chuyển khoản 24/7', icon: Wallet, description: 'Chuyển khoản liên ngân hàng' },
-];
+const AMOUNT_PRESETS = [100_000, 200_000, 500_000, 1_000_000, 2_000_000, 5_000_000];
+const MIN_AMOUNT = 10_000;
+const MAX_AMOUNT = 50_000_000;
+
+interface DepositTransaction {
+  id: number;
+  code: string;
+  type: string;
+  method: string | null;
+  amount: number;
+  status: string;
+  created_at: string | null;
+}
+
+interface PaymentInfo {
+  bank_name: string | null;
+  bank_account: string | null;
+  bank_holder: string | null;
+  hotline: string | null;
+  configured: boolean;
+}
+
+const STATUS_LABEL: Record<string, { text: string; className: string }> = {
+  pending: { text: 'Chờ xác nhận', className: 'bg-amber-50 text-amber-700 border-amber-200' },
+  success: { text: 'Đã cộng tiền', className: 'bg-green-50 text-green-700 border-green-200' },
+  failed: { text: 'Từ chối', className: 'bg-gray-100 text-gray-600 border-gray-200' },
+  refunded: { text: 'Đã hoàn', className: 'bg-gray-100 text-gray-600 border-gray-200' },
+};
 
 export default function NapTienPage() {
-  const [selectedPackage, setSelectedPackage] = useState('vip_30');
-  const [selectedPayment, setSelectedPayment] = useState('vnpay');
-  const [step, setStep] = useState<'select' | 'payment' | 'success'>('select');
+  const [amount, setAmount] = useState<number>(200_000);
+  const [customAmount, setCustomAmount] = useState('');
+  const [balance, setBalance] = useState<number | null>(null);
+  const [payment, setPayment] = useState<PaymentInfo | null>(null);
+  const [history, setHistory] = useState<DepositTransaction[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [created, setCreated] = useState<DepositTransaction | null>(null);
 
-  const currentPackage = packages.find(p => p.id === selectedPackage);
-  const currentPayment = paymentMethods.find(p => p.id === selectedPayment);
+  const loadBalance = useCallback(() => {
+    api.get('/api/v2/auth/me')
+      .then((res) => setBalance(Number(res.data?.data?.balance ?? 0)))
+      .catch(() => setBalance(null));
+  }, []);
 
-  const handlePayment = () => {
-    setStep('payment');
-    // Simulate payment processing
-    setTimeout(() => {
-      setStep('success');
-    }, 2000);
+  const loadHistory = useCallback(() => {
+    api.get('/api/v2/my/transactions', { params: { limit: 10 } })
+      .then((res) => setHistory(Array.isArray(res.data?.data) ? res.data.data : []))
+      .catch(() => setHistory([]));
+  }, []);
+
+  useEffect(() => {
+    loadBalance();
+    loadHistory();
+    api.get('/api/v2/settings/payment')
+      .then((res) => setPayment(res.data?.data ?? null))
+      .catch(() => setPayment(null));
+  }, [loadBalance, loadHistory]);
+
+  const effectiveAmount = useMemo(() => {
+    if (customAmount.trim()) {
+      const n = Number(customAmount.replace(/\D/g, ''));
+      return Number.isFinite(n) ? n : 0;
+    }
+    return amount;
+  }, [amount, customAmount]);
+
+  const amountError =
+    effectiveAmount < MIN_AMOUNT || effectiveAmount > MAX_AMOUNT
+      ? `Số tiền nạp từ ${MIN_AMOUNT.toLocaleString('vi-VN')}đ đến ${MAX_AMOUNT.toLocaleString('vi-VN')}đ.`
+      : null;
+
+  const submit = async () => {
+    if (amountError) {
+      toast.error(amountError);
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      // Khoá chống tạo trùng nếu bấm nhiều lần hoặc mạng retry.
+      const idempotencyKey = `dep-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      const res = await api.post('/api/v2/my/transactions', {
+        amount: effectiveAmount,
+        method: 'banking',
+        idempotency_key: idempotencyKey,
+      });
+      const tx = res.data?.data as DepositTransaction | undefined;
+      if (!tx) throw new Error('Phản hồi không hợp lệ');
+      setCreated(tx);
+      loadHistory();
+      toast.success('Đã ghi nhận yêu cầu nạp tiền.');
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        'Không tạo được yêu cầu nạp tiền. Vui lòng thử lại.';
+      toast.error(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  if (step === 'success') {
-    return (
-      <div className="max-w-md mx-auto text-center py-16 animate-in zoom-in duration-500">
-        <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-8 shadow-sm">
-          <CheckCircle className="h-12 w-12 text-green-600" />
-        </div>
-        <h1 className="text-3xl font-extrabold text-gray-900 mb-3 tracking-tight">Thanh toán thành công!</h1>
-        <p className="text-gray-500 mb-8 text-[15px]">
-          Bạn đã mua gói <span className="font-bold text-gray-900">{currentPackage?.name}</span> thành công. Trải nghiệm dịch vụ ngay bây giờ.
-        </p>
-        
-        <Card className="bg-white rounded-2xl shadow-sm border-gray-100 mb-8 overflow-hidden text-left">
-          <div className="p-4 bg-gray-50 border-b border-gray-100">
-            <p className="text-sm font-bold text-gray-700 uppercase tracking-wider text-center">Chi tiết giao dịch</p>
-          </div>
-          <CardContent className="p-6 space-y-4">
-            <div className="flex justify-between items-center pb-4 border-b border-gray-100">
-              <span className="text-gray-500 font-medium">Gói dịch vụ</span>
-              <span className={`font-bold ${currentPackage?.color}`}>{currentPackage?.name}</span>
-            </div>
-            <div className="flex justify-between items-center pb-4 border-b border-gray-100">
-              <span className="text-gray-500 font-medium">Thời gian áp dụng</span>
-              <span className="font-bold text-gray-900">{currentPackage?.duration} ngày</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-500 font-medium">Đã thanh toán</span>
-              <span className="font-extrabold text-xl text-gray-900">{formatPrice(currentPackage?.price || 0)}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="flex flex-col gap-3">
-          <Button onClick={() => window.location.href = '/dashboard/quan-ly-tin'} className="w-full h-12 bg-primary hover:bg-primary-dark text-white font-bold text-[15px] rounded-xl shadow-md">
-            Áp dụng gói VIP cho tin đăng ngay
-            <ArrowRight className="h-4 w-4 ml-2" />
-          </Button>
-          <Button variant="outline" onClick={() => setStep('select')} className="w-full h-12 font-bold text-gray-600 hover:text-gray-900 rounded-xl">
-            Quay lại trang nạp tiền
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  const copy = (text: string, label: string) => {
+    navigator.clipboard?.writeText(text)
+      .then(() => toast.success(`Đã copy ${label}.`))
+      .catch(() => toast.error('Không copy được, vui lòng chọn và copy thủ công.'));
+  };
 
   return (
-    <div className="max-w-5xl mx-auto animate-in fade-in duration-500">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Mua gói VIP & Nạp tiền</h1>
-        <p className="text-gray-500 mt-1">Chọn gói dịch vụ cao cấp để tăng gấp 10 lần hiệu quả hiển thị</p>
+    <div className="max-w-[900px] mx-auto space-y-6">
+      <div>
+        <h1 className="text-2xl font-extrabold text-gray-900">Nạp tiền vào ví</h1>
+        <p className="text-gray-500 text-[15px] mt-1">
+          Số dư trong ví dùng để mua gói VIP khi đăng tin.
+        </p>
       </div>
 
-      {/* Promotional Banner */}
-      <Card className="bg-gradient-to-r from-[#1075b1] to-[#0c5d8f] border-0 mb-8 rounded-2xl shadow-md overflow-hidden relative">
-        <div className="absolute right-0 top-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
-        <CardContent className="p-6 sm:p-8 text-white relative z-10">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-6 justify-between">
-            <div className="flex items-center gap-5">
-              <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md">
-                <Gift className="h-8 w-8 text-white" />
-              </div>
-              <div>
-                <h3 className="text-2xl font-bold mb-1">Khuyến mãi cực sốc tháng này!</h3>
-                <p className="text-white/90 font-medium">Giảm ngay 25% cho Gói VIP Plus 30 ngày.</p>
-              </div>
+      <Card className="rounded-2xl border-gray-100 shadow-sm">
+        <CardContent className="p-5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-11 w-11 rounded-xl bg-primary-light flex items-center justify-center">
+              <Wallet className="h-5 w-5 text-primary" />
             </div>
-            <div className="shrink-0">
-              <Badge className="bg-white text-red-600 hover:bg-white border-0 font-bold px-4 py-1.5 text-sm uppercase tracking-wider">
-                Chỉ còn 150k
-              </Badge>
+            <div>
+              <p className="text-sm text-gray-500">Số dư hiện tại</p>
+              <p className="text-xl font-extrabold text-gray-900">
+                {balance === null ? '—' : `${balance.toLocaleString('vi-VN')} đ`}
+              </p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <div className="grid lg:grid-cols-12 gap-8 items-start">
-        {/* Packages Selection */}
-        <div className="lg:col-span-7">
-          <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
-            1. Chọn gói dịch vụ
-          </h2>
-          <div className="space-y-4">
-            {packages.map((pkg) => (
-              <Card
-                key={pkg.id}
-                className={`cursor-pointer transition-all duration-300 rounded-2xl border-2 relative overflow-hidden ${
-                  selectedPackage === pkg.id
-                    ? `border-primary shadow-md`
-                    : 'border-transparent bg-white shadow-sm hover:border-gray-300'
-                }`}
-                onClick={() => setSelectedPackage(pkg.id)}
-              >
-                {/* Active highlight background */}
-                {selectedPackage === pkg.id && (
-                  <div className="absolute inset-0 bg-primary/5 pointer-events-none"></div>
-                )}
-                
-                {pkg.popular && (
-                  <div className="absolute top-0 right-0">
-                    <div className="bg-[#e03131] text-white text-[10px] uppercase font-bold tracking-wider py-1 px-4 rounded-bl-xl shadow-sm">
-                      Khuyên dùng
-                    </div>
-                  </div>
-                )}
-
-                <CardContent className="p-5 sm:p-6 relative z-10">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                        selectedPackage === pkg.id ? 'border-primary' : 'border-gray-300'
-                      }`}>
-                        {selectedPackage === pkg.id && <div className="w-3 h-3 rounded-full bg-primary" />}
-                      </div>
-                      <div>
-                        <h3 className={`font-bold text-lg ${pkg.color}`}>{pkg.name}</h3>
-                        <p className="text-sm font-medium text-gray-500 flex items-center gap-1 mt-0.5">
-                          <Clock className="h-3 w-3" /> Áp dụng {pkg.duration} ngày
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xl font-extrabold text-gray-900">{formatPrice(pkg.price)}</p>
-                      {pkg.originalPrice && (
-                        <p className="text-sm font-medium text-gray-400 line-through mt-0.5">
-                          {formatPrice(pkg.originalPrice)}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className={`p-4 rounded-xl ${pkg.bg} border ${pkg.border} mt-2`}>
-                    <ul className="grid sm:grid-cols-2 gap-2.5">
-                      {pkg.features.map((feature, index) => (
-                        <li key={index} className="flex items-center gap-2 text-[13px] font-medium text-gray-700">
-                          <CheckCircle className={`h-4 w-4 shrink-0 ${pkg.color}`} />
-                          <span className="line-clamp-1">{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-
-        {/* Payment Summary */}
-        <div className="lg:col-span-5 space-y-6">
-          
-          {/* Method Selection */}
-          <div>
-            <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <Wallet className="h-5 w-5 text-gray-500" />
-              2. Chọn phương thức thanh toán
-            </h2>
-            <Card className="rounded-2xl border-gray-100 shadow-sm overflow-hidden">
-              <CardContent className="p-0">
-                <RadioGroup
-                  value={selectedPayment}
-                  onValueChange={setSelectedPayment}
-                  className="gap-0 flex flex-col"
-                >
-                  {paymentMethods.map((method, idx) => {
-                    const Icon = method.icon;
-                    return (
-                      <div key={method.id} className={idx !== paymentMethods.length - 1 ? 'border-b border-gray-100' : ''}>
-                        <RadioGroupItem
-                          value={method.id}
-                          id={method.id}
-                          className="peer sr-only"
-                        />
-                        <Label
-                          htmlFor={method.id}
-                          className="flex items-center gap-4 p-4 cursor-pointer hover:bg-gray-50 peer-data-[state=checked]:bg-primary-light/10 transition-colors m-0 relative"
-                        >
-                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                            selectedPayment === method.id ? 'border-primary' : 'border-gray-300'
-                          }`}>
-                            {selectedPayment === method.id && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
-                          </div>
-                          
-                          <div className="w-10 h-10 bg-white border border-gray-100 shadow-sm rounded-xl flex items-center justify-center shrink-0">
-                            <Icon className={`h-5 w-5 ${selectedPayment === method.id ? 'text-primary' : 'text-gray-500'}`} />
-                          </div>
-                          
-                          <div className="flex-1">
-                            <p className="font-bold text-gray-900 text-[15px]">{method.name}</p>
-                            <p className="text-[13px] text-gray-500 font-medium">{method.description}</p>
-                          </div>
-                        </Label>
-                      </div>
-                    );
-                  })}
-                </RadioGroup>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Checkout Card */}
-          <Card className="rounded-2xl border-gray-100 shadow-lg bg-gray-900 text-white relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full blur-3xl -mr-10 -mt-10"></div>
-            <CardContent className="p-6 relative z-10">
-              <h3 className="font-bold text-lg mb-4 text-white">Tổng thanh toán</h3>
-              
-              <div className="space-y-3 mb-6">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400 font-medium text-sm">Gói đã chọn</span>
-                  <span className="font-bold text-white bg-white/10 px-2 py-0.5 rounded-md text-sm">{currentPackage?.name}</span>
-                </div>
-                {currentPackage?.originalPrice && (
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-400 font-medium">Giá gốc</span>
-                    <span className="line-through text-gray-500">
-                      {formatPrice(currentPackage.originalPrice)}
-                    </span>
-                  </div>
-                )}
-                <div className="pt-3 border-t border-white/10 mt-3 flex justify-between items-end">
-                  <span className="text-gray-300 font-medium text-sm">Thành tiền</span>
-                  <span className="text-3xl font-extrabold text-white tracking-tight">
-                    {formatPrice(currentPackage?.price || 0)}
-                  </span>
-                </div>
-              </div>
-
-              <Button
-                onClick={handlePayment}
-                className="w-full h-12 bg-primary hover:bg-[#0ea5e9] text-white font-bold text-base rounded-xl transition-colors shadow-md border-0"
-              >
-                <ShieldCheck className="h-5 w-5 mr-2" />
-                Thanh toán an toàn
-              </Button>
-
-              <div className="mt-5 text-center flex items-center justify-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-green-400" />
-                <p className="text-[11px] text-gray-400 font-medium">
-                  Giao dịch được mã hóa và bảo mật 100%
+      {/* Yêu cầu vừa tạo — nêu rõ CHƯA cộng tiền, tránh gây hiểu là đã nạp xong. */}
+      {created && (
+        <Card className="rounded-2xl border-amber-200 bg-amber-50/60 shadow-sm">
+          <CardContent className="p-5 space-y-4">
+            <div className="flex items-start gap-3">
+              <Clock className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+              <div>
+                <p className="font-bold text-gray-900">Yêu cầu nạp tiền đã được ghi nhận</p>
+                <p className="text-sm text-gray-600 mt-1">
+                  Mã yêu cầu <span className="font-bold text-gray-900">{created.code}</span> —
+                  số tiền <span className="font-bold text-gray-900">{formatPrice(created.amount)}</span>.
+                  Số dư sẽ được cộng <span className="font-semibold">sau khi quản trị viên xác nhận</span> đã nhận
+                  được chuyển khoản.
                 </p>
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+            </div>
+
+            {payment?.configured ? (
+              <div className="rounded-xl bg-white border border-gray-200 p-4 space-y-2 text-sm">
+                <p className="font-bold text-gray-900 mb-1">Thông tin chuyển khoản</p>
+                <div className="flex justify-between gap-3">
+                  <span className="text-gray-500">Ngân hàng</span>
+                  <span className="font-semibold text-gray-900">{payment.bank_name}</span>
+                </div>
+                <div className="flex justify-between gap-3 items-center">
+                  <span className="text-gray-500">Số tài khoản</span>
+                  <span className="font-semibold text-gray-900 flex items-center gap-2">
+                    {payment.bank_account}
+                    <button
+                      type="button"
+                      onClick={() => copy(payment.bank_account ?? '', 'số tài khoản')}
+                      className="p-1 rounded hover:bg-gray-100"
+                      title="Copy số tài khoản"
+                    >
+                      <Copy className="h-3.5 w-3.5 text-gray-500" />
+                    </button>
+                  </span>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <span className="text-gray-500">Chủ tài khoản</span>
+                  <span className="font-semibold text-gray-900">{payment.bank_holder}</span>
+                </div>
+                <div className="flex justify-between gap-3 items-center">
+                  <span className="text-gray-500">Nội dung chuyển khoản</span>
+                  <span className="font-semibold text-gray-900 flex items-center gap-2">
+                    {created.code}
+                    <button
+                      type="button"
+                      onClick={() => copy(created.code, 'nội dung chuyển khoản')}
+                      className="p-1 rounded hover:bg-gray-100"
+                      title="Copy nội dung chuyển khoản"
+                    >
+                      <Copy className="h-3.5 w-3.5 text-gray-500" />
+                    </button>
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 pt-1">
+                  Ghi đúng nội dung <span className="font-semibold">{created.code}</span> để được đối chiếu nhanh.
+                </p>
+              </div>
+            ) : (
+              <div className="rounded-xl bg-white border border-gray-200 p-4 text-sm text-gray-600 flex gap-2">
+                <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                <span>
+                  Thông tin chuyển khoản chưa được cấu hình. Vui lòng liên hệ quản trị viên
+                  {payment?.hotline ? ` (${payment.hotline})` : ''} kèm mã yêu cầu{' '}
+                  <span className="font-semibold text-gray-900">{created.code}</span> để được hướng dẫn.
+                </span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      <Card className="rounded-2xl border-gray-100 shadow-sm">
+        <CardContent className="p-5 space-y-5">
+          <div>
+            <Label className="font-semibold text-gray-700">Chọn số tiền</Label>
+            <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {AMOUNT_PRESETS.map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => { setAmount(v); setCustomAmount(''); }}
+                  className={`rounded-xl border px-3 py-2.5 text-sm font-semibold transition-colors ${
+                    !customAmount.trim() && amount === v
+                      ? 'border-primary bg-primary-light text-primary'
+                      : 'border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {v.toLocaleString('vi-VN')} đ
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <Label className="font-semibold text-gray-700">Hoặc nhập số tiền khác</Label>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={customAmount}
+              onChange={(e) => setCustomAmount(e.target.value.replace(/\D/g, ''))}
+              placeholder="VD: 350000"
+              className="mt-2 w-full h-11 px-3.5 rounded-lg border border-gray-200 bg-gray-50 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+            />
+            {customAmount.trim() && (
+              <p className="text-xs text-gray-500 mt-1">
+                Tương đương {Number(customAmount).toLocaleString('vi-VN')} đ
+              </p>
+            )}
+          </div>
+
+          <div>
+            <Label className="font-semibold text-gray-700">Phương thức</Label>
+            <div className="mt-2 space-y-2">
+              <div className="flex items-center gap-3 rounded-xl border border-primary bg-primary-light px-4 py-3">
+                <Landmark className="h-5 w-5 text-primary" />
+                <div className="flex-1">
+                  <p className="font-semibold text-gray-900 text-sm">Chuyển khoản ngân hàng</p>
+                  <p className="text-xs text-gray-600">Quản trị viên xác nhận và cộng tiền vào ví</p>
+                </div>
+              </div>
+              {/* Chưa tích hợp cổng thanh toán — hiển thị rõ "Sắp có" và KHÔNG cho chọn, thay vì
+                  nhận yêu cầu rồi người dùng không có cách nào trả tiền. */}
+              {[
+                { name: 'VNPay', desc: 'Cổng thanh toán VNPay-QR', Icon: CreditCard },
+                { name: 'MoMo', desc: 'Ví điện tử MoMo', Icon: Smartphone },
+              ].map(({ name, desc, Icon }) => (
+                <div
+                  key={name}
+                  className="flex items-center gap-3 rounded-xl border border-gray-200 px-4 py-3 opacity-60"
+                >
+                  <Icon className="h-5 w-5 text-gray-400" />
+                  <div className="flex-1">
+                    <p className="font-semibold text-gray-600 text-sm">{name}</p>
+                    <p className="text-xs text-gray-500">{desc}</p>
+                  </div>
+                  <Badge variant="outline" className="text-gray-500 border-gray-300">Sắp có</Badge>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {amountError && <p className="text-sm text-red-600">{amountError}</p>}
+
+          <div className="flex items-center justify-between pt-1">
+            <div>
+              <p className="text-sm text-gray-500">Số tiền nạp</p>
+              <p className="text-2xl font-extrabold text-gray-900">
+                {effectiveAmount > 0 ? `${effectiveAmount.toLocaleString('vi-VN')} đ` : '—'}
+              </p>
+            </div>
+            <Button
+              onClick={submit}
+              disabled={isSubmitting || !!amountError}
+              className="h-12 px-6 bg-primary hover:bg-primary-dark text-white font-bold rounded-xl"
+            >
+              {isSubmitting ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Đang gửi...</>
+              ) : (
+                'Tạo yêu cầu nạp tiền'
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-2xl border-gray-100 shadow-sm">
+        <CardContent className="p-5">
+          <p className="font-bold text-gray-900 mb-3">Yêu cầu gần đây</p>
+          {history.length === 0 ? (
+            <p className="text-sm text-gray-500">Chưa có yêu cầu nạp tiền nào.</p>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {history.map((tx) => {
+                const st = STATUS_LABEL[tx.status] ?? {
+                  text: tx.status,
+                  className: 'bg-gray-100 text-gray-600 border-gray-200',
+                };
+                return (
+                  <div key={tx.id} className="flex items-center justify-between py-3 gap-3">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-gray-900 text-sm truncate">
+                        {tx.code} · {formatPrice(tx.amount)}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {tx.created_at ? new Date(tx.created_at).toLocaleString('vi-VN') : ''}
+                      </p>
+                    </div>
+                    <Badge variant="outline" className={`${st.className} shrink-0`}>{st.text}</Badge>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

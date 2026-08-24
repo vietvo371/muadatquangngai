@@ -28,20 +28,32 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   if (!transaction) return apiError('Không tìm thấy giao dịch.', 404);
   if (transaction.status !== 'pending') return apiError('Giao dịch không ở trạng thái chờ duyệt.', 422);
 
-  const updated = await db.transactions.update({
-    where: { id: transaction.id },
-    data: { status: 'success', updated_at: new Date() },
+  // Đổi trạng thái và cộng tiền phải NẰM CHUNG một transaction: trước đây là 2 lệnh rời, nếu
+  // lệnh cộng số dư lỗi thì giao dịch vẫn bị đánh 'success' mà tiền không vào ví.
+  // `updateMany` kèm điều kiện status='pending' đóng vai trò chốt: hai admin bấm duyệt cùng lúc
+  // thì chỉ một lệnh đổi được trạng thái, lệnh còn lại count=0 nên KHÔNG cộng tiền lần hai.
+  const result = await db.$transaction(async (tx) => {
+    const claimed = await tx.transactions.updateMany({
+      where: { id: transaction.id, status: 'pending' },
+      data: { status: 'success', updated_at: new Date() },
+    });
+    if (claimed.count === 0) return null;
+
+    let user: { id: bigint; name: string } | null = null;
+    if (transaction.type === 'deposit') {
+      user = await tx.users.update({
+        where: { id: transaction.user_id },
+        data: { balance: { increment: transaction.amount }, updated_at: new Date() },
+        select: { id: true, name: true },
+      });
+    }
+
+    const fresh = await tx.transactions.findUniqueOrThrow({ where: { id: transaction.id } });
+    return { updated: fresh, user };
   });
 
-  let userForResponse: { id: bigint; name: string } | null = null;
-  if (transaction.type === 'deposit') {
-    const user = await db.users.update({
-      where: { id: transaction.user_id },
-      data: { balance: { increment: transaction.amount }, updated_at: new Date() },
-      select: { id: true, name: true },
-    });
-    userForResponse = user;
-  }
+  if (!result) return apiError('Giao dịch không ở trạng thái chờ duyệt.', 422);
+  const { updated, user: userForResponse } = result;
 
   return apiSuccess(
     mapTransactionResource({ ...updated, ...(userForResponse ? { users: userForResponse } : {}) }),

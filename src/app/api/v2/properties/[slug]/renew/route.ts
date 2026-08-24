@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getAuthUser, unauthenticatedResponse, forbiddenResponse } from '@/lib/auth';
+import { chargeWallet } from '@/lib/wallet';
 
 function notFound(id: string) {
   return NextResponse.json({ message: `No query results for model [App\\Models\\Property] ${id}` }, { status: 404 });
@@ -26,17 +27,41 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
   const pkg = await db.packages.findFirst({ where: { type: currentTier, is_active: true }, orderBy: { id: 'asc' } });
   if (!pkg) return NextResponse.json({ success: false, message: 'Không tìm thấy gói gia hạn.' }, { status: 404 });
 
-  if (Number(user.balance) < Number(pkg.price)) {
-    return NextResponse.json({ success: false, message: 'Số dư không đủ. Vui lòng nạp thêm tiền.' }, { status: 422 });
-  }
-
   const days = pkg.duration_days ?? 30;
   const now = new Date();
   const base = property.vip_expired_at && property.vip_expired_at > now ? new Date(property.vip_expired_at) : now;
   base.setDate(base.getDate() + days);
 
-  // Laravel renew() KHÔNG trừ balance (chỉ boost() trừ) — chỉ cập nhật hạn. Giữ đúng behavior.
-  await db.properties.update({ where: { id: property.id }, data: { vip_expired_at: base, updated_at: new Date() } });
+  // TRƯỚC ĐÂY route này chỉ KIỂM số dư rồi gia hạn mà KHÔNG trừ tiền (comment cũ nói giữ đúng
+  // behavior của Laravel) — ai có số dư đủ giá gói là gia hạn được vô hạn lần miễn phí, và
+  // không có dòng giao dịch nào để đối chiếu. Nay trừ tiền thật, ghi giao dịch, nguyên tử.
+  const body = await request.json().catch(() => ({}));
+  const idempotencyKey =
+    typeof body?.idempotency_key === 'string' && body.idempotency_key.trim().length >= 8
+      ? body.idempotency_key.trim().slice(0, 64)
+      : null;
+
+  const charge = await chargeWallet({
+    userId: user.id,
+    amount: Number(pkg.price),
+    note: `Gia hạn ${currentTier} cho tin #${property.id}`,
+    idempotencyKey,
+    referenceType: 'App\\Models\\Property',
+    referenceId: property.id,
+    apply: async (tx) => {
+      await tx.properties.update({
+        where: { id: property.id },
+        data: { vip_expired_at: base, updated_at: new Date() },
+      });
+    },
+  });
+
+  if (!charge.ok) {
+    return NextResponse.json({ success: false, message: 'Số dư không đủ. Vui lòng nạp thêm tiền.' }, { status: 422 });
+  }
+  if (charge.alreadyProcessed) {
+    return NextResponse.json({ success: true, message: 'Yêu cầu gia hạn này đã được xử lý trước đó.' });
+  }
 
   return NextResponse.json({ success: true, message: 'Đã gia hạn VIP thành công.' });
 }

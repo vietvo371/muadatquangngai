@@ -66,7 +66,11 @@ export function BoostModal({ open, onOpenChange, propertyId, propertyTitle }: Bo
 
   const boostMutation = useMutation({
     mutationFn: async (tier: string) => {
-      const res = await api.post(`/api/v2/properties/${propertyId}/boost`, { tier });
+      // Khoá chống trừ tiền hai lần khi bấm nhanh hai lần hoặc mạng retry (server dedupe theo khoá này).
+      const res = await api.post(`/api/v2/properties/${propertyId}/boost`, {
+        tier,
+        idempotency_key: `boost-${propertyId}-${tier}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      });
       return res.data;
     },
     onSuccess: (data) => {
@@ -81,7 +85,9 @@ export function BoostModal({ open, onOpenChange, propertyId, propertyTitle }: Bo
 
   const renewMutation = useMutation({
     mutationFn: async () => {
-      const res = await api.post(`/api/v2/properties/${propertyId}/renew`);
+      const res = await api.post(`/api/v2/properties/${propertyId}/renew`, {
+        idempotency_key: `renew-${propertyId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      });
       return res.data;
     },
     onSuccess: (data) => {
