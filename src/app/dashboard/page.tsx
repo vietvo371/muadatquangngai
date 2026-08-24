@@ -1,89 +1,106 @@
 'use client';
 
 import Link from 'next/link';
+import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/authStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { WelcomeBanner } from '@/components/dashboard/WelcomeBanner';
 import { StatBox } from '@/components/dashboard/StatBox';
-import { 
-  Building2, 
-  Eye, 
-  Heart, 
-  MessageSquare, 
-  CreditCard, 
-  TrendingUp,
+import {
+  Building2,
+  Eye,
+  Heart,
+  MessageSquare,
+  CreditCard,
   ArrowRight,
   Plus,
   Clock,
-  Star
+  Star,
+  AlertCircle,
 } from 'lucide-react';
-import { formatPrice } from '@/lib/formatters';
+import api from '@/lib/axios';
+import { formatPrice, formatNumber, formatDate } from '@/lib/formatters';
 
-const stats = [
-  { label: 'Tin đang đăng', value: 5, icon: <Building2 className="w-6 h-6 text-[#1075b1]" />, colorClassName: 'bg-[#e8f4fb]', trend: { value: 12, isUp: true } },
-  { label: 'Lượt xem tin', value: '1.2K', icon: <Eye className="w-6 h-6 text-[#1075b1]" />, colorClassName: 'bg-[#e8f4fb]', trend: { value: 8, isUp: true } },
-  { label: 'Lượt lưu tin', value: 45, icon: <Heart className="w-6 h-6 text-[#1075b1]" />, colorClassName: 'bg-[#e8f4fb]', trend: { value: 2, isUp: false } },
-  { label: 'Yêu cầu tư vấn', value: 12, icon: <MessageSquare className="w-6 h-6 text-[#1075b1]" />, colorClassName: 'bg-[#e8f4fb]' },
-];
+interface RecentProperty {
+  id: number;
+  slug: string;
+  title: string;
+  type: string;
+  status: string;
+  price: number;
+  price_unit: string;
+  view_count: number;
+  created_at: string | null;
+}
 
-const recentProperties = [
-  {
-    id: '1',
-    slug: 'can-ho-cao-cap-2pn-view-bien',
-    title: 'Căn hộ cao cấp 2PN view biển Mỹ Khê',
-    price: 2800000000,
-    status: 'active',
-    views: 456,
-    createdAt: '2024-01-15'
-  },
-  {
-    id: '2',
-    slug: 'nha-mat-pho-4-tang-quang-trung',
-    title: 'Nhà mặt phố 4 tầng Quang Trung, kinh doanh sầm uất',
-    price: 6500000000,
-    status: 'pending',
-    views: 123,
-    createdAt: '2024-01-14'
-  },
-  {
-    id: '3',
-    slug: 'dat-nen-du-an-ven-bien-500m2',
-    title: 'Đất nền dự án ven biển 500m2 có sổ đỏ',
-    price: 1800000000,
-    status: 'active',
-    views: 789,
-    createdAt: '2024-01-13'
-  },
-];
+interface MyStats {
+  active_count: number;
+  total_views: number;
+  total_saves: number;
+  recent_properties: RecentProperty[];
+}
 
 export default function DashboardPage() {
   const { user } = useAuthStore();
 
+  const { data, isLoading, isError } = useQuery<MyStats>({
+    queryKey: ['my-stats'],
+    queryFn: () => api.get('/api/v2/my/stats').then((res) => res.data.data),
+  });
+
+  // Chỉ 3 chỉ số có nguồn dữ liệu thật. "Yêu cầu tư vấn" và mọi % tăng trưởng đã bỏ vì
+  // hệ thống chưa lưu dữ liệu để tính — thà thiếu chỉ số hơn hiển thị số bịa.
+  const stats = [
+    {
+      label: 'Tin đang đăng',
+      value: data ? formatNumber(data.active_count) : '—',
+      icon: <Building2 className="w-6 h-6 text-[#1075b1]" />,
+    },
+    {
+      label: 'Lượt xem tin',
+      value: data ? formatNumber(data.total_views) : '—',
+      icon: <Eye className="w-6 h-6 text-[#1075b1]" />,
+    },
+    {
+      label: 'Lượt lưu tin',
+      value: data ? formatNumber(data.total_saves) : '—',
+      icon: <Heart className="w-6 h-6 text-[#1075b1]" />,
+    },
+  ];
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      
-      {/* Welcome Banner */}
       <WelcomeBanner user={user} />
 
+      {isError && (
+        <div className="flex items-start gap-3 rounded-2xl border border-gray-200 bg-white p-5">
+          <AlertCircle className="h-5 w-5 shrink-0 text-[#e03131]" />
+          <div>
+            <p className="font-bold text-gray-900">Không tải được số liệu</p>
+            <p className="text-sm text-gray-500 mt-0.5">
+              Đã xảy ra lỗi khi tải số liệu tài khoản. Vui lòng tải lại trang.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        {stats.map((stat, i) => (
-          <StatBox 
-            key={i}
-            title={stat.label} 
-            value={stat.value} 
-            icon={stat.icon} 
-            colorClassName={stat.colorClassName}
-            trend={stat.trend}
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        {stats.map((stat) => (
+          <StatBox
+            key={stat.label}
+            title={stat.label}
+            value={isLoading ? '...' : stat.value}
+            icon={stat.icon}
+            colorClassName="bg-[#e8f4fb]"
           />
         ))}
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6 sm:gap-8">
-        
-        {/* Recent Properties (Takes up 2 cols on lg) */}
+        {/* Recent Properties */}
         <div className="lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold text-gray-900 tracking-tight">Tin đăng gần đây</h2>
@@ -94,49 +111,83 @@ export default function DashboardPage() {
               </Button>
             </Link>
           </div>
-          
+
           <Card className="border-gray-100 shadow-sm rounded-2xl overflow-hidden">
-            <div className="divide-y divide-gray-100">
-              {recentProperties.map((property) => (
-                <div key={property.id} className="p-4 sm:p-5 hover:bg-gray-50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <Link href={`/mua-ban/${property.slug}`} className="font-bold text-gray-900 hover:text-primary truncate max-w-[80%]">
-                        {property.title}
-                      </Link>
-                      <StatusBadge status={property.status as any} />
-                    </div>
-                    <div className="flex items-center gap-4 text-[13px] text-gray-500 font-medium">
-                      <span className="text-[#e03131] font-bold">{formatPrice(property.price, 'total')}</span>
-                      <span className="flex items-center gap-1.5">
-                        <Eye className="h-3.5 w-3.5" />
-                        {property.views} lượt xem
-                      </span>
-                      <span className="flex items-center gap-1.5">
-                        <Clock className="h-3.5 w-3.5" />
-                        {property.createdAt}
-                      </span>
-                    </div>
+            {isLoading ? (
+              <div className="divide-y divide-gray-100">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="p-5 space-y-3">
+                    <div className="h-4 w-2/3 bg-gray-100 rounded animate-pulse" />
+                    <div className="h-3 w-1/3 bg-gray-100 rounded animate-pulse" />
                   </div>
-                  <Link href={`/dashboard/quan-ly-tin/${property.id}/edit`}>
-                    <Button variant="outline" className="w-full sm:w-auto h-9 font-semibold text-gray-700 bg-white">
-                      Chỉnh sửa
-                    </Button>
-                  </Link>
+                ))}
+              </div>
+            ) : isError ? (
+              <div className="p-10 text-center">
+                <p className="text-gray-500 text-sm">Không tải được tin đăng của bạn.</p>
+              </div>
+            ) : (data?.recent_properties.length ?? 0) === 0 ? (
+              <div className="p-10 text-center">
+                <div className="w-14 h-14 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Building2 className="h-7 w-7 text-gray-300" />
                 </div>
-              ))}
-            </div>
+                <h3 className="font-bold text-gray-900 mb-1">Bạn chưa có tin đăng nào</h3>
+                <p className="text-sm text-gray-500 mb-5">Đăng tin đầu tiên để bắt đầu tiếp cận khách hàng.</p>
+                <Link href="/dashboard/dang-tin">
+                  <Button className="bg-cta hover:bg-cta-dark text-white font-bold h-11 px-6 rounded-xl">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Đăng tin mới
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {data?.recent_properties.map((property) => (
+                  <div key={property.id} className="p-4 sm:p-5 hover:bg-gray-50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <Link
+                          href={`/${property.type === 'sell' ? 'mua-ban' : 'cho-thue'}/${property.slug}`}
+                          className="font-bold text-gray-900 hover:text-primary truncate max-w-[80%]"
+                        >
+                          {property.title}
+                        </Link>
+                        <StatusBadge status={property.status as never} />
+                      </div>
+                      <div className="flex flex-wrap items-center gap-4 text-[13px] text-gray-500 font-medium">
+                        <span className="text-[#e03131] font-bold">
+                          {formatPrice(property.price, property.price_unit)}
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                          <Eye className="h-3.5 w-3.5" />
+                          {formatNumber(property.view_count)} lượt xem
+                        </span>
+                        {property.created_at && (
+                          <span className="flex items-center gap-1.5">
+                            <Clock className="h-3.5 w-3.5" />
+                            {formatDate(property.created_at)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <Link href={`/dashboard/quan-ly-tin/${property.id}/edit`}>
+                      <Button variant="outline" className="w-full sm:w-auto h-9 font-semibold text-gray-700 bg-white">
+                        Chỉnh sửa
+                      </Button>
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            )}
           </Card>
         </div>
 
         {/* Sidebar Widgets */}
         <div className="space-y-6">
-          
           {/* Balance Card */}
           <Card className="bg-gray-900 border-0 rounded-2xl overflow-hidden shadow-lg shadow-gray-900/20 relative">
-            {/* Decor */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
-            
+
             <CardContent className="p-6 relative z-10">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-gray-400 font-medium text-sm uppercase tracking-wider">Số dư ví</span>
@@ -199,7 +250,6 @@ export default function DashboardPage() {
               </Link>
             </CardContent>
           </Card>
-
         </div>
       </div>
     </div>

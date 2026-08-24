@@ -46,6 +46,52 @@ export default function SettingsPage() {
   const [closePassword, setClosePassword] = useState('');
   const [isClosing, setIsClosing] = useState(false);
 
+  /** Phiên đăng nhập thật của tài khoản (GET /api/v2/user/sessions). */
+  interface LoginSession {
+    id: number;
+    name: string;
+    created_at: string | null;
+    last_used_at: string | null;
+    is_current: boolean;
+  }
+  const [sessions, setSessions] = useState<LoginSession[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(true);
+  const [sessionsError, setSessionsError] = useState(false);
+  const [revokingId, setRevokingId] = useState<number | null>(null);
+
+  const loadSessions = () => {
+    setSessionsLoading(true);
+    api
+      .get('/api/v2/user/sessions')
+      .then((res) => {
+        setSessions(Array.isArray(res.data?.data) ? res.data.data : []);
+        setSessionsError(false);
+      })
+      .catch(() => setSessionsError(true))
+      .finally(() => setSessionsLoading(false));
+  };
+
+  useEffect(() => {
+    loadSessions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const revokeSession = async (id: number) => {
+    setRevokingId(id);
+    try {
+      await api.delete(`/api/v2/user/sessions/${id}`);
+      toast.success('Đã đăng xuất phiên đó.');
+      loadSessions();
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        'Không đăng xuất được phiên này. Vui lòng thử lại.';
+      toast.error(message);
+    } finally {
+      setRevokingId(null);
+    }
+  };
+
   // Hồ sơ — nạp từ tài khoản ĐANG ĐĂNG NHẬP. Trước đây hardcode "Nguyễn Văn A" /
   // "nguyenvana@email.com" nên ai vào cũng thấy tên người khác và tưởng đăng nhập nhầm.
   const router = useRouter();
@@ -502,29 +548,69 @@ export default function SettingsPage() {
                 <Separator className="bg-gray-100" />
 
                 {/* Sessions */}
+                {/* Phiên đăng nhập THẬT (từ bảng personal_access_tokens). Trước đây chỗ này
+                    hardcode "Mac OS • Chrome — TP.HCM" và "iPhone 14 Pro Max • Safari — Hà Nội,
+                    2 ngày trước" cho mọi người dùng, kèm nút Đăng xuất không làm gì. Bảng token
+                    không lưu user agent/IP nên KHÔNG hiển thị thiết bị hay thành phố. */}
                 <div>
-                  <h3 className="font-bold text-gray-900 mb-4 text-lg">Thiết bị đã đăng nhập</h3>
+                  <h3 className="font-bold text-gray-900 mb-1 text-lg">Phiên đăng nhập</h3>
+                  <p className="text-[13px] text-gray-500 font-medium mb-4">
+                    Các phiên đang đăng nhập vào tài khoản của bạn. Thấy phiên lạ thì đăng xuất phiên đó.
+                  </p>
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-xl">
-                      <div className="flex items-center gap-4">
-                        <Monitor className="h-8 w-8 text-gray-400" />
-                        <div>
-                          <p className="font-bold text-gray-900 text-[15px]">Mac OS • Chrome</p>
-                          <p className="text-[13px] text-gray-500 font-medium mt-0.5">TP.HCM, Việt Nam • Đang hoạt động</p>
-                        </div>
+                    {sessionsLoading && (
+                      <div className="flex items-center gap-2 text-sm text-gray-500 p-4">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Đang tải phiên đăng nhập...
                       </div>
-                      <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-0 font-bold">Hiện tại</Badge>
-                    </div>
-                    <div className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-xl">
-                      <div className="flex items-center gap-4">
-                        <Smartphone className="h-8 w-8 text-gray-400" />
-                        <div>
-                          <p className="font-bold text-gray-900 text-[15px]">iPhone 14 Pro Max • Safari</p>
-                          <p className="text-[13px] text-gray-500 font-medium mt-0.5">Hà Nội, Việt Nam • 2 ngày trước</p>
+                    )}
+                    {!sessionsLoading && sessionsError && (
+                      <p className="text-sm text-gray-500 p-4 bg-gray-50 rounded-xl">
+                        Không tải được danh sách phiên đăng nhập.
+                      </p>
+                    )}
+                    {!sessionsLoading && !sessionsError && sessions.length === 0 && (
+                      <p className="text-sm text-gray-500 p-4 bg-gray-50 rounded-xl">
+                        Chưa có phiên đăng nhập nào được ghi nhận.
+                      </p>
+                    )}
+                    {sessions.map((sess) => (
+                      <div
+                        key={sess.id}
+                        className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-xl gap-3"
+                      >
+                        <div className="flex items-center gap-4 min-w-0">
+                          <Monitor className="h-8 w-8 text-gray-400 shrink-0" />
+                          <div className="min-w-0">
+                            <p className="font-bold text-gray-900 text-[15px] truncate">
+                              {sess.is_current ? 'Phiên hiện tại' : 'Phiên đăng nhập'}
+                            </p>
+                            <p className="text-[13px] text-gray-500 font-medium mt-0.5">
+                              {sess.last_used_at
+                                ? `Dùng gần nhất: ${new Date(sess.last_used_at).toLocaleString('vi-VN')}`
+                                : sess.created_at
+                                  ? `Tạo lúc: ${new Date(sess.created_at).toLocaleString('vi-VN')}`
+                                  : ''}
+                            </p>
+                          </div>
                         </div>
+                        {sess.is_current ? (
+                          <Badge className="bg-primary-light text-primary hover:bg-primary-light border-0 font-bold shrink-0">
+                            Hiện tại
+                          </Badge>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={revokingId === sess.id}
+                            onClick={() => revokeSession(sess.id)}
+                            className="font-bold text-gray-500 hover:text-gray-900 shrink-0"
+                          >
+                            {revokingId === sess.id ? 'Đang xử lý...' : 'Đăng xuất'}
+                          </Button>
+                        )}
                       </div>
-                      <Button variant="ghost" size="sm" className="font-bold text-gray-500 hover:text-gray-900">Đăng xuất</Button>
-                    </div>
+                    ))}
                   </div>
                 </div>
 
