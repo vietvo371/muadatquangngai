@@ -120,108 +120,7 @@ const mapApiPropertyDetail = (apiProp: any) => {
   };
 };
 
-// Mock property data
-const property = {
-  id: '1',
-  slug: 'can-ho-cao-cap-2pn-view-bien-my-khe',
-  title: 'Căn hộ cao cấp 2PN view biển Mỹ Khê - Đầy đủ nội thất cao cấp',
-  type: 'sell',
-  isVip: 'vip',
-  price: 2800000000,
-  priceUnit: 'total',
-  priceNegotiable: true,
-  area: 75,
-  bedrooms: 2,
-  bathrooms: 2,
-  direction: 'Đông Nam',
-  legal: 'so_hong',
-  legalNote: 'Sổ hồng chính chủ, đã có thế chấp ngân hàng',
-  description: `Căn hộ cao cấp 2 phòng ngủ view biển Mỹ Khê, vị trí đắc địa ngay trung tâm quận Sơn Trà.
 
-**Đặc điểm:**
-- Diện tích: 75m² (2PN, 2WC)
-- Tầng cao, view biển thoáng mát
-- Nội thất cao cấp: giường, tủ, bàn ghế, điều hòa, tivi
-- Ban công rộng rãi, có máy giặt riêng
-
-**Tiện ích:**
-- Hồ bơi, phòng gym, spa
-- Bảo vệ 24/7, camera an ninh
-- Gần trường học, bệnh viện, siêu thị
-- Cách bãi biển 5 phút đi bộ`,
-  media: [
-    'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=1200&h=800&fit=crop',
-    'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=1200&h=800&fit=crop',
-    'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=1200&h=800&fit=crop',
-    'https://images.unsplash.com/photo-1560185127-6ed189bf02f4?w=1200&h=800&fit=crop',
-    'https://images.unsplash.com/photo-1484154218962-a197022b5858?w=1200&h=800&fit=crop',
-  ],
-  address: '123 Đường Võ Nguyên Giáp, Phường Mỹ An, Quận Sơn Trà, Đà Nẵng',
-  viewCount: 1234,
-  publishedAt: '2024-01-15',
-  category: { id: 1, name: 'Căn hộ', slug: 'can-ho' },
-  user: {
-    id: 1,
-    name: 'Nguyễn Văn A',
-    avatar: null,
-    phone: '0901234567',
-    is_verified: true,
-    joinDate: '2022',
-  },
-  features: [
-    { id: 1, name: 'Hồ bơi' },
-    { id: 2, name: 'Gym' },
-    { id: 3, name: 'Bảo vệ 24/7' },
-    { id: 4, name: 'Camera' },
-    { id: 5, name: 'Thang máy' },
-    { id: 6, name: 'Điều hòa' },
-  ],
-};
-
-const similarProperties = [
-  {
-    id: '2',
-    title: 'Căn hộ 2PN Vincom Đà Nẵng',
-    slug: 'can-ho-2pn-vincom-da-nang',
-    price: 2200000000,
-    priceUnit: 'total',
-    area: 70,
-    thumbnail: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&h=400&fit=crop',
-    location: 'Đà Nẵng, Sơn Trà',
-    bedrooms: 2,
-    bathrooms: 2,
-    isVip: 'normal',
-    user: { name: 'Trần Văn B', avatar: null },
-  },
-  {
-    id: '3',
-    title: 'Căn hộ cao cấp 3PN view biển',
-    slug: 'can-ho-cao-cap-3pn-view-bien',
-    price: 4500000000,
-    priceUnit: 'total',
-    area: 120,
-    thumbnail: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=600&h=400&fit=crop',
-    location: 'Đà Nẵng, Mỹ An',
-    bedrooms: 3,
-    bathrooms: 2,
-    isVip: 'vip',
-    user: { name: 'Lê Thị C', avatar: null },
-  },
-  {
-    id: '4',
-    title: 'Căn hộ Goldmark City 2PN',
-    slug: 'can-ho-goldmark-city-2pn',
-    price: 1800000000,
-    priceUnit: 'total',
-    area: 68,
-    thumbnail: 'https://images.unsplash.com/photo-1560185127-6ed189bf02f4?w=600&h=400&fit=crop',
-    location: 'Đà Nẵng, Liên Chiểu',
-    bedrooms: 2,
-    bathrooms: 1,
-    isVip: 'normal',
-    user: { name: 'Phạm Văn D', avatar: null },
-  },
-];
 
 export default function PropertyDetailClient({ params }: { params: Promise<{ slug: string }> }) {
   const unwrappedParams = use(params);
@@ -231,6 +130,7 @@ export default function PropertyDetailClient({ params }: { params: Promise<{ slu
   const [propertyData, setPropertyData] = useState<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [similarData, setSimilarData] = useState<any[]>([]);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     const loadDetail = async () => {
@@ -245,13 +145,14 @@ export default function PropertyDetailClient({ params }: { params: Promise<{ slu
           if (simRes.success && simRes.data && simRes.data.length > 0) {
             setSimilarData(simRes.data.map(mapApiProperty));
           } else {
-            setSimilarData(similarProperties);
+            setSimilarData([]);
           }
         }
       } else {
-        // Fallback to static mock property
-        setPropertyData(property);
-        setSimilarData(similarProperties);
+        // KHÔNG fallback sang tin mẫu: trước đây slug sai/API lỗi lại dựng một tin BỊA (giá,
+        // diện tích, liên hệ đều giả) trông y như tin thật. Vỏ server đã trả 404 cho slug không
+        // tồn tại; ở đây chỉ cần báo không tải được.
+        setLoadError(true);
       }
     };
 
@@ -259,6 +160,29 @@ export default function PropertyDetailClient({ params }: { params: Promise<{ slu
   }, [slug, fetchProperty, fetchSimilar]);
 
   const { isSaved: isFavorite, toggle: toggleFavorite } = useFavorite(propertyData?.id);
+
+  if (loadError) {
+    return (
+      <div className="max-w-[1200px] mx-auto px-4 py-16 text-center">
+        <h1 className="text-xl font-extrabold text-gray-900 mb-2">Không tải được tin đăng</h1>
+        <p className="text-gray-500 mb-6">
+          Tin này có thể đã được gỡ, hoặc kết nối đang gặp sự cố. Vui lòng thử lại.
+        </p>
+        <div className="flex gap-3 justify-center">
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="h-11 px-5 rounded-xl bg-primary text-white font-bold"
+          >
+            Thử lại
+          </button>
+          <Link href="/mua-ban" className="h-11 px-5 rounded-xl border border-gray-200 font-bold text-gray-700 flex items-center">
+            Xem tin khác
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading || !propertyData) {
     return (

@@ -120,90 +120,7 @@ const mapApiPropertyDetail = (apiProp: any) => {
   };
 };
 
-// Mock property data
-const property = {
-  id: '4',
-  slug: 'can-ho-chung-cu-mini-cho-thue-35m2-day-du-noi-that',
-  title: 'Căn hộ chung cư mini cho thuê 35m2 đầy đủ nội thất - Dọn vào ở ngay',
-  type: 'rent',
-  isVip: 'vip',
-  price: 5000000,
-  priceUnit: 'per_month',
-  area: 35,
-  bedrooms: 1,
-  bathrooms: 1,
-  direction: 'Đông',
-  description: `Cho thuê chung cư mini 35m2, đầy đủ nội thất, xách vali vào ở ngay.
-Khu vực an ninh tốt, gần chợ, trường học, siêu thị.
 
-**Nội thất bao gồm:**
-- Giường, đệm, tủ quần áo
-- Điều hòa, bình nóng lạnh
-- Máy giặt, tủ lạnh
-- Bếp từ, hút mùi, kệ bếp
-
-**Tiện ích:**
-- Giờ giấc tự do, không chung chủ
-- Khu vực để xe rộng rãi dưới tầng trệt
-- Camera an ninh 24/7
-- Wifi tốc độ cao
-
-Phù hợp cho sinh viên, người đi làm hoặc vợ chồng trẻ.`,
-  media: [
-    'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=1200&h=800&fit=crop',
-    'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=1200&h=800&fit=crop',
-    'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=1200&h=800&fit=crop',
-  ],
-  address: '123 Đường Trần Phú, Quảng Ngãi, Quảng Ngãi',
-  viewCount: 450,
-  publishedAt: '2024-03-20',
-  category: { id: 2, name: 'Căn hộ cho thuê', slug: 'can-ho-cho-thue' },
-  user: {
-    id: 2,
-    name: 'Phạm Thị D',
-    avatar: null,
-    phone: '0987654321',
-    is_verified: true,
-    joinDate: '2023',
-  },
-  features: [
-    { id: 1, name: 'Wifi miễn phí' },
-    { id: 2, name: 'Chỗ để xe' },
-    { id: 3, name: 'Camera' },
-    { id: 4, name: 'Giờ giấc tự do' },
-  ],
-};
-
-const similarProperties = [
-  {
-    id: '7',
-    title: 'Nhà trọ 1PN cho thuê 20m2 gần trường đại học',
-    slug: 'nha-tro-1pn-cho-thue-20m2-gan-truong-dai-hoc',
-    price: 2000000,
-    priceUnit: 'per_month',
-    area: 20,
-    thumbnail: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&h=400&fit=crop',
-    location: 'Quảng Ngãi, Trần Phú',
-    bedrooms: 1,
-    bathrooms: 1,
-    isVip: 'normal',
-    user: { name: 'Nguyễn Văn E', avatar: null },
-  },
-  {
-    id: '8',
-    title: 'Văn phòng cho thuê 50m2 tại trung tâm thành phố',
-    slug: 'van-phong-cho-thue-50m2-tai-trung-tam-thanh-pho',
-    price: 15000000,
-    priceUnit: 'per_month',
-    area: 50,
-    thumbnail: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=600&h=400&fit=crop',
-    location: 'Quảng Ngãi, Lê Lợi',
-    bedrooms: 0,
-    bathrooms: 1,
-    isVip: 'vip_plus',
-    user: { name: 'Trần Văn F', avatar: null },
-  },
-];
 
 export default function PropertyDetailClient({ params }: { params: Promise<{ slug: string }> }) {
   const unwrappedParams = use(params);
@@ -213,6 +130,7 @@ export default function PropertyDetailClient({ params }: { params: Promise<{ slu
   const [propertyData, setPropertyData] = useState<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [similarData, setSimilarData] = useState<any[]>([]);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     const loadDetail = async () => {
@@ -227,13 +145,14 @@ export default function PropertyDetailClient({ params }: { params: Promise<{ slu
           if (simRes.success && simRes.data && simRes.data.length > 0) {
             setSimilarData(simRes.data.map(mapApiProperty));
           } else {
-            setSimilarData(similarProperties);
+            setSimilarData([]);
           }
         }
       } else {
-        // Fallback to static mock property
-        setPropertyData(property);
-        setSimilarData(similarProperties);
+        // KHÔNG fallback sang tin mẫu: trước đây slug sai/API lỗi lại dựng một tin BỊA (giá,
+        // diện tích, liên hệ đều giả) trông y như tin thật. Vỏ server đã trả 404 cho slug không
+        // tồn tại; ở đây chỉ cần báo không tải được.
+        setLoadError(true);
       }
     };
 
@@ -241,6 +160,29 @@ export default function PropertyDetailClient({ params }: { params: Promise<{ slu
   }, [slug, fetchProperty, fetchSimilar]);
 
   const { isSaved: isFavorite, toggle: toggleFavorite } = useFavorite(propertyData?.id);
+
+  if (loadError) {
+    return (
+      <div className="max-w-[1200px] mx-auto px-4 py-16 text-center">
+        <h1 className="text-xl font-extrabold text-gray-900 mb-2">Không tải được tin đăng</h1>
+        <p className="text-gray-500 mb-6">
+          Tin này có thể đã được gỡ, hoặc kết nối đang gặp sự cố. Vui lòng thử lại.
+        </p>
+        <div className="flex gap-3 justify-center">
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="h-11 px-5 rounded-xl bg-primary text-white font-bold"
+          >
+            Thử lại
+          </button>
+          <Link href="/cho-thue" className="h-11 px-5 rounded-xl border border-gray-200 font-bold text-gray-700 flex items-center">
+            Xem tin khác
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading || !propertyData) {
     return (

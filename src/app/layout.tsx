@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { Providers } from "@/components/providers";
 import { SITE_URL, SITE_NAME, SITE_DESCRIPTION, SITE_OG_IMAGE } from "@/lib/site";
 import { WebsiteJsonLd, OrganizationJsonLd } from "@/components/seo";
+import { NewVersionBanner } from '@/components/shared/NewVersionBanner';
 
 const inter = Inter({
   variable: "--font-sans",
@@ -71,6 +72,8 @@ export default function RootLayout({
           <TooltipProvider delay={300}>
             {children}
             <Toaster position="top-right" richColors />
+            {/* Nhắc tải lại khi máy chủ đã deploy bản mới (tab cũ bấm nút sẽ không chạy). */}
+            <NewVersionBanner />
           </TooltipProvider>
         </Providers>
       </body>

@@ -201,9 +201,8 @@ function LoginForm() {
             Đăng ký ngay
           </Link>
         </p>
-        <Link href="/login-phone" className="inline-block text-[14px] text-gray-600 hover:text-gray-900 font-medium">
-          Đăng nhập bằng số điện thoại
-        </Link>
+        {/* Bỏ lối vào "Đăng nhập bằng số điện thoại": luồng OTP chưa nối API (gửi/xác thực OTP
+            vẫn là TODO), bấm vào sẽ dẫn tới một màn hình nhập mã không hoạt động. */}
       </div>
     </div>
   );

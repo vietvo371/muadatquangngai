@@ -18,11 +18,18 @@ import type { PropertyJsonLdInput } from '@/components/seo';
 export interface PropertySeo {
   meta: Metadata;
   jsonLd: PropertyJsonLdInput | null;
+  /**
+   * True khi CHẮC CHẮN không có tin nào khớp slug (để trang trả HTTP 404 thật).
+   * Lỗi kết nối DB tạm thời KHÔNG bật cờ này — 404 lúc đó sẽ khiến Google gỡ URL của tin
+   * đang sống chỉ vì một sự cố thoáng qua.
+   */
+  notFound: boolean;
 }
 
 const clean = (s: string) => s.replace(/\s+/g, ' ').trim();
 
 export async function getPropertySeo(slug: string, expectedType: 'sell' | 'rent'): Promise<PropertySeo> {
+  let dbFailed = false;
   const property = await db.properties
     .findFirst({
       where: {
@@ -39,7 +46,10 @@ export async function getPropertySeo(slug: string, expectedType: 'sell' | 'rent'
         provinces: { select: { name: true } },
       },
     })
-    .catch(() => null);
+    .catch(() => {
+      dbFailed = true;
+      return null;
+    });
 
   // Không có tin (slug sai/hết hạn) → noindex để Google không giữ URL rỗng trong index.
   if (!property) {
@@ -49,6 +59,7 @@ export async function getPropertySeo(slug: string, expectedType: 'sell' | 'rent'
         robots: { index: false, follow: true },
       },
       jsonLd: null,
+      notFound: !dbFailed,
     };
   }
 
@@ -89,6 +100,7 @@ export async function getPropertySeo(slug: string, expectedType: 'sell' | 'rent'
         ...(image ? { images: [image] } : {}),
       },
     },
+    notFound: false,
     jsonLd: {
       title: property.title,
       slug: property.slug,

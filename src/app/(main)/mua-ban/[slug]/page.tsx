@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import { getPropertySeo } from '@/lib/seo/property-metadata';
 import { PropertyJsonLd, BreadcrumbJsonLd } from '@/components/seo';
 import PropertyDetailClient from './property-detail-client';
@@ -20,7 +21,12 @@ export async function generateMetadata({
 
 export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const { jsonLd } = await getPropertySeo(slug, 'sell');
+  const { jsonLd, notFound: missing } = await getPropertySeo(slug, 'sell');
+
+  // Slug không tồn tại/đã gỡ -> trả HTTP 404 thật + trang "Không tìm thấy".
+  // Trước đây trang vẫn trả 200 rồi client dựng khung lỗi "Lỗi Kết Nối Hệ Thống" (sai thông điệp,
+  // và Google giữ URL rác trong index vì thấy 200).
+  if (missing) notFound();
 
   return (
     <>
