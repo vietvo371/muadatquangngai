@@ -26,9 +26,19 @@ import {
 import Link from 'next/link';
 
 // Đậm dần theo thứ hạng, đủ 5 mức cho top 5 + 1 mức nhạt cho nhóm "Khu vực khác".
+/** Màu thanh theo hạng VIP — dùng đúng 2 màu brand + sắc độ, không thêm màu lạ. */
+const VIP_BAR_COLOR: Record<string, string> = {
+  normal: 'bg-gray-400',
+  vip: 'bg-primary',
+  vip_plus: 'bg-primary/70',
+  diamond: 'bg-cta',
+};
+
 const AREA_BAR_SHADES = ['bg-primary', 'bg-primary/80', 'bg-primary/60', 'bg-primary/45', 'bg-primary/30', 'bg-primary/20'];
 
 interface AreaStat { name: string; count: number; percent: number; }
+interface VipTierStat { key: string; name: string; count: number; percent: number; }
+interface PendingReportStat { reason: string; label: string; count: number; last_at: string | null; }
 
 interface RecentPropertyRow {
   title: string;
@@ -57,6 +67,12 @@ export default function DashboardClient() {
   // Phân bố tin đăng theo xã/phường — số thật từ DB. Trước đây khối này hardcode
   // 45/20/15/12/8% kèm tên huyện/thị xã đã bị xoá sau sáp nhập 2025.
   const [areaStats, setAreaStats] = useState<AreaStat[]>([]);
+  // Cơ cấu VIP + khiếu nại chờ xử lý — số thật từ DB. Trước đây hardcode 60/22/12/6% và 3 dòng
+  // khiếu nại bịa, nên quản trị viên luôn thấy "có khiếu nại" kể cả khi bảng reports trống.
+  const [vipTiers, setVipTiers] = useState<VipTierStat[]>([]);
+  const [vipTiersFailed, setVipTiersFailed] = useState(false);
+  const [pendingReports, setPendingReports] = useState<PendingReportStat[]>([]);
+  const [reportsFailed, setReportsFailed] = useState(false);
 
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -117,6 +133,26 @@ export default function DashboardClient() {
           setAreaStats(areaRes?.data?.areas ?? []);
         } catch (e) {
           console.warn('Lỗi khi lấy phân bố khu vực:', e);
+        }
+
+        // 3b. Cơ cấu tin đăng theo hạng VIP
+        try {
+          const vipRes = await dashboardApi.vipTiers();
+          setVipTiers(vipRes?.data?.tiers ?? []);
+          setVipTiersFailed(false);
+        } catch (e) {
+          console.warn('Lỗi khi lấy cơ cấu VIP:', e);
+          setVipTiersFailed(true);
+        }
+
+        // 3c. Khiếu nại đang chờ xử lý
+        try {
+          const reportRes = await dashboardApi.pendingReports();
+          setPendingReports(reportRes?.data?.items ?? []);
+          setReportsFailed(false);
+        } catch (e) {
+          console.warn('Lỗi khi lấy khiếu nại:', e);
+          setReportsFailed(true);
         }
 
         // 4. Fetch recent properties
@@ -326,22 +362,28 @@ export default function DashboardClient() {
             </div>
             
             <div className="space-y-3 pt-2">
-              {[
-                { name: 'Tin thường hiển thị tiêu chuẩn', value: 60, color: 'bg-gray-400', label: '60%' },
-                { name: 'Tin VIP Quảng Ngãi (Xanh dương)', value: 22, color: 'bg-primary', label: '22%' },
-                { name: 'Tin VIP+ Tiêu Điểm (Đỏ)', value: 12, color: 'bg-cta', label: '12%' },
-                { name: 'Tin Kim Cương Diamond (Xanh coban)', value: 6, color: 'bg-blue-600', label: '6%' },
-              ].map((item, idx) => (
-                <div key={idx} className="space-y-1">
-                  <div className="flex items-center justify-between text-xs font-semibold">
-                    <span className="text-gray-700">{item.name}</span>
-                    <span className="text-gray-900">{item.label}</span>
+              {vipTiersFailed ? (
+                <p className="text-xs text-gray-400 py-2">Không tải được cơ cấu tin đăng.</p>
+              ) : vipTiers.length === 0 ? (
+                <p className="text-xs text-gray-400 py-2">Chưa có tin đăng nào để thống kê.</p>
+              ) : (
+                vipTiers.map((item) => (
+                  <div key={item.key} className="space-y-1">
+                    <div className="flex items-center justify-between text-xs font-semibold">
+                      <span className="text-gray-700">{item.name}</span>
+                      <span className="text-gray-900">
+                        {item.percent}% <span className="text-gray-400 font-medium">({item.count} tin)</span>
+                      </span>
+                    </div>
+                    <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${VIP_BAR_COLOR[item.key] ?? 'bg-primary/30'}`}
+                        style={{ width: `${item.percent}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                    <div className={`h-full ${item.color} rounded-full`} style={{ width: `${item.value}%` }} />
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </CardContent>
         </Card>
@@ -533,23 +575,27 @@ export default function DashboardClient() {
             </div>
             
             <div className="space-y-3">
-              {[
-                { title: 'Tin đăng spam lặp nội dung liên tục', count: 5, time: '1 giờ trước' },
-                { title: 'Thông tin sai sự thật về dự án, vị trí đất', count: 3, time: '2 giờ trước' },
-                { title: 'Số điện thoại liên hệ môi giới không liên lạc được', count: 2, time: '3 giờ trước' },
-              ].map((item, i) => (
-                <div key={i} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0 last:pb-0">
-                  <div className="min-w-0 pr-4">
-                    <p className="text-xs font-semibold text-gray-800 truncate">{item.title}</p>
-                    <p className="text-[10px] text-gray-400 mt-0.5 font-medium">{item.time}</p>
+              {reportsFailed ? (
+                <p className="text-xs text-gray-400 py-2">Không tải được danh sách khiếu nại.</p>
+              ) : pendingReports.length === 0 ? (
+                <p className="text-xs text-gray-400 py-2">Chưa có khiếu nại nào chờ xử lý.</p>
+              ) : (
+                pendingReports.map((item) => (
+                  <div key={item.reason} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0 last:pb-0">
+                    <div className="min-w-0 pr-4">
+                      <p className="text-xs font-semibold text-gray-800 truncate">{item.label}</p>
+                      <p className="text-[10px] text-gray-400 mt-0.5 font-medium">
+                        {item.last_at ? `Gần nhất: ${new Date(item.last_at).toLocaleString('vi-VN')}` : ''}
+                      </p>
+                    </div>
+                    <div className="shrink-0">
+                      <span className="inline-block text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-red-50 text-red-600">
+                        {item.count} chờ xử lý
+                      </span>
+                    </div>
                   </div>
-                  <div className="shrink-0">
-                    <span className="inline-block text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-red-50 text-red-600">
-                      {item.count} mới
-                    </span>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </CardContent>
         </Card>

@@ -455,6 +455,30 @@ export const dashboardApi = {
     }>('/api/v2/admin/dashboard/areas');
     return data;
   },
+
+  /** Cơ cấu tin đăng theo hạng VIP (thay biểu đồ hardcode 60/22/12/6%). */
+  vipTiers: async () => {
+    const { data } = await api.get<{
+      success: boolean;
+      data: {
+        total: number;
+        tiers: Array<{ key: string; name: string; count: number; percent: number }>;
+      };
+    }>('/api/v2/admin/dashboard/vip-tiers');
+    return data;
+  },
+
+  /** Khiếu nại đang chờ xử lý, gom theo lý do (thay 3 dòng khiếu nại hardcode). */
+  pendingReports: async () => {
+    const { data } = await api.get<{
+      success: boolean;
+      data: {
+        total_pending: number;
+        items: Array<{ reason: string; label: string; count: number; last_at: string | null }>;
+      };
+    }>('/api/v2/admin/dashboard/reports');
+    return data;
+  },
 };
 
 /** Khớp phản hồi GET/POST/PUT /api/v2/admin/agencies. */
