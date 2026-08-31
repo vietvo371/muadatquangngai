@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Phone, MessageSquare, ShieldCheck, Flag } from 'lucide-react';
+import { Phone, MessageSquare, ShieldCheck, Flag, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
+import api from '@/lib/axios';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -16,17 +18,65 @@ interface ContactSidebarProps {
     role?: string;
     joinDate?: string;
   };
+  /** Slug tin đang xem — để gắn yêu cầu tư vấn vào đúng tin và đúng chủ tin. */
+  propertySlug?: string;
+  /** Tiêu đề tin — dùng làm nội dung tin nhắn mặc định. */
+  propertyTitle?: string;
 }
 
-export function ContactSidebar({ user }: ContactSidebarProps) {
+export function ContactSidebar({ user, propertySlug, propertyTitle }: ContactSidebarProps) {
   const [phoneRevealed, setPhoneRevealed] = useState(false);
 
-  const rawPhone = user.phone || '0901234567';
-  const displayPhone = phoneRevealed
-    ? rawPhone.replace(/(\d{4})(\d{3})(\d{3})/, '$1 $2 $3')
-    : rawPhone.slice(0, 4) + ' *** ***';
+  // Chủ tin không có số thì KHÔNG bịa số: bản cũ fallback '0901234567' — khách bấm gọi là gọi
+  // nhầm vào số của người lạ.
+  const rawPhone = user.phone?.trim() || '';
+  const hasPhone = rawPhone.length > 0;
+  const displayPhone = !hasPhone
+    ? 'Chưa cung cấp'
+    : phoneRevealed
+      ? rawPhone.replace(/(\d{4})(\d{3})(\d{3})/, '$1 $2 $3')
+      : rawPhone.slice(0, 4) + ' *** ***';
 
   const zaloLink = `https://zalo.me/${rawPhone}`;
+
+  // Form yêu cầu tư vấn — trước đây chỉ là 3 ô input và nút bấm không nối gì.
+  const [leadName, setLeadName] = useState('');
+  const [leadPhone, setLeadPhone] = useState('');
+  const [leadMessage, setLeadMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  const defaultMessage = propertyTitle
+    ? `Tôi quan tâm bất động sản "${propertyTitle}". Vui lòng liên hệ tư vấn giúp tôi.`
+    : 'Tôi muốn hỏi về bất động sản này.';
+
+  const submitLead = async () => {
+    if (!leadPhone.trim()) {
+      toast.error('Vui lòng nhập số điện thoại để chủ tin liên hệ lại.');
+      return;
+    }
+    setSending(true);
+    try {
+      const res = await api.post('/api/v2/leads', {
+        name: leadName.trim() || undefined,
+        phone: leadPhone.trim(),
+        message: (leadMessage.trim() || defaultMessage),
+        property_slug: propertySlug,
+      });
+      toast.success(res.data?.message || 'Đã gửi yêu cầu tư vấn.');
+      setSent(true);
+      setLeadName('');
+      setLeadPhone('');
+      setLeadMessage('');
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        'Không gửi được yêu cầu. Vui lòng thử lại.';
+      toast.error(message);
+    } finally {
+      setSending(false);
+    }
+  };
 
   return (
     <div className="sticky top-24 w-full space-y-4">
@@ -87,16 +137,48 @@ export function ContactSidebar({ user }: ContactSidebarProps) {
       {/* Quick contact form */}
       <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
         <h3 className="text-[15px] font-bold text-gray-900 mb-3">Yêu cầu tư vấn</h3>
-        <Input placeholder="Họ tên" className="mb-2 h-11 text-[14px]" />
-        <Input placeholder="Số điện thoại" type="tel" className="mb-2 h-11 text-[14px]" />
-        <Textarea
-          placeholder="Tôi muốn hỏi về bất động sản này..."
-          rows={3}
-          className="mb-3 text-[14px] resize-none"
-        />
-        <Button className="w-full bg-cta hover:bg-cta-dark text-white font-bold h-11">
-          Gửi yêu cầu
-        </Button>
+        {sent ? (
+          <div className="rounded-xl bg-primary-light px-4 py-3 text-[14px] text-gray-700">
+            Đã gửi yêu cầu. Chủ tin sẽ liên hệ với bạn sớm nhất.
+            <button
+              type="button"
+              onClick={() => setSent(false)}
+              className="block mt-2 text-primary font-semibold"
+            >
+              Gửi thêm yêu cầu khác
+            </button>
+          </div>
+        ) : (
+          <>
+            <Input
+              placeholder="Họ tên"
+              value={leadName}
+              onChange={(e) => setLeadName(e.target.value)}
+              className="mb-2 h-11 text-[14px]"
+            />
+            <Input
+              placeholder="Số điện thoại *"
+              type="tel"
+              value={leadPhone}
+              onChange={(e) => setLeadPhone(e.target.value)}
+              className="mb-2 h-11 text-[14px]"
+            />
+            <Textarea
+              placeholder={defaultMessage}
+              value={leadMessage}
+              onChange={(e) => setLeadMessage(e.target.value)}
+              rows={3}
+              className="mb-3 text-[14px] resize-none"
+            />
+            <Button
+              onClick={submitLead}
+              disabled={sending}
+              className="w-full bg-cta hover:bg-cta-dark text-white font-bold h-11"
+            >
+              {sending ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin" />Đang gửi...</>) : 'Gửi yêu cầu'}
+            </Button>
+          </>
+        )}
       </div>
 
       {/* Report */}

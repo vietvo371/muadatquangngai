@@ -5,7 +5,9 @@ import { apiError, apiSuccess } from '@/lib/api-response';
 import { mapPackageResource } from '@/lib/api-resources/package-resource';
 import { FieldError, validationErrorResponse, isString, isNumeric, isInteger, isBoolean, inList } from '@/lib/validation';
 
-const PACKAGE_TYPES = ['vip', 'vip_plus', 'diamond'] as const;
+// Bảng giá mới: normal (miễn phí) / featured (Nổi bật) / vip. vip_plus + diamond là hạng cũ,
+// vẫn cho phép để admin sửa/tắt các gói cũ đang tồn tại.
+const PACKAGE_TYPES = ['normal', 'featured', 'vip', 'vip_plus', 'diamond'] as const;
 
 /**
  * GET /api/v2/admin/packages/[id] — port của AdminPackageController@show.

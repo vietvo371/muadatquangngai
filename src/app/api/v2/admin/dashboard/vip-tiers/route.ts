@@ -15,9 +15,11 @@ import { apiSuccess } from '@/lib/api-response';
 /** Thứ tự hiển thị + nhãn tiếng Việt cho từng hạng. */
 const TIERS: Array<{ key: string; name: string }> = [
   { key: 'normal', name: 'Tin thường' },
+  { key: 'featured', name: 'Tin Nổi bật' },
   { key: 'vip', name: 'Tin VIP' },
-  { key: 'vip_plus', name: 'Tin VIP+' },
-  { key: 'diamond', name: 'Tin Kim Cương' },
+  // Hạng cũ không bán nữa nhưng vẫn còn tin đang chạy — giữ trong biểu đồ cho tới khi hết.
+  { key: 'vip_plus', name: 'Tin VIP+ (cũ)' },
+  { key: 'diamond', name: 'Tin Kim Cương (cũ)' },
 ];
 
 export async function GET(request: Request) {

@@ -48,7 +48,10 @@ const VIP_COLORS: Record<string, string> = {
 };
 
 const VIP_LABELS: Record<string, string> = {
+  normal: 'Thường',
+  featured: 'Nổi bật',
   vip: 'VIP',
+  // Hạng cũ không bán nữa, giữ nhãn để hiển thị gói/tin cũ.
   vip_plus: 'VIP+',
   diamond: 'Diamond',
 };

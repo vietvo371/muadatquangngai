@@ -4,8 +4,11 @@ import { getAuthUser, unauthenticatedResponse, forbiddenResponse } from '@/lib/a
 import { toCarbonDefaultUtc } from '@/lib/api-resources/carbon-format';
 import { chargeWallet } from '@/lib/wallet';
 
-const VIP_LABEL: Record<string, string> = { normal: 'Thường', vip: 'VIP', vip_plus: 'VIP+', diamond: 'Kim Cương' };
-const TIERS = ['vip', 'vip_plus', 'diamond'] as const;
+// Nhãn + danh sách hạng còn bán lấy từ nguồn dùng chung (src/lib/vip.ts) để không lệch nhau.
+const VIP_LABEL: Record<string, string> = { normal: 'Thường', featured: 'Nổi bật', vip: 'VIP', vip_plus: 'VIP+', diamond: 'Kim Cương' };
+// Chỉ nhận hạng ĐANG BÁN: bảng giá mới là Nổi bật (40k) và VIP (99k); vip_plus/diamond là
+// hạng cũ không bán nữa (tin cũ vẫn chạy tới khi hết hạn).
+const TIERS = ['featured', 'vip'] as const;
 
 function notFound(id: string) {
   return NextResponse.json({ message: `No query results for model [App\\Models\\Property] ${id}` }, { status: 404 });

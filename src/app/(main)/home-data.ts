@@ -3,6 +3,7 @@ import { mapPropertyResource, loadWardsMap } from '@/lib/api-resources/property-
 import { mapProjectResource } from '@/lib/api-resources/project-resource';
 import { fetchPublishedPosts, POST_TYPE_LABEL } from '@/lib/api-resources/post-list';
 import { timeAgo, formatDate } from '@/lib/formatters';
+import { vipRank } from '@/lib/vip';
 
 /**
  * Data fetcher phía server cho trang chủ — thay toàn bộ mảng hardcode cũ bằng dữ liệu thật
@@ -28,12 +29,7 @@ const PROPERTY_INCLUDE = {
   },
 } as const;
 
-function vipRank(isVip: string): number {
-  if (isVip === 'diamond') return 1;
-  if (isVip === 'vip_plus') return 2;
-  if (isVip === 'vip') return 3;
-  return 4;
-}
+// vipRank dùng chung ở src/lib/vip.ts — tin hết hạn gói tự về Tin thường.
 
 export interface ListingCardData {
   id: number;
@@ -61,7 +57,7 @@ async function fetchListingsByType(type: 'sell' | 'rent', limit: number): Promis
 
   // Sort mặc định "newest": rank VIP (diamond>vip_plus>vip>normal) rồi published_at desc.
   rows.sort((a, b) => {
-    const rankDiff = vipRank(a.is_vip) - vipRank(b.is_vip);
+    const rankDiff = vipRank(a.is_vip, a.vip_expired_at) - vipRank(b.is_vip, b.vip_expired_at);
     if (rankDiff !== 0) return rankDiff;
     return (b.published_at?.getTime() ?? 0) - (a.published_at?.getTime() ?? 0);
   });

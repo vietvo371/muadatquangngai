@@ -45,18 +45,33 @@ export function SpecBoxes({ price, priceUnit, priceNegotiable, priceDisplayForma
   const cols = specs.length <= 4 ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5';
 
   return (
-    <div className={`grid ${cols} gap-3 py-5 border-y border-gray-100 mb-8`}>
+    <div className={`grid ${cols} gap-3 py-5 border-y border-gray-100 mb-6`}>
       {specs.map((spec, i) => {
         const Icon = spec.icon;
+        // Ô "Mức giá" và "Diện tích" là hai thông số khách nhìn đầu tiên — làm nổi bật hơn.
+        const isHighlight = i < 2;
         return (
-          <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-transparent hover:border-gray-100 transition-colors">
-            <div className="p-2 bg-primary-light rounded-lg shrink-0">
+          <div
+            key={i}
+            className={`flex items-center gap-3 p-3 rounded-xl transition-colors ${
+              isHighlight
+                ? 'bg-primary-light border border-primary/20 col-span-2 sm:col-span-1'
+                : 'bg-gray-50 border border-transparent hover:border-gray-100'
+            }`}
+          >
+            <div className={`p-2 rounded-lg shrink-0 ${isHighlight ? 'bg-white' : 'bg-primary-light'}`}>
               <Icon className="w-4 h-4 text-primary" />
             </div>
             <div className="overflow-hidden">
               <div className="text-[11px] text-gray-500 uppercase tracking-wide truncate">{spec.label}</div>
-              <div className="text-[14px] font-semibold text-gray-900 truncate">{spec.value}</div>
-              {spec.sub && <div className="text-[11px] text-gray-400 truncate">{spec.sub}</div>}
+              <div
+                className={`truncate ${
+                  isHighlight ? 'text-[18px] font-extrabold text-primary leading-tight' : 'text-[14px] font-semibold text-gray-900'
+                }`}
+              >
+                {spec.value}
+              </div>
+              {spec.sub && <div className="text-[11px] text-gray-500 truncate">{spec.sub}</div>}
             </div>
           </div>
         );

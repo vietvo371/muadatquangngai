@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { apiPaginated, buildPaginationMeta } from '@/lib/api-response';
 import { mapPropertyResource, type WardRow } from '@/lib/api-resources/property-resource';
+import { vipRank } from '@/lib/vip';
 
 /**
  * GET /api/v2/properties — port của PropertyController@index (Laravel).
@@ -18,12 +19,8 @@ const PROPERTY_INCLUDE = {
   },
 } as const;
 
-function vipRank(isVip: string): number {
-  if (isVip === 'diamond') return 1;
-  if (isVip === 'vip_plus') return 2;
-  if (isVip === 'vip') return 3;
-  return 4;
-}
+// Xếp hạng theo hạng THỰC TẾ: tin đã hết hạn gói quay về Tin thường. Trước đây chỉ đọc
+// `is_vip` nên tin hết hạn VIP vẫn nằm trên cùng vĩnh viễn (xem src/lib/vip.ts).
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -89,7 +86,7 @@ export async function GET(request: NextRequest) {
   if (sort === 'newest') {
     const all = await db.properties.findMany({ where, include: PROPERTY_INCLUDE });
     all.sort((a, b) => {
-      const rankDiff = vipRank(a.is_vip) - vipRank(b.is_vip);
+      const rankDiff = vipRank(a.is_vip, a.vip_expired_at) - vipRank(b.is_vip, b.vip_expired_at);
       if (rankDiff !== 0) return rankDiff;
       const at = a.published_at?.getTime() ?? 0;
       const bt = b.published_at?.getTime() ?? 0;

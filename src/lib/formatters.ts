@@ -1,3 +1,4 @@
+import { vipBadgeClass } from '@/lib/vip';
 export function formatPrice(
   price: number,
   unit?: string
@@ -185,14 +186,12 @@ export function truncate(text: string, length: number): string {
   return text.substring(0, length) + "...";
 }
 
+/**
+ * Màu nhãn hạng tin. Bản cũ dùng bg-blue/purple/yellow — trái quy ước chỉ 2 màu brand trong
+ * CLAUDE.md (badge VIP phải dùng màu CTA #e03131). Bảng màu nay nằm ở src/lib/vip.ts.
+ */
 export function getVipColor(vip: string): string {
-  const map: Record<string, string> = {
-    normal: "bg-gray-100 text-gray-600",
-    vip: "bg-blue-100 text-blue-700",
-    vip_plus: "bg-purple-100 text-purple-700",
-    diamond: "bg-yellow-100 text-yellow-700",
-  };
-  return map[vip] || map.normal;
+  return vipBadgeClass(vip);
 }
 
 export function getStatusColor(status: string): string {

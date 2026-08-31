@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Camera, X, ChevronLeft, ChevronRight, FileText, ExternalLink, ZoomIn, ZoomOut, Maximize, Minimize } from 'lucide-react';
+import { Camera, FileText, ExternalLink } from 'lucide-react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { IMAGE_CATEGORY_OPTIONS } from '@/lib/property-form-config';
 import { parseYoutubeId } from '@/components/shared/ImageUploader';
+import { PropertyImageSlider } from './PropertyImageSlider';
+import { PropertyGalleryLightbox } from './PropertyGalleryLightbox';
 
 const PropertyLocationMap = dynamic(
   () => import('@/components/map/PropertyLocationMap').then((m) => m.PropertyLocationMap),
@@ -28,25 +30,30 @@ export interface PropertyMediaFile {
 }
 
 interface PropertyMediaSectionProps {
-  /** Mảng URL ảnh phẳng, đã có fallback (thumbnail/ảnh mặc định) — dùng cho hero + lightbox,
+  /** Mảng URL ảnh phẳng, đã có fallback (thumbnail/ảnh mặc định) — dùng cho hero + slider,
    * giữ nguyên hành vi cũ của HeroGallery. */
   media: string[];
   /** Ảnh có đủ metadata (image_type/sort_order) — dùng để nhóm theo loại (III.3/III.6). Có thể
-   * rỗng với dữ liệu cũ; khi đó phần nhóm ảnh bị bỏ qua, hero/lightbox vẫn dùng `media` như cũ. */
+   * rỗng với dữ liệu cũ; khi đó phần nhóm ảnh bị bỏ qua, hero/slider vẫn dùng `media` như cũ. */
   images: PropertyMediaImage[];
   videos: PropertyMediaFile[];
   tour360Url?: string;
   floorPlans: PropertyMediaFile[];
   latitude?: number;
   longitude?: number;
+  /** Dữ liệu cho CTA trong album ảnh (Gọi / Chia sẻ / Lưu tin) — optional, thiếu thì ẩn nút
+   * tương ứng, không gọi API mới. */
+  propertyId?: number | string;
+  propertyTitle?: string;
+  contactPhone?: string;
 }
 
 type TabKey = 'photos' | 'videos' | 'tour360' | 'floorplans' | 'map';
 
 /**
  * Trang chi tiết James Edition (Đợt 4, III.1-III.8, trừ Street View đã bỏ) — thay `HeroGallery`
- * ở 2 trang chi tiết. Giữ nguyên phần hero-grid + lightbox của `HeroGallery.tsx` (copy có điều
- * chỉnh, không sửa file gốc vì `ListingPreview.tsx` vẫn đang dùng nó).
+ * ở 2 trang chi tiết. Giữ nguyên phần hero-grid + các section media trên trang; phần xem ảnh
+ * toàn màn hình tách sang `PropertyGalleryLightbox` (album) và `PropertyImageSlider` (1 ảnh).
  */
 export function PropertyMediaSection({
   media,
@@ -56,65 +63,17 @@ export function PropertyMediaSection({
   floorPlans,
   latitude,
   longitude,
+  propertyId,
+  propertyTitle,
+  contactPhone,
 }: PropertyMediaSectionProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [touchStart, setTouchStart] = useState<number | null>(null);
-  const [touchEnd, setTouchEnd] = useState<number | null>(null);
-  const minSwipeDistance = 50;
-
-  // Zoom + fullscreen cho lightbox (III.7) — tự viết, không dùng lib ngoài, khớp quy ước
-  // sẵn có của HeroGallery (mọi thứ trong lightbox đều tự tay làm).
-  const [zoomScale, setZoomScale] = useState(1);
-  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const lightboxRef = useRef<HTMLDivElement>(null);
-  const panStateRef = useRef<{ dragging: boolean; startX: number; startY: number; originX: number; originY: number }>({
-    dragging: false,
-    startX: 0,
-    startY: 0,
-    originX: 0,
-    originY: 0,
-  });
-  const MAX_ZOOM = 3;
-
-  const resetZoom = () => {
-    setZoomScale(1);
-    setPanOffset({ x: 0, y: 0 });
-  };
-
-  const toggleZoom = () => {
-    if (zoomScale > 1) resetZoom();
-    else setZoomScale(2);
-  };
-
-  useEffect(() => {
-    const handleFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement);
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
-  }, []);
-
-  const toggleFullscreen = () => {
-    if (document.fullscreenElement) {
-      document.exitFullscreen();
-    } else {
-      lightboxRef.current?.requestFullscreen().catch(() => {
-        // Trình duyệt/thiết bị không hỗ trợ Fullscreen API — bỏ qua, không chặn zoom/xem ảnh.
-      });
-    }
-  };
-
-  const closeLightbox = () => {
-    if (document.fullscreenElement) document.exitFullscreen();
-    setIsOpen(false);
-    resetZoom();
-  };
+  const [sliderIndex, setSliderIndex] = useState<number | null>(null);
+  const [albumOpen, setAlbumOpen] = useState(false);
 
   const sectionRefs = useRef<Partial<Record<TabKey, HTMLDivElement | null>>>({});
   const [activeTab, setActiveTab] = useState<TabKey>('photos');
 
-  // Tab nào có nội dung mới hiện — cần tính trước 2 effect bên dưới vì effect scrollspy phụ
-  // thuộc vào số lượng tab.
+  // Tab nào có nội dung mới hiện — cần tính trước effect scrollspy vì effect phụ thuộc số tab.
   const tabs: Array<{ key: TabKey; label: string }> = [
     { key: 'photos', label: `Ảnh (${media.length})` },
     ...(videos.length > 0 ? [{ key: 'videos' as TabKey, label: 'Video' }] : []),
@@ -122,21 +81,6 @@ export function PropertyMediaSection({
     ...(floorPlans.length > 0 ? [{ key: 'floorplans' as TabKey, label: 'Mặt bằng' }] : []),
     ...(latitude != null && longitude != null ? [{ key: 'map' as TabKey, label: 'Bản đồ' }] : []),
   ];
-
-  useEffect(() => {
-    if (!isOpen || media.length === 0) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeLightbox();
-      else if (e.key === 'ArrowRight') { resetZoom(); setActiveIndex((p) => (p + 1) % media.length); }
-      else if (e.key === 'ArrowLeft') { resetZoom(); setActiveIndex((p) => (p - 1 + media.length) % media.length); }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    document.body.style.overflow = 'hidden';
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = '';
-    };
-  }, [isOpen, media]);
 
   // Scrollspy — tô đậm tab đang xem khi cuộn qua (III.4), cùng pattern IntersectionObserver đã
   // dùng ở trang dự án (du-an/[slug]/page.tsx).
@@ -160,81 +104,7 @@ export function PropertyMediaSection({
 
   const extraCount = media.length - 3;
 
-  const handleOpen = (index: number) => {
-    setActiveIndex(index);
-    setIsOpen(true);
-    resetZoom();
-  };
-
-  const handlePrev = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    resetZoom();
-    setActiveIndex((p) => (p - 1 + media.length) % media.length);
-  };
-  const handleNext = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    resetZoom();
-    setActiveIndex((p) => (p + 1) % media.length);
-  };
-
-  // Đã zoom thì chạm để KÉO ẢNH, không phải vuốt chuyển ảnh — 2 thao tác dễ nhầm nếu dùng
-  // chung 1 cử chỉ chạm.
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (zoomScale > 1) {
-      const t = e.targetTouches[0];
-      panStateRef.current = { dragging: true, startX: t.clientX, startY: t.clientY, originX: panOffset.x, originY: panOffset.y };
-      return;
-    }
-    setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
-  };
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (zoomScale > 1 && panStateRef.current.dragging) {
-      const t = e.targetTouches[0];
-      setPanOffset({
-        x: panStateRef.current.originX + (t.clientX - panStateRef.current.startX) / zoomScale,
-        y: panStateRef.current.originY + (t.clientY - panStateRef.current.startY) / zoomScale,
-      });
-      return;
-    }
-    setTouchEnd(e.targetTouches[0].clientX);
-  };
-  const handleTouchEnd = () => {
-    if (zoomScale > 1) {
-      panStateRef.current.dragging = false;
-      return;
-    }
-    if (!touchStart || !touchEnd) return;
-    const distance = touchStart - touchEnd;
-    if (distance > minSwipeDistance) handleNext({ stopPropagation() {} } as React.MouseEvent);
-    else if (distance < -minSwipeDistance) handlePrev({ stopPropagation() {} } as React.MouseEvent);
-  };
-
-  // Cuộn chuột để zoom, con lăn xuống thì thu nhỏ dần về 1x (III.7).
-  const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-    setZoomScale((prev) => {
-      const next = Math.min(MAX_ZOOM, Math.max(1, prev - e.deltaY * 0.002));
-      if (next === 1) setPanOffset({ x: 0, y: 0 });
-      return next;
-    });
-  };
-
-  // Kéo ảnh khi đã zoom (chuột) — chỉ áp dụng cho desktop, cảm ứng xử lý riêng ở touch handlers.
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (zoomScale <= 1) return;
-    panStateRef.current = { dragging: true, startX: e.clientX, startY: e.clientY, originX: panOffset.x, originY: panOffset.y };
-  };
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!panStateRef.current.dragging) return;
-    setPanOffset({
-      x: panStateRef.current.originX + (e.clientX - panStateRef.current.startX) / zoomScale,
-      y: panStateRef.current.originY + (e.clientY - panStateRef.current.startY) / zoomScale,
-    });
-  };
-  const handleMouseUp = () => {
-    panStateRef.current.dragging = false;
-  };
+  const handleOpen = (index: number) => setSliderIndex(index);
 
   // Nhóm ảnh theo loại (III.3/III.6) — chỉ khi có metadata; ảnh không gắn phân loại gộp "Khác".
   const groups: Array<{ key: string; label: string; items: PropertyMediaImage[] }> = [];
@@ -260,7 +130,14 @@ export function PropertyMediaSection({
       <div className="relative rounded-2xl overflow-hidden mb-4 h-[300px] sm:h-[400px] md:h-[480px]">
         <div className={`grid h-full gap-2 ${media.length > 1 ? 'grid-cols-1 md:grid-cols-[2fr_1fr]' : 'grid-cols-1'}`}>
           <div onClick={() => handleOpen(0)} className="relative h-full group cursor-pointer bg-gray-100 overflow-hidden">
-            <Image src={media[0]} alt="Ảnh chính" fill className="object-cover group-hover:scale-105 transition-transform duration-500" priority />
+            <Image
+              src={media[0]}
+              alt="Ảnh chính"
+              fill
+              sizes="(max-width: 768px) 100vw, 66vw"
+              className="object-cover group-hover:scale-105 transition-transform duration-500"
+              priority
+            />
           </div>
           {media.length > 1 && (
             <div className="hidden md:grid grid-rows-2 gap-2 h-full">
@@ -270,7 +147,14 @@ export function PropertyMediaSection({
                 const isLast = idx === 2 && extraCount > 0;
                 return (
                   <div key={idx} onClick={() => handleOpen(idx)} className="relative group cursor-pointer overflow-hidden bg-gray-100 h-full">
-                    <Image src={img} alt={`Ảnh ${idx + 1}`} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
+                    <Image
+                      src={img}
+                      alt={`Ảnh ${idx + 1}`}
+                      fill
+                      sizes="33vw"
+                      loading="lazy"
+                      className="object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
                     {isLast && (
                       <div className="absolute inset-0 bg-black/55 flex items-center justify-center transition-colors group-hover:bg-black/40">
                         <span className="text-white font-bold text-[18px]">+{extraCount} ảnh</span>
@@ -283,9 +167,9 @@ export function PropertyMediaSection({
           )}
         </div>
 
-        {/* III.1: KHÔNG mở popup nữa — cuộn xuống gallery hiển thị đầy đủ ngay trên trang. */}
+        {/* Mở album ảnh toàn màn hình (có thanh điều hướng + tab media + CTA). */}
         <button
-          onClick={() => scrollToTab('photos')}
+          onClick={() => setAlbumOpen(true)}
           className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-md hover:bg-white text-gray-900 px-4 py-2 rounded-lg font-bold text-[13px] shadow-sm flex items-center gap-2 transition-all hover:shadow-md active:scale-95"
         >
           <Camera className="w-4 h-4 text-primary" />
@@ -334,7 +218,14 @@ export function PropertyMediaSection({
                         onClick={() => handleOpen(flatIndex >= 0 ? flatIndex : 0)}
                         className="relative aspect-square rounded-lg overflow-hidden bg-gray-100 group"
                       >
-                        <Image src={img.thumbnail || img.url} alt={g.label} fill className="object-cover group-hover:scale-105 transition-transform duration-300" />
+                        <Image
+                          src={img.thumbnail || img.url}
+                          alt={g.label}
+                          fill
+                          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                          loading="lazy"
+                          className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
                       </button>
                     );
                   })}
@@ -346,7 +237,14 @@ export function PropertyMediaSection({
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
             {media.map((url, idx) => (
               <button key={url} onClick={() => handleOpen(idx)} className="relative aspect-square rounded-lg overflow-hidden bg-gray-100 group">
-                <Image src={url} alt={`Ảnh ${idx + 1}`} fill className="object-cover group-hover:scale-105 transition-transform duration-300" />
+                <Image
+                  src={url}
+                  alt={`Ảnh ${idx + 1}`}
+                  fill
+                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                  loading="lazy"
+                  className="object-cover group-hover:scale-105 transition-transform duration-300"
+                />
               </button>
             ))}
           </div>
@@ -417,7 +315,14 @@ export function PropertyMediaSection({
                   rel="noopener noreferrer"
                   className="relative aspect-square rounded-lg overflow-hidden bg-gray-100"
                 >
-                  <Image src={fp.thumbnail || fp.url} alt="Mặt bằng" fill className="object-cover" />
+                  <Image
+                    src={fp.thumbnail || fp.url}
+                    alt="Mặt bằng"
+                    fill
+                    sizes="(max-width: 640px) 50vw, 33vw"
+                    loading="lazy"
+                    className="object-cover"
+                  />
                 </a>
               );
             })}
@@ -433,125 +338,30 @@ export function PropertyMediaSection({
         </div>
       )}
 
-      {/* Lightbox — giữ nguyên phần tương tác của HeroGallery (zoom/fullscreen thêm ở đợt sau). */}
-      {isOpen && (
-        <div
-          ref={lightboxRef}
-          className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-sm flex flex-col justify-between p-4 select-none animate-in fade-in duration-200"
-          onClick={closeLightbox}
-        >
-          <div className="flex items-center justify-between w-full max-w-7xl mx-auto z-10 pt-2">
-            <span className="text-white/80 text-sm font-semibold tracking-wider">
-              {activeIndex + 1} / {media.length}
-            </span>
-            <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-              <button
-                onClick={() => setZoomScale((s) => Math.max(1, s - 0.5))}
-                disabled={zoomScale <= 1}
-                className="text-white/80 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors bg-white/10 hover:bg-white/20 p-2.5 rounded-full"
-                aria-label="Thu nhỏ"
-              >
-                <ZoomOut className="w-4 h-4" />
-              </button>
-              <button
-                onClick={toggleZoom}
-                className="text-white/80 hover:text-white transition-colors bg-white/10 hover:bg-white/20 p-2.5 rounded-full"
-                aria-label="Phóng to"
-              >
-                <ZoomIn className="w-4 h-4" />
-              </button>
-              <button
-                onClick={toggleFullscreen}
-                className="text-white/80 hover:text-white transition-colors bg-white/10 hover:bg-white/20 p-2.5 rounded-full"
-                aria-label={isFullscreen ? 'Thoát toàn màn hình' : 'Toàn màn hình'}
-              >
-                {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
-              </button>
-              <button
-                onClick={closeLightbox}
-                className="text-white/80 hover:text-white transition-colors bg-white/10 hover:bg-white/20 p-2.5 rounded-full"
-                aria-label="Đóng"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
+      {/* Album ảnh toàn màn hình — thanh điều hướng cố định, tab media, lưới bất đối xứng. */}
+      <PropertyGalleryLightbox
+        open={albumOpen}
+        onClose={() => setAlbumOpen(false)}
+        media={media}
+        images={images}
+        videos={videos}
+        tour360Url={tour360Url}
+        floorPlans={floorPlans}
+        latitude={latitude}
+        longitude={longitude}
+        propertyId={propertyId}
+        propertyTitle={propertyTitle}
+        contactPhone={contactPhone}
+      />
 
-          <div className="flex items-center justify-center w-full max-w-7xl mx-auto flex-1 my-4 relative">
-            <div
-              className="relative flex-1 max-w-5xl h-[65vh] md:h-[75vh] flex items-center justify-center mx-2 overflow-hidden"
-              onClick={(e) => e.stopPropagation()}
-              onWheel={handleWheel}
-              onMouseDown={handleMouseDown}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseUp}
-              onTouchStart={handleTouchStart}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
-            >
-              {zoomScale === 1 && (
-                <button
-                  onClick={handlePrev}
-                  className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 flex items-center justify-center bg-black/50 hover:bg-black/75 text-white p-2.5 md:p-3.5 rounded-full transition-all hover:scale-105 active:scale-95 z-20 shadow-lg border border-white/10"
-                  aria-label="Ảnh trước"
-                >
-                  <ChevronLeft className="w-5 h-5 md:w-6 md:h-6" />
-                </button>
-              )}
-
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={media[activeIndex]}
-                alt={`Slide ${activeIndex + 1}`}
-                onDoubleClick={toggleZoom}
-                draggable={false}
-                style={{
-                  transform: `scale(${zoomScale}) translate(${panOffset.x}px, ${panOffset.y}px)`,
-                  transition: panStateRef.current.dragging ? 'none' : 'transform 0.2s ease-out',
-                  cursor: zoomScale > 1 ? 'grab' : 'zoom-in',
-                }}
-                className="max-h-full max-w-full object-contain rounded-xl shadow-2xl animate-in zoom-in-95 duration-200"
-              />
-
-              {zoomScale === 1 && (
-                <button
-                  onClick={handleNext}
-                  className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 flex items-center justify-center bg-black/50 hover:bg-black/75 text-white p-2.5 md:p-3.5 rounded-full transition-all hover:scale-105 active:scale-95 z-20 shadow-lg border border-white/10"
-                  aria-label="Ảnh sau"
-                >
-                  <ChevronRight className="w-5 h-5 md:w-6 md:h-6" />
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div className="w-full max-w-4xl mx-auto z-10 pb-2">
-            <div className="md:hidden flex justify-center items-center px-4 mb-2">
-              <span className="text-[12px] text-white/40 font-medium text-center">
-                {zoomScale > 1 ? 'Kéo để xem ảnh, bấm đúp để thu nhỏ' : 'Vuốt sang trái/phải hoặc dùng nút để chuyển ảnh'}
-              </span>
-            </div>
-            <div className="hidden md:flex justify-center gap-2.5 overflow-x-auto py-2 max-w-full scrollbar-hide">
-              {media.map((img, idx) => (
-                <button
-                  key={idx}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    resetZoom();
-                    setActiveIndex(idx);
-                  }}
-                  className={`relative w-20 h-14 rounded-lg overflow-hidden border-2 transition-all ${
-                    idx === activeIndex ? 'border-[#1075b1] scale-105 shadow-md' : 'border-transparent opacity-50 hover:opacity-90'
-                  }`}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={img} alt={`Thumb ${idx + 1}`} className="w-full h-full object-cover" />
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
+      {/* Slider 1 ảnh — mở từ hero/lưới ảnh trên trang. */}
+      {sliderIndex !== null && (
+        <PropertyImageSlider
+          media={media}
+          index={sliderIndex}
+          onIndexChange={setSliderIndex}
+          onClose={() => setSliderIndex(null)}
+        />
       )}
     </>
   );

@@ -828,3 +828,26 @@ model wards {
 
   @@index([district_id], map: "wards_district_id_index")
 }
+
+/// Yêu cầu tư vấn (Lead) khách gửi từ trang chi tiết BĐS.
+/// CỐ Ý KHÔNG đặt khoá ngoại tới `properties`/`users`: mọi FK trỏ vào users trong DB này đều
+/// onDelete: Cascade, gắn FK vào đây thì xoá 1 tài khoản/tin là mất luôn lịch sử khách hàng.
+/// Lưu id dạng cột thường + index để truy vấn.
+model leads {
+  id          BigInt    @id @default(autoincrement())
+  uuid        String    @unique(map: "leads_uuid_unique") @db.Uuid
+  property_id BigInt?
+  owner_id    BigInt?
+  name        String?   @db.VarChar(255)
+  phone       String    @db.VarChar(20)
+  email       String?   @db.VarChar(255)
+  message     String?
+  source      String?   @db.VarChar(50)
+  status      String    @default("new") @db.VarChar(20)
+  created_at  DateTime? @db.Timestamp(0)
+  updated_at  DateTime? @db.Timestamp(0)
+
+  @@index([owner_id], map: "leads_owner_id_index")
+  @@index([property_id], map: "leads_property_id_index")
+  @@index([status], map: "leads_status_index")
+}
