@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import {
   Search,
   Plus,
@@ -14,6 +15,7 @@ import {
   LayoutGrid,
   List as ListIcon
 } from 'lucide-react';
+import { RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -27,10 +29,31 @@ import { formatPrice } from '@/lib/formatters';
 export default function PropertyManagementPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  /**
+   * Đăng lại tin THƯỜNG đã hết hạn (miễn phí, thêm 30 ngày).
+   * Trước đây tin thường hết hạn là hết đường — nút "Đẩy tin"/"VIP" chỉ dành cho gói trả phí,
+   * chủ tin buộc phải nhập lại tin từ đầu.
+   */
+  const [repostingId, setRepostingId] = useState<number | null>(null);
+  const repost = async (id: number) => {
+    setRepostingId(id);
+    try {
+      const res = await api.post(`/api/v2/my/properties/${id}/repost`);
+      toast.success(res.data?.message || 'Đã đăng lại tin.');
+      refetch();
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        'Không đăng lại được tin. Vui lòng thử lại.';
+      toast.error(message);
+    } finally {
+      setRepostingId(null);
+    }
+  };
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [boostProperty, setBoostProperty] = useState<{ id: number; title: string } | null>(null);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ['my-properties', statusFilter, searchQuery],
     queryFn: () =>
       api.get('/api/v2/my/properties', {
@@ -149,7 +172,7 @@ export default function PropertyManagementPage() {
                   )}
                 </div>
                 <div className="absolute top-3 right-3">
-                  <StatusBadge status={property.status} />
+                  <StatusBadge status={property.is_expired ? 'expired' : property.status} />
                 </div>
               </Link>
               
@@ -179,6 +202,16 @@ export default function PropertyManagementPage() {
                     <Edit className="h-3.5 w-3.5 mr-1" /> Sửa
                   </Button>
                 </Link>
+                {property.is_expired && (
+                  <Button
+                    disabled={repostingId === property.id}
+                    onClick={() => repost(property.id)}
+                    className="flex-1 h-9 bg-primary hover:bg-primary-dark text-white font-bold text-xs"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                    {repostingId === property.id ? 'Đang...' : 'Đăng lại'}
+                  </Button>
+                )}
               </div>
             </div>
           ))}
@@ -205,8 +238,8 @@ export default function PropertyManagementPage() {
                 {/* Info */}
                 <div className="flex-1 min-w-0 py-1">
                   <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                    <StatusBadge status={property.status} />
-                    <Badge className={`border-0 uppercase text-[10px] tracking-wider font-bold ${property.type === 'sell' ? 'bg-primary-light text-primary' : 'bg-green-100 text-green-700'}`}>
+                    <StatusBadge status={property.is_expired ? 'expired' : property.status} />
+                    <Badge className={`border-0 uppercase text-[10px] tracking-wider font-bold ${property.type === 'sell' ? 'bg-primary-light text-primary' : 'bg-primary-light text-primary'}`}>
                       {property.type === 'sell' ? 'Bán' : 'Cho thuê'}
                     </Badge>
                   </div>
@@ -239,6 +272,16 @@ export default function PropertyManagementPage() {
                       <Edit className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Chỉnh sửa</span>
                     </Button>
                   </Link>
+                  {property.is_expired && (
+                    <Button
+                      disabled={repostingId === property.id}
+                      onClick={() => repost(property.id)}
+                      className="h-9 w-full bg-primary hover:bg-primary-dark text-white font-bold"
+                    >
+                      <RotateCcw className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">{repostingId === property.id ? 'Đang...' : 'Đăng lại'}</span>
+                    </Button>
+                  )}
                   <div className="flex gap-2 w-full">
                     <Link href={`/${property.type === 'sell' ? 'mua-ban' : 'cho-thue'}/${property.slug}`} target="_blank" className="flex-1">
                       <Button variant="ghost" className="h-9 w-full text-gray-500 hover:text-gray-900 bg-gray-50">

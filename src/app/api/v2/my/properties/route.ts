@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { apiPaginated, apiSuccess, apiError, buildPaginationMeta } from '@/lib/api-response';
 import { getAuthUser, unauthenticatedResponse } from '@/lib/auth';
 import { mapPropertyResource, type WardRow } from '@/lib/api-resources/property-resource';
+import { toVietnamIso8601 } from '@/lib/api-resources/carbon-format';
 import { validateFeatureIds } from '@/lib/api-resources/property-validation';
 import { FieldError, validationErrorResponse, isNumeric, isInteger, isBoolean, inList, isString } from '@/lib/validation';
 import { slugify } from '@/lib/formatters';
@@ -99,9 +100,15 @@ export async function GET(request: Request) {
     : [];
   const wardMap = new Map(wards.map((w) => [w.id.toString(), w]));
 
-  const data = rows.map((row) =>
-    mapPropertyResource(row, row.ward_id !== null ? (wardMap.get(row.ward_id.toString()) ?? null) : null)
-  );
+  // `expired_at`/`is_expired` CHỈ thêm ở route "tin của tôi": chủ tin cần biết tin đã hết hạn để
+  // bấm Đăng lại. KHÔNG đưa vào mapPropertyResource dùng chung vì route công khai
+  // /api/v2/properties là bản port khớp từng byte với Laravel (scripts/diff-api.mjs đối chiếu).
+  const nowTs = Date.now();
+  const data = rows.map((row) => ({
+    ...mapPropertyResource(row, row.ward_id !== null ? (wardMap.get(row.ward_id.toString()) ?? null) : null),
+    expired_at: toVietnamIso8601(row.expired_at),
+    is_expired: row.expired_at !== null && row.expired_at.getTime() <= nowTs,
+  }));
 
   return apiPaginated(data, buildPaginationMeta(total, page, perPage));
 }
