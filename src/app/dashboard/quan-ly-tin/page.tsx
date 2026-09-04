@@ -23,6 +23,7 @@ import { Badge } from '@/components/ui/badge';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { EmptyState, BoostModal } from '@/components/shared';
 import { PillTabs } from '@/components/ui/pill-tabs';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import api from '@/lib/axios';
 import { formatPrice } from '@/lib/formatters';
 
@@ -48,6 +49,30 @@ export default function PropertyManagementPage() {
       toast.error(message);
     } finally {
       setRepostingId(null);
+    }
+  };
+
+  /**
+   * Xoá tin. API DELETE /api/v2/my/properties/[id] xoá VĨNH VIỄN (không phải xoá mềm) nên phải
+   * hỏi xác nhận rõ ràng. Trước đây nút thùng rác KHÔNG có onClick — bấm không làm gì cả.
+   */
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; title: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    try {
+      await api.delete(`/api/v2/my/properties/${deleteTarget.id}`);
+      toast.success('Đã xóa tin đăng.');
+      setDeleteTarget(null);
+      refetch();
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        'Không xóa được tin. Vui lòng thử lại.';
+      toast.error(message);
+    } finally {
+      setIsDeleting(false);
     }
   };
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -192,7 +217,7 @@ export default function PropertyManagementPage() {
               <div className="p-3 border-t border-gray-100 bg-gray-50 flex items-center gap-2">
                 <Button
                   variant="outline"
-                  className="flex-1 h-9 bg-white border-yellow-300 text-yellow-700 hover:bg-yellow-50 font-bold text-xs"
+                  className="flex-1 h-9 bg-white border-primary text-primary hover:bg-primary-light font-bold text-xs"
                   onClick={() => setBoostProperty({ id: property.id, title: property.title })}
                 >
                   <Zap className="h-3.5 w-3.5 mr-1" /> VIP
@@ -262,7 +287,7 @@ export default function PropertyManagementPage() {
                 <div className="flex sm:flex-col items-center gap-2 shrink-0 border-t sm:border-t-0 sm:border-l border-gray-100 pt-4 sm:pt-0 sm:pl-4 mt-2 sm:mt-0">
                   <Button
                     variant="outline"
-                    className="flex-1 sm:flex-none h-9 w-full bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100 font-bold"
+                    className="flex-1 sm:flex-none h-9 w-full bg-primary-light border-primary/30 text-primary hover:bg-primary-light/70 font-bold"
                     onClick={() => setBoostProperty({ id: property.id, title: property.title })}
                   >
                     <Zap className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Đẩy tin</span>
@@ -288,7 +313,12 @@ export default function PropertyManagementPage() {
                         <ExternalLink className="h-4 w-4" />
                       </Button>
                     </Link>
-                    <Button variant="ghost" className="h-9 flex-1 text-red-500 hover:text-red-600 hover:bg-red-50 bg-gray-50">
+                    <Button
+                      variant="ghost"
+                      onClick={() => setDeleteTarget({ id: property.id, title: property.title })}
+                      title="Xóa tin đăng"
+                      className="h-9 flex-1 text-cta hover:bg-primary-light bg-gray-50"
+                    >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -298,6 +328,18 @@ export default function PropertyManagementPage() {
           </div>
         </Card>
       )}
+
+      {/* Xác nhận xóa tin — API xóa vĩnh viễn nên nói rõ không khôi phục được */}
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        title="Xóa tin đăng?"
+        description={`Tin "${deleteTarget?.title ?? ''}" sẽ bị xóa vĩnh viễn cùng toàn bộ hình ảnh. Không thể khôi phục lại.`}
+        confirmText="Xóa vĩnh viễn"
+        variant="destructive"
+        isLoading={isDeleting}
+        onConfirm={confirmDelete}
+      />
 
       {/* Boost Modal */}
       {boostProperty && (
