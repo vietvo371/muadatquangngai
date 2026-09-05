@@ -8,6 +8,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { useAuthStore } from '@/stores/authStore';
+import { REPORT_REASONS, reportReasonLabel, type ReportReason } from '@/lib/reports';
 
 interface ContactSidebarProps {
   user: {
@@ -45,6 +55,50 @@ export function ContactSidebar({ user, propertySlug, propertyTitle }: ContactSid
   const [leadMessage, setLeadMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+
+  // Báo cáo vi phạm — trước đây nút "Báo cáo tin đăng vi phạm" KHÔNG có onClick, bấm không làm
+  // gì cả, và cũng chưa có endpoint nào để nhận báo cáo.
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const [showReport, setShowReport] = useState(false);
+  const [reportReason, setReportReason] = useState<ReportReason | null>(null);
+  const [reportDescription, setReportDescription] = useState('');
+  const [reporting, setReporting] = useState(false);
+
+  const openReport = () => {
+    // Gửi khi chưa đăng nhập sẽ bị interceptor 401 đá thẳng sang /login, mất luôn trang đang xem.
+    if (!isAuthenticated) {
+      toast.error('Vui lòng đăng nhập để báo cáo tin đăng vi phạm.');
+      return;
+    }
+    setShowReport(true);
+  };
+
+  const submitReport = async () => {
+    if (!reportReason) {
+      toast.error('Vui lòng chọn lý do báo cáo.');
+      return;
+    }
+    setReporting(true);
+    try {
+      const res = await api.post('/api/v2/reports', {
+        type: 'property',
+        property_slug: propertySlug,
+        reason: reportReason,
+        description: reportDescription.trim() || undefined,
+      });
+      toast.success(res.data?.message || 'Đã gửi báo cáo.');
+      setShowReport(false);
+      setReportReason(null);
+      setReportDescription('');
+    } catch (error) {
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        'Không gửi được báo cáo. Vui lòng thử lại.';
+      toast.error(message);
+    } finally {
+      setReporting(false);
+    }
+  };
 
   const defaultMessage = propertyTitle
     ? `Tôi quan tâm bất động sản "${propertyTitle}". Vui lòng liên hệ tư vấn giúp tôi.`
@@ -182,10 +236,75 @@ export function ContactSidebar({ user, propertySlug, propertyTitle }: ContactSid
       </div>
 
       {/* Report */}
-      <button className="w-full flex items-center justify-center gap-1.5 text-[12px] text-gray-400 hover:text-gray-600 transition-colors py-1">
+      <button
+        type="button"
+        onClick={openReport}
+        className="w-full flex items-center justify-center gap-1.5 text-[12px] text-gray-400 hover:text-gray-600 transition-colors py-1"
+      >
         <Flag className="w-3.5 h-3.5" />
         Báo cáo tin đăng vi phạm
       </button>
+
+      <Dialog open={showReport} onOpenChange={setShowReport}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Báo cáo tin đăng vi phạm</DialogTitle>
+            <DialogDescription>
+              Chọn lý do để quản trị viên xem xét. Báo cáo sai sự thật có thể ảnh hưởng đến tài
+              khoản của bạn.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              {REPORT_REASONS.map((reason) => {
+                const isActive = reportReason === reason;
+                return (
+                  <button
+                    key={reason}
+                    type="button"
+                    onClick={() => setReportReason(reason)}
+                    className={`w-full text-left px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                      isActive
+                        ? 'border-primary bg-primary-light text-primary'
+                        : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {reportReasonLabel(reason)}
+                  </button>
+                );
+              })}
+            </div>
+
+            <Textarea
+              value={reportDescription}
+              onChange={(e) => setReportDescription(e.target.value)}
+              placeholder="Mô tả thêm (không bắt buộc)"
+              rows={3}
+            />
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowReport(false)}>
+              Hủy
+            </Button>
+            <Button
+              onClick={submitReport}
+              disabled={reporting}
+              className="bg-cta hover:bg-cta-dark text-white font-bold"
+            >
+              {reporting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Đang gửi...
+                </>
+              ) : (
+                'Gửi báo cáo'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

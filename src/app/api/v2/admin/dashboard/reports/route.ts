@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
 import { apiSuccess } from '@/lib/api-response';
+import { reportReasonLabel } from '@/lib/reports';
 
 /**
  * GET /api/v2/admin/dashboard/reports — khiếu nại đang chờ xử lý, gom theo lý do.
@@ -12,19 +13,6 @@ import { apiSuccess } from '@/lib/api-response';
  */
 
 const TOP_N = 5;
-
-/** Nhãn tiếng Việt cho các mã lý do; mã lạ thì hiển thị nguyên văn thay vì bịa nhãn. */
-const REASON_LABEL: Record<string, string> = {
-  spam: 'Tin đăng spam, đăng lặp',
-  duplicate: 'Tin đăng trùng lặp',
-  fake: 'Thông tin sai sự thật',
-  wrong_info: 'Thông tin không chính xác',
-  scam: 'Có dấu hiệu lừa đảo',
-  sold: 'Tin đã bán/cho thuê nhưng chưa gỡ',
-  unreachable: 'Không liên hệ được người đăng',
-  inappropriate: 'Nội dung không phù hợp',
-  other: 'Lý do khác',
-};
 
 export async function GET(request: Request) {
   const guard = await requireAdmin(request);
@@ -44,7 +32,7 @@ export async function GET(request: Request) {
     .slice(0, TOP_N)
     .map((g) => ({
       reason: g.reason,
-      label: REASON_LABEL[g.reason] ?? g.reason,
+      label: reportReasonLabel(g.reason),
       count: g._count._all,
       last_at: g._max.created_at ? g._max.created_at.toISOString() : null,
     }));
