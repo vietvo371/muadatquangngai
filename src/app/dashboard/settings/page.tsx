@@ -59,6 +59,53 @@ export default function SettingsPage() {
   const [sessionsError, setSessionsError] = useState(false);
   const [revokingId, setRevokingId] = useState<number | null>(null);
 
+  /**
+   * Đổi mật khẩu — trước đây 3 ô này KHÔNG nối state (không value, không onChange) và nút
+   * cũng không có onClick: người dùng gõ mật khẩu mới, bấm nút, không có gì xảy ra, nhưng lại
+   * tin là đã đổi xong. Nguy hiểm nhất khi ai đó nghi tài khoản bị lộ và vào đây để đổi.
+   * `PUT /api/v2/user/password` đã tồn tại và chạy thật từ trước, chỉ là chưa ai nối vào.
+   */
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+
+  const changePassword = async () => {
+    // Chặn sớm ở client cho đỡ phải chờ mạng; server vẫn kiểm lại đầy đủ.
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      toast.error('Vui lòng nhập đủ ba ô mật khẩu.');
+      return;
+    }
+    if (newPassword.length < 8) {
+      toast.error('Mật khẩu mới phải có ít nhất 8 ký tự.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error('Xác nhận mật khẩu mới không khớp.');
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      const res = await api.put('/api/v2/user/password', {
+        current_password: currentPassword,
+        password: newPassword,
+        password_confirmation: confirmPassword,
+      });
+      toast.success(res.data?.message || 'Đổi mật khẩu thành công!');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error) {
+      // Server trả lỗi theo từng field (vd mật khẩu hiện tại sai) — ưu tiên hiện đúng câu đó.
+      const res = (error as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } })?.response?.data;
+      const fieldError = res?.errors ? Object.values(res.errors)[0]?.[0] : undefined;
+      toast.error(fieldError || res?.message || 'Không đổi được mật khẩu. Vui lòng thử lại.');
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
   const loadSessions = () => {
     setSessionsLoading(true);
     api
@@ -520,29 +567,49 @@ export default function SettingsPage() {
                   <div className="space-y-4 ml-10 max-w-md">
                     <div className="space-y-2">
                       <Label htmlFor="current_password" className="font-semibold text-gray-700">Mật khẩu hiện tại</Label>
-                      <Input id="current_password" type="password" className="h-11 bg-gray-50" />
+                      <Input
+                        id="current_password"
+                        type="password"
+                        autoComplete="current-password"
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        className="h-11 bg-gray-50"
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="new_password" className="font-semibold text-gray-700">Mật khẩu mới</Label>
-                      <Input id="new_password" type="password" className="h-11 bg-gray-50" />
+                      <Input
+                        id="new_password"
+                        type="password"
+                        autoComplete="new-password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className="h-11 bg-gray-50"
+                      />
+                      <p className="text-xs text-gray-500 font-medium">Tối thiểu 8 ký tự.</p>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="confirm_password" className="font-semibold text-gray-700">Xác nhận mật khẩu mới</Label>
-                      <Input id="confirm_password" type="password" className="h-11 bg-gray-50" />
+                      <Input
+                        id="confirm_password"
+                        type="password"
+                        autoComplete="new-password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className="h-11 bg-gray-50"
+                      />
                     </div>
-                    <Button className="font-bold">Đổi mật khẩu</Button>
+                    <Button className="font-bold" onClick={changePassword} disabled={changingPassword}>
+                      {changingPassword ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Đang đổi...
+                        </>
+                      ) : (
+                        'Đổi mật khẩu'
+                      )}
+                    </Button>
                   </div>
-                </div>
-
-                <Separator className="bg-gray-100" />
-
-                {/* Two Factor */}
-                <div className="flex items-center justify-between py-2">
-                  <div>
-                    <h3 className="font-bold text-gray-900 text-lg">Xác thực 2 yếu tố (2FA)</h3>
-                    <p className="text-sm text-gray-500 font-medium mt-1 max-w-md">Tăng cường bảo mật bằng cách yêu cầu mã xác nhận từ điện thoại mỗi khi đăng nhập.</p>
-                  </div>
-                  <Button variant="outline" className="h-10 px-6 font-bold shrink-0">Kích hoạt</Button>
                 </div>
 
                 <Separator className="bg-gray-100" />

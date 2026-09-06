@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Phone, MessageSquare, ShieldCheck, Flag, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '@/lib/axios';
@@ -48,6 +48,18 @@ export function ContactSidebar({ user, propertySlug, propertyTitle }: ContactSid
       : rawPhone.slice(0, 4) + ' *** ***';
 
   const zaloLink = `https://zalo.me/${rawPhone}`;
+
+  // "Nhắn tin" trước đây là nút chết. Dự án chưa có endpoint tạo hội thoại (chat realtime cũng
+  // chưa nối xong), nên nút này đưa người xem xuống đúng form yêu cầu tư vấn ngay bên dưới —
+  // thứ đã chạy thật — thay vì mở một khung chat không gửi được.
+  const messageFieldRef = useRef<HTMLTextAreaElement>(null);
+
+  const focusMessageForm = () => {
+    setSent(false);
+    messageFieldRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // Chờ cuộn xong mới focus, tránh trình duyệt nhảy giật về vị trí cũ.
+    setTimeout(() => messageFieldRef.current?.focus(), 400);
+  };
 
   // Form yêu cầu tư vấn — trước đây chỉ là 3 ô input và nút bấm không nối gì.
   const [leadName, setLeadName] = useState('');
@@ -159,21 +171,42 @@ export function ContactSidebar({ user, propertySlug, propertyTitle }: ContactSid
           </div>
         </div>
 
-        {/* Phone reveal */}
-        <Button
-          className="w-full mb-2 bg-primary hover:bg-primary-dark text-white font-bold h-11 text-[15px] tracking-wide"
-          onClick={() => setPhoneRevealed(true)}
-        >
-          <Phone className="w-4 h-4 mr-2" />
-          {displayPhone}
-        </Button>
+        {/* Phone reveal — lần bấm đầu hiện số, bấm tiếp thì gọi luôn. */}
+        {phoneRevealed && hasPhone ? (
+          <a
+            href={`tel:${rawPhone}`}
+            className="w-full mb-2 flex items-center justify-center rounded-md bg-primary hover:bg-primary-dark text-white font-bold h-11 text-[15px] tracking-wide transition-colors"
+          >
+            <Phone className="w-4 h-4 mr-2" />
+            {displayPhone}
+          </a>
+        ) : (
+          <Button
+            className="w-full mb-2 bg-primary hover:bg-primary-dark text-white font-bold h-11 text-[15px] tracking-wide"
+            onClick={() => setPhoneRevealed(true)}
+            disabled={!hasPhone}
+          >
+            <Phone className="w-4 h-4 mr-2" />
+            {displayPhone}
+          </Button>
+        )}
 
         <div className="grid grid-cols-2 gap-2">
           <a
-            href={zaloLink}
+            href={hasPhone ? zaloLink : undefined}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 h-11 rounded-lg border border-[#0068FF] text-[#0068FF] text-[13px] font-bold hover:bg-[#0068FF]/5 transition-colors"
+            aria-disabled={!hasPhone}
+            onClick={(e) => {
+              // Chủ tin chưa có số thì link Zalo sẽ trỏ vào "zalo.me/" rỗng — chặn lại.
+              if (!hasPhone) {
+                e.preventDefault();
+                toast.error('Người đăng chưa cung cấp số điện thoại.');
+              }
+            }}
+            className={`flex items-center justify-center gap-2 h-11 rounded-lg border border-[#0068FF] text-[#0068FF] text-[13px] font-bold transition-colors ${
+              hasPhone ? 'hover:bg-[#0068FF]/5' : 'opacity-50 cursor-not-allowed'
+            }`}
           >
             <svg viewBox="0 0 48 48" className="w-5 h-5" fill="currentColor">
               <path d="M24 4C13 4 4 12.1 4 22.2c0 5.8 3 11 7.8 14.4L10 42l6.2-3.2A21 21 0 0024 40.4c11 0 20-8.1 20-18.2S35 4 24 4z" />
@@ -181,7 +214,11 @@ export function ContactSidebar({ user, propertySlug, propertyTitle }: ContactSid
             </svg>
             Zalo
           </a>
-          <Button variant="outline" className="border-gray-200 text-gray-700 hover:bg-gray-50 font-bold h-11">
+          <Button
+            variant="outline"
+            onClick={focusMessageForm}
+            className="border-gray-200 text-gray-700 hover:bg-gray-50 font-bold h-11"
+          >
             <MessageSquare className="w-4 h-4 mr-1.5" />
             Nhắn tin
           </Button>
@@ -218,6 +255,7 @@ export function ContactSidebar({ user, propertySlug, propertyTitle }: ContactSid
               className="mb-2 h-11 text-[14px]"
             />
             <Textarea
+              ref={messageFieldRef}
               placeholder={defaultMessage}
               value={leadMessage}
               onChange={(e) => setLeadMessage(e.target.value)}

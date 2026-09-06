@@ -2,6 +2,7 @@
 
 import { useState, use, useEffect } from 'react';
 import api from '@/lib/axios';
+import { toast } from 'sonner';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -66,6 +67,24 @@ export default function AgentProfilePage({
   const [agent, setAgent] = useState<AgentProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+
+  /** Điện thoại có hộp chia sẻ sẵn; máy tính thì chép link vào bộ nhớ tạm. */
+  const shareProfile = async () => {
+    const url = window.location.href;
+    const title = agent ? `Môi giới ${agent.name}` : 'Hồ sơ môi giới';
+    try {
+      if (navigator.share) {
+        await navigator.share({ title, url });
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      toast.success('Đã chép liên kết hồ sơ.');
+    } catch (error) {
+      // Người dùng bấm huỷ hộp chia sẻ — không phải lỗi, đừng làm phiền họ.
+      if ((error as { name?: string })?.name === 'AbortError') return;
+      toast.error('Không chia sẻ được. Bạn có thể chép link trên thanh địa chỉ.');
+    }
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -175,15 +194,41 @@ export default function AgentProfilePage({
 
               {/* Action Buttons */}
               <div className="flex flex-wrap justify-center md:justify-start gap-3 mt-6">
-                <Button className="bg-primary hover:bg-primary-dark font-bold px-6 h-12 rounded-xl shadow-md gap-2 text-[15px]">
-                  <Phone className="h-4 w-4" />
-                  {agent.phone}
-                </Button>
-                <Button variant="outline" className="font-bold px-6 h-12 rounded-xl border-gray-200 text-gray-700 hover:bg-gray-50 gap-2">
-                  <MessageSquare className="h-4 w-4" />
-                  Gửi tin nhắn
-                </Button>
-                <Button variant="outline" size="icon" className="h-12 w-12 rounded-xl border-gray-200 text-gray-500 hover:bg-gray-50 shrink-0">
+                {/* Ba nút này trước đây đều KHÔNG có onClick — khách bấm vào số điện thoại
+                    môi giới cũng không có gì xảy ra. Dự án chưa có endpoint tạo hội thoại nên
+                    "Gửi tin nhắn" đi qua Zalo, giống cách trang chi tiết tin đang làm. */}
+                {agent.phone ? (
+                  <>
+                    <a
+                      href={`tel:${agent.phone}`}
+                      className="inline-flex items-center justify-center bg-primary hover:bg-primary-dark text-white font-bold px-6 h-12 rounded-xl shadow-md gap-2 text-[15px] transition-colors"
+                    >
+                      <Phone className="h-4 w-4" />
+                      {agent.phone}
+                    </a>
+                    <a
+                      href={`https://zalo.me/${agent.phone}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center font-bold px-6 h-12 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 gap-2 transition-colors"
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                      Gửi tin nhắn
+                    </a>
+                  </>
+                ) : (
+                  <div className="inline-flex items-center justify-center font-bold px-6 h-12 rounded-xl border border-gray-200 text-gray-400 gap-2">
+                    <Phone className="h-4 w-4" />
+                    Chưa cung cấp số điện thoại
+                  </div>
+                )}
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={shareProfile}
+                  aria-label="Chia sẻ hồ sơ môi giới"
+                  className="h-12 w-12 rounded-xl border-gray-200 text-gray-500 hover:bg-gray-50 shrink-0"
+                >
                   <Share2 className="h-4 w-4" />
                 </Button>
               </div>
