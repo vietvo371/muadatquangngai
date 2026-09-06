@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent } from '@/components/ui/card';
@@ -144,19 +146,27 @@ export default function ProfilePage() {
                 </div>
               </div>
 
+              {/* Ba mục này trước đây là nút chết. Chúng ứng với đúng các tab đã có trong trang
+                  Cài đặt, nên nối thẳng sang đó thay vì để bấm không phản hồi. */}
               <div className="mt-6 space-y-1">
-                <Button variant="ghost" className="w-full justify-start gap-3 h-11 text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-medium">
-                  <Bell className="h-5 w-5 text-gray-400" />
-                  Cài đặt thông báo
-                </Button>
-                <Button variant="ghost" className="w-full justify-start gap-3 h-11 text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-medium">
-                  <Lock className="h-5 w-5 text-gray-400" />
-                  Bảo mật tài khoản
-                </Button>
-                <Button variant="ghost" className="w-full justify-start gap-3 h-11 text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-medium">
-                  <Eye className="h-5 w-5 text-gray-400" />
-                  Quyền riêng tư
-                </Button>
+                <Link href="/dashboard/settings?tab=notifications" className="block">
+                  <Button variant="ghost" className="w-full justify-start gap-3 h-11 text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-medium">
+                    <Bell className="h-5 w-5 text-gray-400" />
+                    Cài đặt thông báo
+                  </Button>
+                </Link>
+                <Link href="/dashboard/settings?tab=security" className="block">
+                  <Button variant="ghost" className="w-full justify-start gap-3 h-11 text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-medium">
+                    <Lock className="h-5 w-5 text-gray-400" />
+                    Bảo mật tài khoản
+                  </Button>
+                </Link>
+                <Link href="/dashboard/settings?tab=privacy" className="block">
+                  <Button variant="ghost" className="w-full justify-start gap-3 h-11 text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-medium">
+                    <Eye className="h-5 w-5 text-gray-400" />
+                    Quyền riêng tư
+                  </Button>
+                </Link>
               </div>
             </CardContent>
           </Card>

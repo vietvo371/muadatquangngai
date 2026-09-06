@@ -191,46 +191,10 @@ export default function BlogListPage() {
         </div>
       </section>
 
-      {/* NEWSLETTER CTA */}
-      <section className="py-16 px-4 bg-white">
-        <div className="max-w-5xl mx-auto">
-          <div className="relative overflow-hidden rounded-[2rem] bg-gray-900 p-8 md:p-14 shadow-xl">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-transparent mix-blend-overlay" />
-            <div className="absolute right-0 top-0 bottom-0 w-1/2 opacity-20 pointer-events-none">
-              <div className="w-full h-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary/40 via-transparent to-transparent blur-2xl" />
-            </div>
-
-            <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
-              <div className="max-w-lg text-center md:text-left">
-                <h2 className="text-3xl md:text-4xl font-black text-white mb-4 tracking-tight leading-tight">
-                  Nhận Bản Tin <br className="hidden md:block" />
-                  <span className="text-primary-light">Thị Trường</span> Mỗi Tuần
-                </h2>
-                <p className="text-gray-300 text-[15px] font-medium leading-relaxed max-w-md mx-auto md:mx-0">
-                  Phân tích độc quyền, báo cáo quy hoạch và cơ hội đầu tư tốt nhất tại Quảng Ngãi được gửi thẳng vào email của bạn.
-                </p>
-              </div>
-
-              <div className="w-full md:w-auto flex-1 max-w-md">
-                <div className="flex flex-col sm:flex-row gap-3 bg-white/10 p-2 rounded-2xl backdrop-blur-md border border-white/10">
-                  <Input
-                    placeholder="Nhập địa chỉ email của bạn..."
-                    className="flex-1 bg-white border-0 text-gray-900 placeholder:text-gray-500 rounded-xl h-12 focus-visible:ring-2 focus-visible:ring-primary shadow-inner"
-                  />
-                  <Button className="bg-primary hover:bg-primary-dark text-white h-12 px-8 font-bold rounded-xl shadow-md sm:w-auto w-full transition-all hover:scale-[1.02]">
-                    Đăng Ký Ngay
-                  </Button>
-                </div>
-                <p className="text-xs text-gray-400 mt-4 text-center md:text-left font-medium">
-                  Bằng việc đăng ký, bạn đồng ý với{' '}
-                  <a href="#" className="text-primary-light hover:underline">Chính sách bảo mật</a>{' '}
-                  của chúng tôi.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Khối "Nhận bản tin thị trường" đã gỡ: ô email + nút "Đăng Ký Ngay" không nối gì,
+          không có API và không có bảng lưu người đăng ký — khách nhập email rồi bấm là mất
+          luôn, nhưng lại tưởng đã đăng ký. Khi nào làm thật (bảng subscribers + endpoint)
+          thì dựng lại. */}
     </div>
   );
 }

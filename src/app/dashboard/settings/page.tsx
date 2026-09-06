@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/axios';
 import { useAuthStore } from '@/stores/authStore';
+import { fileUploadApi } from '@/lib/admin-api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -40,7 +41,17 @@ import { toast } from 'sonner';
 import { PillTabs } from '@/components/ui/pill-tabs';
 
 export default function SettingsPage() {
+  // Cho phép link thẳng vào một tab (vd /dashboard/settings?tab=security từ trang Hồ sơ).
+  // CỐ Ý không dùng useSearchParams: nó biến trang thành dynamic và làm hỏng prerender lúc
+  // build (đã thử, build đứt ở bước Export /dashboard/settings). Đọc từ window sau khi mount
+  // là đủ cho một trang chỉ hiện sau khi đăng nhập.
   const [activeTab, setActiveTab] = useState('profile');
+
+  useEffect(() => {
+    const TABS = ['profile', 'notifications', 'privacy', 'security'];
+    const tab = new URLSearchParams(window.location.search).get('tab');
+    if (tab && TABS.includes(tab)) setActiveTab(tab);
+  }, []);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [closePassword, setClosePassword] = useState('');
@@ -58,6 +69,110 @@ export default function SettingsPage() {
   const [sessionsLoading, setSessionsLoading] = useState(true);
   const [sessionsError, setSessionsError] = useState(false);
   const [revokingId, setRevokingId] = useState<number | null>(null);
+
+  /**
+   * Ảnh đại diện — trước đây nút máy ảnh, "Tải ảnh lên" và "Xóa ảnh" đều không có onClick.
+   * Ảnh đi thẳng lên Cloudinary từ trình duyệt (giống ảnh tin đăng), rồi lưu đường dẫn qua
+   * PUT /api/v2/user/profile — route đó nay nhận thêm trường `avatar`.
+   */
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const [avatarBusy, setAvatarBusy] = useState(false);
+
+  const saveAvatar = async (value: string | null, doneMessage: string) => {
+    const res = await api.put('/api/v2/user/profile', { avatar: value });
+    const updated = res.data?.data;
+    setProfile((p) => ({ ...p, avatar: value }));
+    if (updated) setAuthUser(updated);
+    toast.success(doneMessage);
+  };
+
+  const onPickAvatar = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    // Cho chọn lại đúng file vừa chọn (nếu không, input giữ nguyên value và không bắn change).
+    event.target.value = '';
+    if (!file) return;
+
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) {
+      toast.error('Chỉ nhận ảnh JPG, PNG hoặc WEBP.');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Ảnh vượt quá 2MB. Vui lòng chọn ảnh nhẹ hơn.');
+      return;
+    }
+
+    setAvatarBusy(true);
+    try {
+      const uploaded = await fileUploadApi.upload(file);
+      await saveAvatar(uploaded.url, 'Đã cập nhật ảnh đại diện.');
+    } catch (error) {
+      toast.error((error as Error)?.message || 'Không tải được ảnh lên. Vui lòng thử lại.');
+    } finally {
+      setAvatarBusy(false);
+    }
+  };
+
+  const removeAvatar = async () => {
+    setAvatarBusy(true);
+    try {
+      await saveAvatar(null, 'Đã xoá ảnh đại diện.');
+    } catch {
+      toast.error('Không xoá được ảnh đại diện. Vui lòng thử lại.');
+    } finally {
+      setAvatarBusy(false);
+    }
+  };
+
+  /**
+   * Xác thực email — nút "Xác thực" trước đây cũng chết, dù hai endpoint gửi mã và xác nhận mã
+   * đã có sẵn. Luồng: gửi mã 6 số về email -> nhập mã -> đánh dấu đã xác thực.
+   */
+  const [showVerifyEmail, setShowVerifyEmail] = useState(false);
+  const [verifyCode, setVerifyCode] = useState('');
+  const [sendingCode, setSendingCode] = useState(false);
+  const [verifyingCode, setVerifyingCode] = useState(false);
+
+  const apiMessage = (error: unknown, fallback: string) => {
+    const res = (error as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } })?.response?.data;
+    return (res?.errors ? Object.values(res.errors)[0]?.[0] : undefined) || res?.message || fallback;
+  };
+
+  const sendVerifyCode = async () => {
+    setSendingCode(true);
+    try {
+      const res = await api.post('/api/v2/auth/email-verification/send');
+      toast.success(res.data?.message || 'Đã gửi mã xác thực tới email của bạn.');
+      setShowVerifyEmail(true);
+    } catch (error) {
+      const message = apiMessage(error, 'Không gửi được mã xác thực. Vui lòng thử lại.');
+      // Email đã xác thực từ trước thì đây là tin tốt, không phải lỗi — đừng báo đỏ.
+      if (/đã được xác thực/i.test(message)) toast.success(message);
+      else toast.error(message);
+    } finally {
+      setSendingCode(false);
+    }
+  };
+
+  const confirmVerifyCode = async () => {
+    if (!verifyCode.trim()) {
+      toast.error('Vui lòng nhập mã xác thực.');
+      return;
+    }
+    setVerifyingCode(true);
+    try {
+      const res = await api.post('/api/v2/auth/email-verification/verify', { code: verifyCode.trim() });
+      toast.success(res.data?.message || 'Xác thực email thành công.');
+      setShowVerifyEmail(false);
+      setVerifyCode('');
+      // Nạp lại hồ sơ để cờ đã-xác-thực hiện ngay, khỏi phải tải lại trang.
+      const me = await api.get('/api/v2/user/me').catch(() => null);
+      if (me?.data?.data) setAuthUser(me.data.data);
+    } catch (error) {
+      toast.error(apiMessage(error, 'Mã xác thực không đúng hoặc đã hết hạn.'));
+    } finally {
+      setVerifyingCode(false);
+    }
+  };
 
   /**
    * Đổi mật khẩu — trước đây 3 ô này KHÔNG nối state (không value, không onChange) và nút
@@ -98,9 +213,7 @@ export default function SettingsPage() {
       setConfirmPassword('');
     } catch (error) {
       // Server trả lỗi theo từng field (vd mật khẩu hiện tại sai) — ưu tiên hiện đúng câu đó.
-      const res = (error as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } })?.response?.data;
-      const fieldError = res?.errors ? Object.values(res.errors)[0]?.[0] : undefined;
-      toast.error(fieldError || res?.message || 'Không đổi được mật khẩu. Vui lòng thử lại.');
+      toast.error(apiMessage(error, 'Không đổi được mật khẩu. Vui lòng thử lại.'));
     } finally {
       setChangingPassword(false);
     }
@@ -290,17 +403,50 @@ export default function SettingsPage() {
                     </Avatar>
                     <Button
                       size="icon"
+                      onClick={() => avatarInputRef.current?.click()}
+                      disabled={avatarBusy}
+                      aria-label="Đổi ảnh đại diện"
                       className="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-gray-900 hover:bg-black text-white border-2 border-white shadow-sm"
                     >
-                      <Camera className="h-4 w-4" />
+                      {avatarBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
                     </Button>
                   </div>
                   <div>
                     <h3 className="font-bold text-gray-900 text-lg mb-1">Ảnh đại diện</h3>
-                    <p className="text-sm text-gray-500 mb-3">Định dạng JPG, PNG. Dung lượng tối đa 2MB.</p>
+                    <p className="text-sm text-gray-500 mb-3">Định dạng JPG, PNG hoặc WEBP. Dung lượng tối đa 2MB.</p>
+                    <input
+                      ref={avatarInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={onPickAvatar}
+                      className="hidden"
+                    />
                     <div className="flex gap-2">
-                      <Button variant="outline" className="h-9 font-medium">Tải ảnh lên</Button>
-                      <Button variant="ghost" className="h-9 text-red-500 hover:text-red-600 font-medium">Xóa ảnh</Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => avatarInputRef.current?.click()}
+                        disabled={avatarBusy}
+                        className="h-9 font-medium"
+                      >
+                        {avatarBusy ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Đang xử lý...
+                          </>
+                        ) : (
+                          'Tải ảnh lên'
+                        )}
+                      </Button>
+                      {profile.avatar && (
+                        <Button
+                          variant="ghost"
+                          onClick={removeAvatar}
+                          disabled={avatarBusy}
+                          className="h-9 text-cta hover:text-cta font-medium"
+                        >
+                          Xóa ảnh
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -323,29 +469,41 @@ export default function SettingsPage() {
                   <div className="space-y-2">
                     <Label htmlFor="email" className="font-semibold text-gray-700">Địa chỉ Email</Label>
                     <div className="flex gap-2">
+                      {/* Ô email trước đây gõ sửa được nhưng PUT /api/v2/user/profile KHÔNG nhận
+                          trường email — sửa xong bấm Lưu là mất, không ai báo gì. Để chỉ đọc cho
+                          đúng thực tế. */}
                       <Input
                         id="email"
                         type="email"
                         value={profile.email}
-                        onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                        className="flex-1 h-11 bg-gray-50"
+                        readOnly
+                        className="flex-1 h-11 bg-gray-100 text-gray-600 cursor-not-allowed"
                       />
-                      <Button variant="outline" className="h-11 px-4 font-medium">Xác thực</Button>
+                      <Button
+                        variant="outline"
+                        onClick={sendVerifyCode}
+                        disabled={sendingCode}
+                        className="h-11 px-4 font-medium"
+                      >
+                        {sendingCode ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Xác thực'}
+                      </Button>
                     </div>
+                    <p className="text-xs text-gray-500 font-medium">
+                      Email dùng để đăng nhập nên không đổi được ở đây.
+                    </p>
                   </div>
 
                   {/* Phone */}
                   <div className="space-y-2">
                     <Label htmlFor="phone" className="font-semibold text-gray-700">Số điện thoại</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="phone"
-                        value={profile.phone}
-                        onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                        className="flex-1 h-11 bg-gray-50"
-                      />
-                      <Button variant="outline" className="h-11 px-4 font-medium">Đổi số</Button>
-                    </div>
+                    {/* Bỏ nút "Đổi số": nó không có onClick, mà ô số điện thoại vốn đã sửa trực
+                        tiếp được và nút Lưu thay đổi bên dưới đã gửi lên API thật. */}
+                    <Input
+                      id="phone"
+                      value={profile.phone}
+                      onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                      className="h-11 bg-gray-50"
+                    />
                   </div>
                 </div>
 
@@ -521,7 +679,7 @@ export default function SettingsPage() {
                   <div className="flex items-center justify-between p-4 rounded-xl border border-gray-100 bg-white">
                     <div className="pr-4">
                       <p className="font-bold text-gray-900 text-[15px]">Trạng thái hoạt động</p>
-                      <p className="text-sm text-gray-500 font-medium mt-0.5">Hiển thị nhãn "Đang Online" khi bạn truy cập hệ thống</p>
+                      <p className="text-sm text-gray-500 font-medium mt-0.5">Hiển thị nhãn &quot;Đang Online&quot; khi bạn truy cập hệ thống</p>
                     </div>
                     <Switch
                       checked={privacy.show_online_status}
@@ -710,6 +868,52 @@ export default function SettingsPage() {
       </div>
 
       {/* Delete Account Dialog */}
+      {/* Nhập mã xác thực email */}
+      <Dialog open={showVerifyEmail} onOpenChange={setShowVerifyEmail}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Xác thực email</DialogTitle>
+            <DialogDescription>
+              Chúng tôi đã gửi mã xác thực tới {profile.email}. Nhập mã để hoàn tất.
+            </DialogDescription>
+          </DialogHeader>
+
+          <Input
+            value={verifyCode}
+            onChange={(e) => setVerifyCode(e.target.value)}
+            placeholder="Nhập mã xác thực"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            className="h-11 text-center tracking-widest font-bold"
+          />
+
+          <button
+            type="button"
+            onClick={sendVerifyCode}
+            disabled={sendingCode}
+            className="text-xs text-primary font-semibold hover:underline disabled:opacity-50"
+          >
+            Chưa nhận được mã? Gửi lại
+          </button>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowVerifyEmail(false)}>
+              Hủy
+            </Button>
+            <Button onClick={confirmVerifyCode} disabled={verifyingCode} className="font-bold">
+              {verifyingCode ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Đang xác thực...
+                </>
+              ) : (
+                'Xác nhận'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent className="rounded-2xl border-0 overflow-hidden p-0 sm:max-w-md">
           <div className="bg-red-600 p-6 flex flex-col items-center justify-center text-white text-center">
