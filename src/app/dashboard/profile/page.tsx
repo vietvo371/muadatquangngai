@@ -115,12 +115,16 @@ export default function ProfilePage() {
                     <AvatarImage src={user.avatar || undefined} alt={user.name} />
                     <AvatarFallback className="text-2xl font-bold bg-primary-light text-primary">{user.name?.charAt(0)}</AvatarFallback>
                   </Avatar>
-                  <Button
-                    size="icon"
-                    className="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-gray-900 hover:bg-black text-white border-2 border-white shadow-sm"
-                  >
-                    <Camera className="h-4 w-4" />
-                  </Button>
+                  {/* Trang này chỉ để xem. Nút máy ảnh trước đây không có onClick — nay đưa
+                      sang Cài đặt, nơi việc tải ảnh đại diện chạy thật. */}
+                  <Link href="/dashboard/settings" aria-label="Đổi ảnh đại diện">
+                    <Button
+                      size="icon"
+                      className="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-gray-900 hover:bg-black text-white border-2 border-white shadow-sm"
+                    >
+                      <Camera className="h-4 w-4" />
+                    </Button>
+                  </Link>
                 </div>
               </div>
               

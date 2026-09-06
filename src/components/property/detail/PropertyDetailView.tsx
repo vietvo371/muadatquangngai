@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { shareCurrentPage } from '@/lib/share';
 import {
   Heart,
   Share2,
@@ -372,7 +373,11 @@ export function PropertyDetailView({ slug, listingType }: PropertyDetailViewProp
                   <Heart className={`h-4 w-4 ${isFavorite ? 'fill-current' : ''}`} />
                   Lưu tin
                 </button>
-                <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] font-semibold text-gray-600 hover:bg-gray-100 transition-colors">
+                <button
+                  type="button"
+                  onClick={() => shareCurrentPage(propertyData?.title ?? 'Bất động sản')}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] font-semibold text-gray-600 hover:bg-gray-100 transition-colors"
+                >
                   <Share2 className="h-4 w-4" />
                   Chia sẻ
                 </button>

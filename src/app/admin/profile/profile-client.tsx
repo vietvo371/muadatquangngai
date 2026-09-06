@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState, type ChangeEvent } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { fileUploadApi } from '@/lib/admin-api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -49,6 +50,41 @@ export default function ProfileClient() {
     newPassword: '',
     confirmPassword: '',
   });
+
+  /**
+   * Ảnh đại diện — nút máy ảnh trước đây không có onClick. Ảnh tải thẳng lên Cloudinary rồi lưu
+   * đường dẫn qua updateProfile (PUT /api/v2/user/profile, route nay đã nhận trường `avatar`).
+   */
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const [avatarBusy, setAvatarBusy] = useState(false);
+
+  const onPickAvatar = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    // Cho chọn lại đúng file vừa chọn (nếu không, input giữ nguyên value và không bắn change).
+    event.target.value = '';
+    if (!file) return;
+
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) {
+      toast.error('Chỉ nhận ảnh JPG, PNG hoặc WEBP.');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Ảnh vượt quá 2MB. Vui lòng chọn ảnh nhẹ hơn.');
+      return;
+    }
+
+    setAvatarBusy(true);
+    try {
+      const uploaded = await fileUploadApi.upload(file);
+      const result = await updateProfile({ avatar: uploaded.url });
+      if (result.success) toast.success('Đã cập nhật ảnh đại diện.');
+      else toast.error(result.error || 'Không lưu được ảnh đại diện.');
+    } catch (error) {
+      toast.error((error as Error)?.message || 'Không tải được ảnh lên. Vui lòng thử lại.');
+    } finally {
+      setAvatarBusy(false);
+    }
+  };
 
   const handleProfileUpdate = async () => {
     setIsSaving(true);
@@ -145,8 +181,21 @@ export default function ProfileClient() {
                     {user.name?.charAt(0)?.toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-                <button className="absolute bottom-0 right-0 h-7 w-7 rounded-full bg-gray-900 hover:bg-black text-white border-2 border-white shadow-sm flex items-center justify-center transition-colors">
-                  <Camera className="h-3.5 w-3.5" />
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={onPickAvatar}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={avatarBusy}
+                  aria-label="Đổi ảnh đại diện"
+                  className="absolute bottom-0 right-0 h-7 w-7 rounded-full bg-gray-900 hover:bg-black text-white border-2 border-white shadow-sm flex items-center justify-center transition-colors disabled:opacity-60"
+                >
+                  {avatarBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
                 </button>
               </div>
             </div>

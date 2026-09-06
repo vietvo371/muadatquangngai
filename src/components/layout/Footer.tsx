@@ -95,22 +95,9 @@ export function Footer() {
               </div>
             </div>
 
-            {/* Newsletter */}
-            <div>
-              <h3 className="font-semibold text-white mb-3 text-sm uppercase tracking-wide">
-                Đăng ký nhận bảng tin
-              </h3>
-              <div className="flex gap-2">
-                <input
-                  type="email"
-                  placeholder="Nhập email của bạn"
-                  className="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-gray-200 placeholder:text-gray-500 outline-none focus:border-primary transition-colors"
-                />
-                <button className="bg-primary hover:bg-primary-dark text-white text-sm font-medium px-4 py-2 rounded transition-colors shrink-0">
-                  Đăng ký
-                </button>
-              </div>
-            </div>
+            {/* Khối "Đăng ký nhận bảng tin" đã gỡ: ô email + nút Đăng ký không nối gì, không có
+                API và không có bảng lưu người đăng ký. Khối này nằm ở chân trang nên hiện trên
+                MỌI trang — khách nhập email ở đâu cũng mất. Dựng lại khi làm thật. */}
 
             {/* Quốc gia & ngôn ngữ */}
             <div className="mt-4 flex items-center gap-2 text-gray-500 text-xs">

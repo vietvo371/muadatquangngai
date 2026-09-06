@@ -1,5 +1,7 @@
 'use client';
 
+import { shareCurrentPage } from '@/lib/share';
+
 import { useState, useEffect, useRef, use } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
@@ -651,7 +653,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
               <Heart className={`h-4 w-4 ${liked ? 'fill-current' : ''}`} />
               <span className="hidden sm:inline">Lưu</span>
             </button>
-            <button className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:border-gray-300 transition-colors">
+            <button
+              type="button"
+              onClick={() => shareCurrentPage(projectData?.name ?? 'Dự án bất động sản')}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:border-gray-300 transition-colors"
+            >
               <Share2 className="h-4 w-4" />
               <span className="hidden sm:inline">Chia sẻ</span>
             </button>
@@ -1117,11 +1123,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
 
                       {/* Footer */}
                       <div className="flex items-center justify-between px-5 py-3 bg-gray-50 flex-wrap gap-3">
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
-                          <span>Những thông tin trên có hữu ích không?</span>
-                          <button className="px-3 py-1 rounded border border-gray-300 text-sm text-gray-700 hover:border-primary hover:text-primary transition-colors">Có</button>
-                          <button className="px-3 py-1 rounded border border-gray-300 text-sm text-gray-700 hover:border-primary hover:text-primary transition-colors">Không</button>
-                        </div>
+                        {/* Đã gỡ câu hỏi "Những thông tin trên có hữu ích không?":
+                            hai nút Có/Không không nối gì, không có API và không có bảng lưu
+                            phản hồi — bấm xong không đi đâu cả. */}
                         <button
                           onClick={() => setContactOpen(true)}
                           className="text-sm font-semibold text-primary border border-primary px-4 py-1.5 rounded hover:bg-primary-light transition-colors"

@@ -2,7 +2,7 @@
 
 import { useState, use, useEffect } from 'react';
 import api from '@/lib/axios';
-import { toast } from 'sonner';
+import { shareCurrentPage } from '@/lib/share';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -67,24 +67,6 @@ export default function AgentProfilePage({
   const [agent, setAgent] = useState<AgentProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-
-  /** Điện thoại có hộp chia sẻ sẵn; máy tính thì chép link vào bộ nhớ tạm. */
-  const shareProfile = async () => {
-    const url = window.location.href;
-    const title = agent ? `Môi giới ${agent.name}` : 'Hồ sơ môi giới';
-    try {
-      if (navigator.share) {
-        await navigator.share({ title, url });
-        return;
-      }
-      await navigator.clipboard.writeText(url);
-      toast.success('Đã chép liên kết hồ sơ.');
-    } catch (error) {
-      // Người dùng bấm huỷ hộp chia sẻ — không phải lỗi, đừng làm phiền họ.
-      if ((error as { name?: string })?.name === 'AbortError') return;
-      toast.error('Không chia sẻ được. Bạn có thể chép link trên thanh địa chỉ.');
-    }
-  };
 
   useEffect(() => {
     if (!id) return;
@@ -225,7 +207,7 @@ export default function AgentProfilePage({
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={shareProfile}
+                  onClick={() => shareCurrentPage(agent ? `Môi giới ${agent.name}` : 'Hồ sơ môi giới')}
                   aria-label="Chia sẻ hồ sơ môi giới"
                   className="h-12 w-12 rounded-xl border-gray-200 text-gray-500 hover:bg-gray-50 shrink-0"
                 >
