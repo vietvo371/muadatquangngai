@@ -116,6 +116,51 @@ export function PropertyJsonLd({ property }: { property: PropertyJsonLdInput }) 
   );
 }
 
+export interface ArticleJsonLdInput {
+  title: string;
+  description: string | null;
+  image: string | null;
+  /** Đường dẫn tương đối, vd `/tin-tuc/abc`. */
+  path: string;
+  publishedAt: Date | null;
+  updatedAt: Date | null;
+}
+
+/**
+ * Article cho trang tin tức. CHỈ khai những trường có thật trên trang — không bịa tác giả,
+ * không bịa ngày. Thiếu ảnh hay thiếu ngày thì bỏ hẳn trường đó thay vì điền giá trị giả.
+ */
+export function ArticleJsonLd({ article }: { article: ArticleJsonLdInput }) {
+  const url = absoluteUrl(article.path);
+  const image = article.image
+    ? article.image.startsWith('http')
+      ? article.image
+      : absoluteUrl(article.image)
+    : null;
+
+  return (
+    <JsonLd
+      data={{
+        '@context': 'https://schema.org',
+        '@type': 'Article',
+        headline: article.title,
+        ...(article.description ? { description: article.description } : {}),
+        ...(image ? { image: [image] } : {}),
+        mainEntityOfPage: { '@type': 'WebPage', '@id': url },
+        url,
+        inLanguage: 'vi-VN',
+        ...(article.publishedAt ? { datePublished: article.publishedAt.toISOString() } : {}),
+        ...(article.updatedAt ? { dateModified: article.updatedAt.toISOString() } : {}),
+        publisher: {
+          '@type': 'Organization',
+          name: SITE_NAME,
+          url: SITE_URL,
+        },
+      }}
+    />
+  );
+}
+
 export function BreadcrumbJsonLd({ items }: { items: Array<{ name: string; url: string }> }) {
   return (
     <JsonLd

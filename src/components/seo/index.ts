@@ -3,5 +3,6 @@ export {
   OrganizationJsonLd,
   PropertyJsonLd,
   BreadcrumbJsonLd,
+  ArticleJsonLd,
 } from './SeoComponents';
-export type { PropertyJsonLdInput } from './SeoComponents';
+export type { PropertyJsonLdInput, ArticleJsonLdInput } from './SeoComponents';
