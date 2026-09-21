@@ -30,6 +30,7 @@ import { CONFIG } from '@/lib/config';
 import { useProperties } from '@/hooks/useProperties';
 import { parseFiltersFromSearchParams, buildSearchParamsFromState } from '@/lib/filter-url-sync';
 import type { MapBounds } from '@/components/map/PropertyMapView';
+import { ListingPagination } from '@/components/listing/ListingPagination';
 
 // Bản đồ Goong nạp phía client — split-view danh sách + bản đồ.
 const PropertyMapView = dynamic(
@@ -72,7 +73,9 @@ const LISTING_COPY: Record<
   },
 };
 
-const PER_PAGE = 6;
+// 30 tin/trang theo yêu cầu khách (mục 13). Khung xương khi tải chỉ vẽ vài thẻ cho nhẹ.
+const PER_PAGE = 30;
+const SKELETON_COUNT = 6;
 
 // Giá trị sort của SortBar → tham số API. "Phù hợp nhất" = thứ tự mặc định (VIP trước, mới
 // trước); "Xem nhiều nhất" API gọi là `popular` — bản cũ không map nên chọn xong không đổi gì.
@@ -127,6 +130,7 @@ function PropertyListingContent({ type }: { type: ListingType }) {
   // Tin đang hover/chọn ở danh sách hoặc trên bản đồ — dùng để đồng bộ highlight 2 chiều.
   const [hoveredId, setHoveredId] = useState<string | number | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const listTopRef = useRef<HTMLDivElement>(null);
   const mapColumnRef = useRef<HTMLElement>(null);
   const searchParams = useSearchParams();
   // Tìm theo khung nhìn bản đồ: `bbox` = vùng đang lọc; `pendingBounds` = vùng người dùng vừa
@@ -230,6 +234,12 @@ function PropertyListingContent({ type }: { type: ListingType }) {
 
     loadProperties();
   }, [type, page, filters, sort, bbox, fetchProperties]);
+
+  // Đổi trang thì đưa người dùng về đầu danh sách — 30 tin/trang, đứng nguyên cuối trang là lạc.
+  const changePage = useCallback((next: number) => {
+    setPage(next);
+    listTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
 
   const updateFilters = useCallback((updates: Partial<FilterState>) => {
     setFilters((prev) => ({ ...prev, ...updates }));
@@ -414,7 +424,7 @@ function PropertyListingContent({ type }: { type: ListingType }) {
 
           {/* Cột trái ~65%: danh sách. */}
           <div className="min-w-0 w-full lg:w-[65%] lg:flex-none">
-            <div className="flex items-center gap-2 text-[13px] text-gray-500 mb-3.5 font-medium">
+            <div ref={listTopRef} className="flex items-center gap-2 text-[13px] text-gray-500 mb-3.5 font-medium scroll-mt-[76px]">
               <Link href="/" className="hover:text-primary transition-colors flex items-center gap-1">
                 <Home className="w-3.5 h-3.5" />
                 Trang chủ
@@ -462,7 +472,7 @@ function PropertyListingContent({ type }: { type: ListingType }) {
 
             {isLoading || isFiltering ? (
               <div className="grid gap-4 grid-cols-1">
-                {[...Array(PER_PAGE)].map((_, i) => (
+                {[...Array(SKELETON_COUNT)].map((_, i) => (
                   <PropertyCardSkeleton key={i} variant="horizontal" />
                 ))}
               </div>
@@ -511,57 +521,14 @@ function PropertyListingContent({ type }: { type: ListingType }) {
               </div>
             )}
 
-            {displayProperties.length > 0 && apiPagination.last_page > 1 && (
-              <div className="flex justify-center mt-10">
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    aria-label="Trang trước"
-                    onClick={() => setPage((p) => Math.max(p - 1, 1))}
-                    disabled={apiPagination.current_page === 1}
-                    className={`w-9 h-9 rounded-lg border border-gray-200 text-gray-700 flex items-center justify-center transition-colors ${
-                      apiPagination.current_page === 1 ? 'cursor-not-allowed text-gray-300 border-gray-100' : 'hover:bg-gray-50'
-                    }`}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </button>
-
-                  {buildPageItems(apiPagination.current_page, apiPagination.last_page).map((p, idx) =>
-                    p === '...' ? (
-                      <span key={`ellipsis-${idx}`} className="w-9 h-9 flex items-center justify-center text-gray-400 font-medium">
-                        …
-                      </span>
-                    ) : (
-                      <button
-                        key={`page-${p}`}
-                        type="button"
-                        onClick={() => setPage(Number(p))}
-                        className={`w-9 h-9 rounded-lg font-medium transition-colors ${
-                          p === apiPagination.current_page
-                            ? 'bg-primary text-white font-semibold shadow-sm'
-                            : 'border border-gray-200 text-gray-700 hover:bg-gray-50'
-                        }`}
-                      >
-                        {p}
-                      </button>
-                    )
-                  )}
-
-                  <button
-                    type="button"
-                    aria-label="Trang sau"
-                    onClick={() => setPage((p) => Math.min(p + 1, apiPagination.last_page))}
-                    disabled={apiPagination.current_page === apiPagination.last_page}
-                    className={`w-9 h-9 rounded-lg border border-gray-200 text-gray-700 flex items-center justify-center transition-colors ${
-                      apiPagination.current_page === apiPagination.last_page
-                        ? 'cursor-not-allowed text-gray-300 border-gray-100'
-                        : 'hover:bg-gray-50'
-                    }`}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
+            {displayProperties.length > 0 && (
+              <ListingPagination
+                currentPage={apiPagination.current_page}
+                lastPage={apiPagination.last_page}
+                total={apiPagination.total}
+                perPage={apiPagination.per_page}
+                onChange={changePage}
+              />
             )}
           </div>
 
@@ -659,19 +626,6 @@ function PropertyListingContent({ type }: { type: ListingType }) {
   );
 }
 
-/** Dải số trang: 1 … 4 5 6 … 20. */
-function buildPageItems(current: number, last: number): Array<number | '...'> {
-  if (last <= 5) return Array.from({ length: last }, (_, i) => i + 1);
-  const items: Array<number | '...'> = [1];
-  const start = Math.max(2, current - 1);
-  const end = Math.min(last - 1, current + 1);
-  if (start > 2) items.push('...');
-  for (let i = start; i <= end; i++) items.push(i);
-  if (end < last - 1) items.push('...');
-  items.push(last);
-  return items;
-}
-
 function PropertyListingLoading() {
   return (
     <div className="bg-gray-50 min-h-screen py-6">
@@ -679,7 +633,7 @@ function PropertyListingLoading() {
         <div className="w-full lg:w-[65%]">
           <div className="h-10 w-1/3 bg-gray-200 rounded animate-pulse mb-6" />
           <div className="grid grid-cols-1 gap-4">
-            {[...Array(PER_PAGE)].map((_, i) => (
+            {[...Array(SKELETON_COUNT)].map((_, i) => (
               <PropertyCardSkeleton key={i} variant="horizontal" />
             ))}
           </div>
