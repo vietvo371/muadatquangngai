@@ -284,13 +284,22 @@ function PropertyListingContent({ type }: { type: ListingType }) {
   // display:none nên observer không bao giờ báo "đang thấy" → nút luôn hiện, đúng ý.
   useEffect(() => {
     const el = mapColumnRef.current;
-    if (!el || typeof IntersectionObserver === 'undefined') return;
+    if (!el) return;
+    // Dưới lg cột bản đồ display:none — coi như "không thấy" ngay, không đợi observer.
+    const desktop = window.matchMedia('(min-width: 1024px)');
+    const syncViewport = () => { if (!desktop.matches) setMapInView(false); };
+    syncViewport();
+    desktop.addEventListener('change', syncViewport);
+    if (typeof IntersectionObserver === 'undefined') return () => desktop.removeEventListener('change', syncViewport);
     const observer = new IntersectionObserver(
       ([entry]) => setMapInView(entry.isIntersecting && entry.intersectionRatio > 0.15),
       { threshold: [0, 0.15, 0.5] }
     );
     observer.observe(el);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      desktop.removeEventListener('change', syncViewport);
+    };
   }, []);
 
   const jumpToMap = useCallback(() => {
