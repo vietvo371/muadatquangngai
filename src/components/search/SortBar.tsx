@@ -1,14 +1,9 @@
 'use client';
 
-import { Map as MapIcon, X } from 'lucide-react';
-
 export interface SortBarProps {
   totalResults?: number;
   sort?: string;
   onSortChange?: (sort: string) => void;
-  /** Chế độ bản đồ đang bật hay không — quyết định nhãn nút "Xem/Đóng bản đồ". */
-  mapMode?: boolean;
-  onToggleMap?: () => void;
 }
 
 const SORT_OPTIONS = [
@@ -24,11 +19,9 @@ export function SortBar({
   totalResults = 234,
   sort = 'newest',
   onSortChange,
-  mapMode = false,
-  onToggleMap,
 }: SortBarProps) {
-  // Đã bỏ toggle Lưới/Danh sách (feedback 28/07). Nút "Xem bản đồ" giờ bật/tắt chế độ bản đồ
-  // ngay tại trang (như batdongsan.com.vn ?tpl=map), không dẫn sang trang riêng nữa.
+  // Đã bỏ toggle Lưới/Danh sách (feedback 28/07) và nút "Xem bản đồ" inline (feedback 21/09 —
+  // bản đồ giờ luôn hiện ở cột phải, nút nổi cuối trang đưa về bản đồ).
   return (
     <div className="flex items-center justify-between gap-3 mb-4 bg-white p-3 rounded-xl border border-gray-100 shadow-sm lg:bg-transparent lg:p-0 lg:rounded-none lg:border-none lg:shadow-none">
       <span className="text-[14px] text-gray-500 shrink-0">
@@ -47,18 +40,6 @@ export function SortBar({
             </option>
           ))}
         </select>
-
-        {onToggleMap && (
-          <button
-            type="button"
-            onClick={onToggleMap}
-            className="h-9 px-3.5 rounded-lg bg-[#12a5a5] hover:bg-[#0e8f8f] text-white font-semibold text-[13px] flex items-center gap-1.5 transition-colors shrink-0"
-            aria-label={mapMode ? 'Đóng bản đồ' : 'Xem bản đồ'}
-          >
-            {mapMode ? <X className="w-4 h-4" /> : <MapIcon className="w-4 h-4" />}
-            <span className="hidden sm:inline">{mapMode ? 'Đóng bản đồ' : 'Xem bản đồ'}</span>
-          </button>
-        )}
       </div>
     </div>
   );
