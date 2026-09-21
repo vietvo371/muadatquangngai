@@ -1,7 +1,8 @@
 'use client';
 
+import { useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import { Heart, MapPin, Bed, Bath, Square, User, CheckCircle, Camera, Ruler } from 'lucide-react';
+import { Heart, MapPin, Bed, Bath, Square, User, CheckCircle, Camera, Ruler, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatPrice, formatPriceByMode, timeAgo, derivePrices } from '@/lib/formatters';
 import { CONFIG } from '@/lib/config';
 import { useFavorite } from '@/hooks/useFavorite';
@@ -80,9 +81,6 @@ export function PropertyCardHorizontal({
       ? [property.thumbnail]
       : []
   ).filter(Boolean);
-  const [mainImage, ...rest] = images;
-  // Chỉ dựng khung 1 lớn + 2 nhỏ khi có đủ 3 ảnh; ít hơn thì ảnh chính chiếm trọn để không có ô trống.
-  const smallImages = rest.length >= 2 ? rest.slice(0, 2) : [];
 
   const { total: totalPrice, perM2: pricePerM2 } = derivePrices(property.price, property.priceUnit, property.area);
   const priceLabel = formatPriceByMode(
@@ -102,50 +100,12 @@ export function PropertyCardHorizontal({
           vipLabel ? 'border-[1.5px] border-dashed border-cta' : 'border border-gray-100 hover:border-primary/20'
         }`}
       >
-        {/* ── Khu ảnh: 1 lớn trên + 2 nhỏ dưới ── */}
+        {/* ── Khu ảnh: slider lớn trên + 2 ảnh nhỏ dưới ── */}
         <div className="relative shrink-0 w-full sm:w-[42%] md:w-[320px] lg:w-[300px] xl:w-[340px] bg-gray-100">
-          <div className={`grid gap-1 h-full ${smallImages.length ? 'grid-rows-[minmax(0,2fr)_minmax(0,1fr)]' : ''}`}>
-            <div className="relative aspect-[4/3] sm:aspect-auto sm:min-h-[180px] overflow-hidden">
-              {mainImage ? (
-                <img
-                  src={mainImage}
-                  alt={property.title}
-                  referrerPolicy="no-referrer"
-                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                />
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-xs uppercase text-gray-400">Không có ảnh</span>
-                </div>
-              )}
-
-              {/* Bộ đếm ảnh — góc dưới phải khung hình chính (mục 12; đợt 3 sẽ chạy theo slider). */}
-              {images.length > 0 && (
-                <div className="absolute bottom-2 right-2 flex items-center gap-1 rounded-md bg-black/55 px-2 py-0.5 text-[11px] font-medium text-white">
-                  <Camera className="h-3 w-3" />
-                  1/{images.length}
-                </div>
-              )}
-            </div>
-
-            {smallImages.length > 0 && (
-              <div className="grid grid-cols-2 gap-1 min-h-[72px]">
-                {smallImages.map((src, i) => (
-                  <div key={`${src}-${i}`} className="relative overflow-hidden">
-                    <img
-                      src={src}
-                      alt=""
-                      referrerPolicy="no-referrer"
-                      className="absolute inset-0 h-full w-full object-cover"
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <CardImageSlider images={images} alt={property.title} />
 
           {/* Nhãn góc trên trái */}
-          <div className="absolute left-3 top-3 flex flex-col items-start gap-1.5">
+          <div className="absolute left-3 top-3 flex flex-col items-start gap-1.5 pointer-events-none">
             {vipLabel && (
               <span className="rounded-md bg-cta px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-white shadow-sm">
                 {vipLabel}
@@ -166,7 +126,7 @@ export function PropertyCardHorizontal({
           <button
             type="button"
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(); }}
-            className={`absolute right-2 top-2 rounded-full bg-white/90 p-1.5 shadow-sm transition-colors hover:bg-white hover:text-cta ${
+            className={`absolute right-2 top-2 z-10 rounded-full bg-white/90 p-1.5 shadow-sm transition-colors hover:bg-white hover:text-cta ${
               isSaved ? 'text-cta' : 'text-gray-400'
             }`}
             aria-label={isSaved ? 'Bỏ lưu tin' : 'Lưu tin'}
@@ -258,5 +218,135 @@ export function PropertyCardHorizontal({
         </div>
       </article>
     </Link>
+  );
+}
+
+const SWIPE_THRESHOLD_PX = 40;
+
+/**
+ * Slider ảnh trong card (mục 10-12): ảnh chính trượt ngang, nút Prev/Next overlay, vuốt trên
+ * màn cảm ứng, bộ đếm "1/50" góc dưới phải. Hai ảnh nhỏ bên dưới là hai ảnh KẾ TIẾP, bấm để
+ * nhảy thẳng. Mọi nút chặn sự kiện để không kích hoạt Link bao ngoài.
+ */
+function CardImageSlider({ images, alt }: { images: string[]; alt: string }) {
+  const [idx, setIdx] = useState(0);
+  const touchStartX = useRef<number | null>(null);
+  const count = images.length;
+  const hasMany = count > 1;
+  const showThumbs = count >= 3;
+
+  const go = useCallback(
+    (delta: number) => {
+      if (count === 0) return;
+      setIdx((i) => (i + delta + count) % count);
+    },
+    [count]
+  );
+
+  const stop = (e: React.SyntheticEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0]?.clientX ?? null;
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const dx = (e.changedTouches[0]?.clientX ?? touchStartX.current) - touchStartX.current;
+    touchStartX.current = null;
+    if (Math.abs(dx) < SWIPE_THRESHOLD_PX) return;
+    // Vuốt đủ xa là đổi ảnh, đồng thời chặn click mở trang chi tiết ngay sau cú vuốt.
+    e.preventDefault();
+    go(dx < 0 ? 1 : -1);
+  };
+
+  const thumbs = showThumbs ? [1, 2].map((k) => (idx + k) % count) : [];
+
+  return (
+    <div className={`grid gap-1 h-full ${showThumbs ? 'grid-rows-[minmax(0,2fr)_minmax(0,1fr)]' : ''}`}>
+      <div
+        className="relative aspect-[4/3] sm:aspect-auto sm:min-h-[180px] overflow-hidden touch-pan-y"
+        onTouchStart={hasMany ? onTouchStart : undefined}
+        onTouchEnd={hasMany ? onTouchEnd : undefined}
+      >
+        {count === 0 ? (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-xs uppercase text-gray-400">Không có ảnh</span>
+          </div>
+        ) : (
+          <div
+            className="absolute inset-0 flex transition-transform duration-300 ease-out"
+            style={{ transform: `translateX(-${idx * 100}%)` }}
+          >
+            {images.map((src, i) => (
+              <img
+                key={`${src}-${i}`}
+                src={src}
+                alt={i === 0 ? alt : ''}
+                referrerPolicy="no-referrer"
+                loading={i === 0 ? undefined : 'lazy'}
+                draggable={false}
+                className="h-full w-full shrink-0 object-cover"
+              />
+            ))}
+          </div>
+        )}
+
+        {hasMany && (
+          <>
+            <button
+              type="button"
+              onClick={(e) => { stop(e); go(-1); }}
+              aria-label="Ảnh trước"
+              className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/90 p-1.5 text-gray-800 shadow-md transition-opacity hover:bg-white sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={(e) => { stop(e); go(1); }}
+              aria-label="Ảnh sau"
+              className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/90 p-1.5 text-gray-800 shadow-md transition-opacity hover:bg-white sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </>
+        )}
+
+        {count > 0 && (
+          <div
+            data-testid="image-counter"
+            className="absolute bottom-2 right-2 flex items-center gap-1 rounded-md bg-black/55 px-2 py-0.5 text-[11px] font-medium text-white"
+          >
+            <Camera className="h-3 w-3" />
+            {idx + 1}/{count}
+          </div>
+        )}
+      </div>
+
+      {showThumbs && (
+        <div className="grid grid-cols-2 gap-1 min-h-[72px]">
+          {thumbs.map((imageIndex, k) => (
+            <button
+              type="button"
+              key={`${imageIndex}-${k}`}
+              onClick={(e) => { stop(e); setIdx(imageIndex); }}
+              aria-label={`Xem ảnh ${imageIndex + 1}`}
+              className="relative overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <img
+                src={images[imageIndex]}
+                alt=""
+                referrerPolicy="no-referrer"
+                loading="lazy"
+                draggable={false}
+                className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 hover:scale-105"
+              />
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
