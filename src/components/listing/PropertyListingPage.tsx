@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
-import { PropertyCard } from '@/components/property/PropertyCard';
+import { PropertyCardHorizontal } from '@/components/property/PropertyCardHorizontal';
 import { FilterSidebar, FilterState, DEFAULT_FILTERS } from '@/components/search/FilterSidebar';
 import { FilterHorizontal } from '@/components/search/FilterHorizontal';
 import { SortBar } from '@/components/search/SortBar';
@@ -102,6 +102,16 @@ const mapApiProperty = (apiProp: any) => {
     bedrooms: Number(apiProp.bedrooms || 0),
     bathrooms: Number(apiProp.bathrooms || 0),
     facade: apiProp.facade != null ? Number(apiProp.facade) : null,
+    floors: apiProp.floors != null ? Number(apiProp.floors) : null,
+    legal: apiProp.legal ?? null,
+    furniture: apiProp.furniture ?? null,
+    direction: apiProp.direction ?? null,
+    parking: !!apiProp.parking,
+    description: apiProp.description ?? null,
+    // Ảnh cho khu 1 lớn + 2 nhỏ / slider: chỉ ảnh (bỏ video, tour 360), theo sort_order API đã sắp.
+    images: Array.isArray(apiProp.media)
+      ? apiProp.media.filter((m: any) => m.type === 'image' && m.url).map((m: any) => m.url as string)
+      : [],
     isVip: apiProp.is_vip || 'normal',
     user: {
       name: apiProp.owner?.name || 'Môi giới',
@@ -451,9 +461,9 @@ function PropertyListingContent({ type }: { type: ListingType }) {
             )}
 
             {isLoading || isFiltering ? (
-              <div className="grid gap-5 grid-cols-1 sm:grid-cols-2">
+              <div className="grid gap-4 grid-cols-1">
                 {[...Array(PER_PAGE)].map((_, i) => (
-                  <PropertyCardSkeleton key={i} variant="grid" />
+                  <PropertyCardSkeleton key={i} variant="horizontal" />
                 ))}
               </div>
             ) : displayProperties.length === 0 ? (
@@ -484,7 +494,7 @@ function PropertyListingContent({ type }: { type: ListingType }) {
                 </div>
               </div>
             ) : (
-              <div ref={listRef} className="grid gap-5 grid-cols-1 sm:grid-cols-2">
+              <div ref={listRef} className="grid gap-4 grid-cols-1">
                 {displayProperties.map((property, index) => (
                   <div
                     key={property.id}
@@ -495,7 +505,7 @@ function PropertyListingContent({ type }: { type: ListingType }) {
                       String(hoveredId) === String(property.id) ? 'ring-2 ring-primary ring-offset-2' : ''
                     }`}
                   >
-                    <PropertyCard property={property} variant="default" />
+                    <PropertyCardHorizontal property={property} />
                   </div>
                 ))}
               </div>
@@ -668,9 +678,9 @@ function PropertyListingLoading() {
       <div className="max-w-[1440px] mx-auto px-4 lg:px-6 flex gap-6">
         <div className="w-full lg:w-[65%]">
           <div className="h-10 w-1/3 bg-gray-200 rounded animate-pulse mb-6" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 gap-4">
             {[...Array(PER_PAGE)].map((_, i) => (
-              <PropertyCardSkeleton key={i} />
+              <PropertyCardSkeleton key={i} variant="horizontal" />
             ))}
           </div>
         </div>

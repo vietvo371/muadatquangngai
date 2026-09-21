@@ -1,11 +1,36 @@
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface PropertyCardSkeletonProps {
-  variant?: 'grid' | 'list';
+  variant?: 'grid' | 'list' | 'horizontal';
   className?: string;
 }
 
 export function PropertyCardSkeleton({ variant = 'grid', className }: PropertyCardSkeletonProps) {
+  if (variant === 'horizontal') {
+    return (
+      <div className={`flex flex-col sm:flex-row overflow-hidden rounded-2xl border bg-white ${className || ''}`}>
+        <div className="w-full sm:w-[42%] md:w-[320px] lg:w-[300px] xl:w-[340px] shrink-0 grid gap-1">
+          <Skeleton className="aspect-[4/3] sm:aspect-auto sm:min-h-[180px] rounded-none" />
+          <div className="grid grid-cols-2 gap-1">
+            <Skeleton className="h-[72px] rounded-none" />
+            <Skeleton className="h-[72px] rounded-none" />
+          </div>
+        </div>
+        <div className="flex-1 space-y-3 p-5">
+          <Skeleton className="h-6 w-28" />
+          <Skeleton className="h-5 w-full" />
+          <Skeleton className="h-4 w-2/3" />
+          <div className="flex gap-4">
+            <Skeleton className="h-4 w-14" />
+            <Skeleton className="h-4 w-14" />
+            <Skeleton className="h-4 w-14" />
+          </div>
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-5/6" />
+        </div>
+      </div>
+    );
+  }
   if (variant === 'list') {
     return (
       <div className={`flex gap-4 p-4 bg-white rounded-xl border ${className || ''}`}>
