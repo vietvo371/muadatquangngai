@@ -11,12 +11,16 @@ import { useFavorite } from '@/hooks/useFavorite';
 import { PropertyImageSlider } from './PropertyImageSlider';
 import type { PropertyMediaImage, PropertyMediaFile } from './PropertyMediaSection';
 
-const PropertyLocationMap = dynamic(
-  () => import('@/components/map/PropertyLocationMap').then((m) => m.PropertyLocationMap),
+const GoogleMapEmbed = dynamic(
+  () => import('@/components/map/GoogleMapEmbed').then((m) => m.GoogleMapEmbed),
   { ssr: false, loading: () => <div className="h-[360px] rounded-xl bg-gray-100 animate-pulse" /> }
 );
+const GoogleStreetViewEmbed = dynamic(
+  () => import('@/components/map/GoogleStreetViewEmbed').then((m) => m.GoogleStreetViewEmbed),
+  { ssr: false, loading: () => <div className="aspect-video w-full rounded-xl bg-gray-100 animate-pulse" /> }
+);
 
-export type GalleryTabKey = 'photos' | 'videos' | 'tour360' | 'floorplans' | 'map';
+export type GalleryTabKey = 'photos' | 'videos' | 'tour360' | 'floorplans' | 'map' | 'streetview';
 
 interface PropertyGalleryLightboxProps {
   open: boolean;
@@ -96,6 +100,7 @@ export function PropertyGalleryLightbox({
     ...(tour360Url ? [{ key: 'tour360' as GalleryTabKey, label: 'Tour 360' }] : []),
     ...(floorPlans.length > 0 ? [{ key: 'floorplans' as GalleryTabKey, label: 'Mặt bằng' }] : []),
     ...(latitude != null && longitude != null ? [{ key: 'map' as GalleryTabKey, label: 'Bản đồ' }] : []),
+    ...(latitude != null && longitude != null ? [{ key: 'streetview' as GalleryTabKey, label: 'Đường phố' }] : []),
   ];
 
   // Khoá cuộn nền + Esc đóng album (khi slider đang mở thì slider tự xử lý Esc của nó).
@@ -366,10 +371,18 @@ export function PropertyGalleryLightbox({
             )}
 
             {activeTab === 'map' && latitude != null && longitude != null && (
-              <PropertyLocationMap
+              <GoogleMapEmbed
                 latitude={latitude}
                 longitude={longitude}
                 className="w-full h-[60vh] rounded-xl overflow-hidden border border-gray-200"
+              />
+            )}
+
+            {activeTab === 'streetview' && latitude != null && longitude != null && (
+              <GoogleStreetViewEmbed
+                latitude={latitude}
+                longitude={longitude}
+                frameClassName="w-full h-[60vh]"
               />
             )}
           </div>

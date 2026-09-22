@@ -9,9 +9,15 @@ import { parseYoutubeId } from '@/components/shared/ImageUploader';
 import { PropertyImageSlider } from './PropertyImageSlider';
 import { PropertyGalleryLightbox } from './PropertyGalleryLightbox';
 
-const PropertyLocationMap = dynamic(
-  () => import('@/components/map/PropertyLocationMap').then((m) => m.PropertyLocationMap),
+// Bản đồ + ảnh đường phố nhúng từ Google, không cần API key (xem src/lib/google-embed.ts).
+// Nạp động vì cả hai là iframe của bên thứ ba, không cần có mặt lúc dựng trang trên máy chủ.
+const GoogleMapEmbed = dynamic(
+  () => import('@/components/map/GoogleMapEmbed').then((m) => m.GoogleMapEmbed),
   { ssr: false, loading: () => <div className="h-[360px] rounded-xl bg-gray-100 animate-pulse" /> }
+);
+const GoogleStreetViewEmbed = dynamic(
+  () => import('@/components/map/GoogleStreetViewEmbed').then((m) => m.GoogleStreetViewEmbed),
+  { ssr: false, loading: () => <div className="aspect-video w-full rounded-xl bg-gray-100 animate-pulse" /> }
 );
 
 export interface PropertyMediaImage {
@@ -48,7 +54,7 @@ interface PropertyMediaSectionProps {
   contactPhone?: string;
 }
 
-type TabKey = 'photos' | 'videos' | 'tour360' | 'floorplans' | 'map';
+type TabKey = 'photos' | 'videos' | 'tour360' | 'floorplans' | 'map' | 'streetview';
 
 /**
  * Trang chi tiết James Edition (Đợt 4, III.1-III.8, trừ Street View đã bỏ) — thay `HeroGallery`
@@ -80,6 +86,7 @@ export function PropertyMediaSection({
     ...(tour360Url ? [{ key: 'tour360' as TabKey, label: 'Tour 360' }] : []),
     ...(floorPlans.length > 0 ? [{ key: 'floorplans' as TabKey, label: 'Mặt bằng' }] : []),
     ...(latitude != null && longitude != null ? [{ key: 'map' as TabKey, label: 'Bản đồ' }] : []),
+    ...(latitude != null && longitude != null ? [{ key: 'streetview' as TabKey, label: 'Đường phố' }] : []),
   ];
 
   // Scrollspy — tô đậm tab đang xem khi cuộn qua (III.4), cùng pattern IntersectionObserver đã
@@ -330,11 +337,29 @@ export function PropertyMediaSection({
         </div>
       )}
 
-      {/* Bản đồ */}
+      {/* Bản đồ — Google Maps theo yêu cầu khách, hiện luôn tên tiện ích quanh khu vực. */}
       {latitude != null && longitude != null && (
         <div ref={(el) => { sectionRefs.current.map = el; }} data-tab="map" className="scroll-mt-24 mb-8">
           <h3 className="text-[15px] font-bold text-gray-900 mb-3">Bản đồ</h3>
-          <PropertyLocationMap latitude={latitude} longitude={longitude} className="w-full h-[360px] rounded-xl overflow-hidden border border-gray-200" />
+          <GoogleMapEmbed
+            latitude={latitude}
+            longitude={longitude}
+            className="w-full h-[360px] rounded-xl overflow-hidden border border-gray-200"
+          />
+        </div>
+      )}
+
+      {/* Ảnh đường phố tại đúng vị trí tin đăng. */}
+      {latitude != null && longitude != null && (
+        <div ref={(el) => { sectionRefs.current.streetview = el; }} data-tab="streetview" className="scroll-mt-24 mb-8">
+          <h3 className="text-[15px] font-bold text-gray-900 mb-3">Ảnh đường phố</h3>
+          {/* Cùng chiều cao với khối bản đồ ngay trên: nơi Google chưa chụp ảnh sẽ là một khung
+              tối, để nguyên tỉ lệ 16:9 full width thì mảng tối đó chiếm gần hết màn hình. */}
+          <GoogleStreetViewEmbed
+            latitude={latitude}
+            longitude={longitude}
+            frameClassName="w-full h-[360px]"
+          />
         </div>
       )}
 
