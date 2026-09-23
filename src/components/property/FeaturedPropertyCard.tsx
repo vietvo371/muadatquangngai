@@ -3,13 +3,15 @@
 import { useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import {
-  Heart, MapPin, Bed, Bath, Square, CheckCircle, Camera, Ruler, ChevronLeft, ChevronRight,
-  Mail, Layers, Sofa, Compass, Building2, Car, FileText,
+  Heart, MapPin, Bed, Bath, Square, Camera, ChevronLeft, ChevronRight,
+  Mail, Layers, Sofa, Compass, Building2, Car, FileText, User,
 } from 'lucide-react';
-import { formatPrice, formatPriceByMode, timeAgo, derivePrices } from '@/lib/formatters';
+import { formatPrice, formatPriceByMode, derivePrices } from '@/lib/formatters';
 import { CONFIG } from '@/lib/config';
 import { useFavorite } from '@/hooks/useFavorite';
 import { legalText, furnitureText, directionText } from '@/lib/property-form-config';
+import { featureIcon, shortFeatureName } from '@/lib/feature-icons';
+import { ListingMediaBadges } from '@/components/listing/ListingMediaBadges';
 
 export interface FeaturedCardProperty {
   id: number | string;
@@ -20,11 +22,15 @@ export interface FeaturedCardProperty {
   priceDisplayFormat?: 'short' | 'million' | 'mixed';
   area: number;
   type: string;
-  /** Loại nhà đất (tên danh mục) — khách yêu cầu hiện "loại đất" trên thẻ nổi bật. */
+  /** Loại nhà đất (tên danh mục). */
   category?: string;
   thumbnail?: string;
   /** Toàn bộ ảnh của tin, đã sắp theo sort_order. */
   images?: string[];
+  /** Tiện ích người đăng đã chọn (bảng features) — API trả khi gọi kèm `with=features`. */
+  features?: Array<{ id: number | string; name: string; icon?: string | null }>;
+  hasVideo?: boolean;
+  hasTour?: boolean;
   location?: string;
   address?: string;
   bedrooms?: number;
@@ -37,14 +43,11 @@ export interface FeaturedCardProperty {
   parking?: boolean;
   description?: string | null;
   isVip?: string;
-  is_verified?: boolean;
-  created_at?: string;
-  user?: { name: string; avatar?: string | null; is_verified?: boolean };
+  user?: { name: string; avatar?: string | null };
 }
 
-const VIP_BADGE: Record<string, string> = { vip: 'VIP', vip_plus: 'VIP+', diamond: 'DIAMOND' };
-
 type AmenityIcon = typeof Sofa;
+const MAX_AMENITIES = 6;
 
 /** Mô tả từ trình soạn thảo có thể chứa HTML — chỉ lấy chữ để hiện tóm tắt. */
 function plainText(html?: string | null): string {
@@ -53,30 +56,25 @@ function plainText(html?: string | null): string {
 }
 
 /**
- * Tiện ích cơ bản, gom từ các cột sẵn có trên tin (không cần bảng features riêng).
- * Mỗi mục kèm icon theo yêu cầu 23/09; tin thiếu dữ liệu nào thì bỏ mục đó, không hiện ô rỗng.
+ * Tiện ích hiện trên thẻ: ưu tiên tiện ích THẬT người đăng đã tick (Hồ bơi, Thang máy...) như
+ * thiết kế. Tin chưa tick tiện ích nào thì mới suy ra từ các cột sẵn có (pháp lý, nội thất,
+ * hướng, chỗ đậu xe) để thẻ không trống trơn.
  */
 function buildAmenities(p: FeaturedCardProperty): Array<{ icon: AmenityIcon; label: string }> {
+  if (p.features && p.features.length > 0) {
+    return p.features.slice(0, MAX_AMENITIES).map((f) => ({ icon: featureIcon(f.icon), label: shortFeatureName(f.name) }));
+  }
   const out: Array<{ icon: AmenityIcon; label: string }> = [];
   if (p.legal) out.push({ icon: FileText, label: legalText(p.legal) });
-  if (p.furniture && p.furniture !== 'none' && p.furniture !== 'khac') {
-    out.push({ icon: Sofa, label: furnitureText(p.furniture) });
-  }
-  if (p.direction && p.direction !== 'khong_xac_dinh') {
-    out.push({ icon: Compass, label: `Hướng ${directionText(p.direction)}` });
-  }
-  if (p.floors && p.floors > 0) out.push({ icon: Building2, label: `${p.floors} tầng` });
+  if (p.furniture && p.furniture !== 'none' && p.furniture !== 'khac') out.push({ icon: Sofa, label: furnitureText(p.furniture) });
+  if (p.direction && p.direction !== 'khong_xac_dinh') out.push({ icon: Compass, label: `Hướng ${directionText(p.direction)}` });
   if (p.parking) out.push({ icon: Car, label: 'Chỗ đậu xe' });
-  if (p.category) out.push({ icon: Layers, label: p.category });
-  return out.slice(0, 6);
+  return out.slice(0, MAX_AMENITIES);
 }
 
 /**
- * Thẻ tin NỔI BẬT ở hàng đầu trang danh sách (yêu cầu 23/09): ảnh chiếm 50% bên trái,
- * nội dung 50% bên phải. Các tin từ #2 trở đi dùng thẻ dọc `PropertyCard` trong lưới 3 cột.
- *
- * Tiền thân là `PropertyCardHorizontal` của đợt 21/09 — hồi đó MỌI tin đều là thẻ ngang; khách
- * đổi ý ngày 23/09 nên thẻ ngang chỉ còn dùng cho đúng tin đầu tiên.
+ * Thẻ tin NỔI BẬT ở hàng đầu trang danh sách (thiết kế 23/09): ảnh 50% bên trái, nội dung 50%
+ * bên phải trên nền xám nhạt. Các tin từ #2 trở đi dùng `ListingGridCard` trong lưới 3 cột.
  */
 export function FeaturedPropertyCard({
   property,
@@ -85,13 +83,9 @@ export function FeaturedPropertyCard({
   property: FeaturedCardProperty;
   className?: string;
 }) {
-  const vipValue = property.isVip || 'normal';
-  const vipLabel = CONFIG.enableVip && vipValue !== 'normal' ? VIP_BADGE[vipValue] : '';
-  const location = property.location || property.address || '';
-  const typeLabel = property.type === 'sell' ? 'Bán' : property.type === 'rent' ? 'Cho thuê' : property.type;
   const href = `/${property.type === 'sell' ? 'mua-ban' : 'cho-thue'}/${property.slug}`;
-  // eslint-disable-next-line react-hooks/purity
-  const isNew = !!property.created_at && Date.now() - new Date(property.created_at).getTime() < 86400000;
+  const promoted = CONFIG.enableVip && !!property.isVip && property.isVip !== 'normal';
+  const location = property.location || property.address || '';
 
   const images = (property.images && property.images.length > 0
     ? property.images
@@ -109,41 +103,20 @@ export function FeaturedPropertyCard({
   const { isSaved, toggle: toggleFavorite } = useFavorite(property.id);
   const amenities = buildAmenities(property);
   const summary = plainText(property.description);
-  const verified = property.is_verified || property.user?.is_verified;
 
   return (
     <article
-      className={`group flex h-full flex-col overflow-hidden rounded-2xl bg-white transition-all duration-300 hover:shadow-xl lg:flex-row ${
-        vipLabel ? 'border-[1.5px] border-dashed border-cta' : 'border border-gray-100 hover:border-primary/20'
-      } ${className}`}
+      className={`group flex h-full flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white transition-shadow duration-300 hover:shadow-xl lg:flex-row ${className}`}
     >
       {/* ── Ảnh: đúng một nửa bề ngang trên desktop ── */}
       <div className="relative w-full shrink-0 bg-gray-100 lg:w-1/2">
         <CardImageSlider images={images} alt={property.title} />
-
-        <div className="pointer-events-none absolute left-3 top-3 flex flex-col items-start gap-1.5">
-          {vipLabel && (
-            <span className="rounded-md bg-cta px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-white shadow-sm">
-              {vipLabel}
-            </span>
-          )}
-          <div className="flex items-center gap-1.5">
-            <span className="rounded-md bg-primary px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-white shadow-sm">
-              {typeLabel}
-            </span>
-            {isNew && (
-              <span className="rounded-md bg-white/95 px-2 py-1 text-[10px] font-bold uppercase text-primary shadow-sm">
-                Mới
-              </span>
-            )}
-          </div>
-        </div>
-
+        <ListingMediaBadges hasVideo={property.hasVideo} hasTour={property.hasTour} promoted={promoted} />
         <button
           type="button"
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(); }}
-          className={`absolute right-2 top-2 z-10 rounded-full bg-white/90 p-1.5 shadow-sm transition-colors hover:bg-white hover:text-cta ${
-            isSaved ? 'text-cta' : 'text-gray-400'
+          className={`absolute right-2.5 top-2.5 z-10 rounded-full bg-white/95 p-1.5 shadow-sm transition-colors hover:text-cta ${
+            isSaved ? 'text-cta' : 'text-gray-500'
           }`}
           aria-label={isSaved ? 'Bỏ lưu tin' : 'Lưu tin'}
         >
@@ -151,22 +124,18 @@ export function FeaturedPropertyCard({
         </button>
       </div>
 
-      {/* ── Nội dung: nửa còn lại ── */}
-      <div className="flex min-w-0 flex-1 flex-col gap-3 p-4 md:p-5 lg:w-1/2">
-        {/* Giá lớn bên trái, nút liên hệ góc trên phải. */}
+      {/* ── Nội dung: nửa còn lại, nền xám nhạt theo thiết kế ── */}
+      <div className="flex min-w-0 flex-1 flex-col gap-3 bg-gray-50 p-4 md:p-5 lg:w-1/2">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[26px] font-extrabold leading-none text-cta">{priceLabel}</p>
-            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-gray-500">
-              {pricePerM2 !== null && property.type === 'sell' && <span>{formatPrice(pricePerM2)}/m²</span>}
-              <span className="font-medium text-gray-700">{property.area} m²</span>
-              {!!property.floors && property.floors > 0 && <span>{property.floors} tầng</span>}
-              {property.category && <span>{property.category}</span>}
-            </div>
+            {pricePerM2 !== null && property.type === 'sell' && (
+              <p className="mt-1 text-[13px] text-gray-500">{formatPrice(pricePerM2)}/m²</p>
+            )}
           </div>
           <Link
             href={href}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-primary-dark"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3.5 py-2 text-[13px] font-semibold text-gray-800 shadow-sm transition-colors hover:border-primary hover:text-primary"
           >
             <Mail className="h-3.5 w-3.5" />
             Liên hệ
@@ -174,68 +143,58 @@ export function FeaturedPropertyCard({
         </div>
 
         <Link href={href} className="min-w-0">
-          <h3 className="line-clamp-2 text-[18px] font-bold leading-snug text-gray-900 transition-colors group-hover:text-primary">
+          <h3 className="line-clamp-2 text-[17px] font-bold leading-snug text-gray-900 transition-colors group-hover:text-primary">
             {property.title}
           </h3>
         </Link>
 
         {location && (
           <p className="flex items-center gap-1.5 text-[13px] text-gray-500">
-            <MapPin className="h-3.5 w-3.5 shrink-0 text-primary" />
+            <MapPin className="h-3.5 w-3.5 shrink-0 text-gray-400" />
             <span className="line-clamp-1">{location}</span>
           </p>
         )}
 
-        <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-[13px] font-medium text-gray-600">
+        {/* Thông số cơ bản: diện tích, phòng, số tầng, loại nhà đất. */}
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-[12.5px] font-medium text-gray-600">
+          <span className="flex items-center gap-1.5"><Square className="h-3.5 w-3.5 text-gray-400" />{property.area} m²</span>
           {!!property.bedrooms && property.bedrooms > 0 && (
-            <span className="flex items-center gap-1.5">
-              <Bed className="h-4 w-4 text-gray-400" />
-              {property.bedrooms} PN
-            </span>
+            <span className="flex items-center gap-1.5"><Bed className="h-3.5 w-3.5 text-gray-400" />{property.bedrooms} PN</span>
           )}
           {!!property.bathrooms && property.bathrooms > 0 && (
-            <span className="flex items-center gap-1.5">
-              <Bath className="h-4 w-4 text-gray-400" />
-              {property.bathrooms} WC
-            </span>
+            <span className="flex items-center gap-1.5"><Bath className="h-3.5 w-3.5 text-gray-400" />{property.bathrooms} WC</span>
           )}
-          <span className="flex items-center gap-1.5">
-            <Square className="h-4 w-4 text-gray-400" />
-            {property.area} m²
-          </span>
-          {property.facade != null && Number(property.facade) > 0 && (
-            <span className="flex items-center gap-1.5">
-              <Ruler className="h-4 w-4 text-gray-400" />
-              MT {property.facade} m
-            </span>
+          {!!property.floors && property.floors > 0 && (
+            <span className="flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5 text-gray-400" />{property.floors} tầng</span>
+          )}
+          {property.category && (
+            <span className="flex items-center gap-1.5"><Layers className="h-3.5 w-3.5 text-gray-400" />{property.category}</span>
           )}
         </div>
 
-        {/* Tiện ích: lưới 2 cột (3 cột khi rộng), mỗi mục có icon nhỏ. */}
+        {/* Tiện ích: lưới 3 cột (2 cột khi hẹp), icon nhỏ trước mỗi mục. */}
         {amenities.length > 0 && (
-          <ul className="grid grid-cols-2 gap-x-3 gap-y-1.5 xl:grid-cols-3">
+          <ul className="grid grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-3">
             {amenities.map(({ icon: Icon, label }) => (
-              <li key={label} className="flex items-center gap-1.5 text-[12.5px] text-gray-600">
-                <Icon className="h-3.5 w-3.5 shrink-0 text-primary" />
+              <li key={label} className="flex items-center gap-2 text-[12.5px] text-gray-700">
+                <Icon className="h-4 w-4 shrink-0 text-gray-500" />
                 <span className="line-clamp-1">{label}</span>
               </li>
             ))}
           </ul>
         )}
 
-        {summary && <p className="line-clamp-3 text-[13px] leading-relaxed text-gray-500">{summary}</p>}
+        {summary && <p className="line-clamp-2 text-[13px] leading-relaxed text-gray-500">{summary}</p>}
 
-        <div className="mt-auto flex items-center justify-between gap-3 border-t border-gray-100 pt-3 text-[12.5px]">
-          <span className="line-clamp-1 font-medium text-gray-700">{property.user?.name || 'Môi giới'}</span>
-          <div className="flex shrink-0 items-center gap-3">
-            {verified && (
-              <span className="flex items-center gap-1 font-medium text-primary">
-                <CheckCircle className="h-3.5 w-3.5" />
-                Đã xác thực
-              </span>
-            )}
-            {property.created_at && <span className="text-gray-400">{timeAgo(property.created_at)}</span>}
-          </div>
+        <div className="mt-auto flex items-center gap-2.5 pt-1">
+          {property.user?.avatar ? (
+            <img src={property.user.avatar} alt="" className="h-8 w-8 rounded-full object-cover" referrerPolicy="no-referrer" />
+          ) : (
+            <span className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 bg-white">
+              <User className="h-4 w-4 text-gray-400" />
+            </span>
+          )}
+          <span className="line-clamp-1 text-[13px] font-medium text-gray-700">{property.user?.name || 'Môi giới'}</span>
         </div>
       </div>
     </article>

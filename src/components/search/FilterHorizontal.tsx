@@ -1,20 +1,14 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import {
-  Search,
-  ChevronDown,
-  SlidersHorizontal,
-  ShieldCheck,
-  Award,
-  X,
-  RotateCcw
-} from 'lucide-react';
+import { useState, useRef, useEffect, type ReactNode } from 'react';
+import { Search, ChevronDown, SlidersHorizontal, X, RotateCcw } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Switch } from '@/components/ui/switch';
 import { FilterState, FilterContext, getCategoriesForContext } from './FilterSidebar';
 import { RegionSelect } from '@/components/shared/RegionSelect';
 import { formatPrice } from '@/lib/formatters';
+import { DIRECTION_OPTIONS, LEGAL_OPTIONS } from '@/lib/property-form-config';
+import { shortFeatureName } from '@/lib/feature-icons';
+import axios from '@/lib/axios';
 
 interface FilterHorizontalProps {
   filters: FilterState;
@@ -22,15 +16,24 @@ interface FilterHorizontalProps {
   onReset: () => void;
   searchQuery: string;
   onSearchQueryChange: (query: string) => void;
-  onSearchSubmit?: () => void;
+  sort: string;
+  onSortChange: (sort: string) => void;
   context?: FilterContext;
 }
 
+export const SORT_OPTIONS = [
+  { value: 'newest', label: 'Mới nhất' },
+  { value: 'price_asc', label: 'Giá tăng dần' },
+  { value: 'price_desc', label: 'Giá giảm dần' },
+  { value: 'area_desc', label: 'Diện tích lớn nhất' },
+  { value: 'views_desc', label: 'Xem nhiều nhất' },
+];
+
 const PRICE_PRESETS: Array<{ label: string; min: number | ''; max: number | '' }> = [
-  { label: 'Dưới 1 tỷ', min: '', max: 1000000000 },
-  { label: '1 - 3 tỷ', min: 1000000000, max: 3000000000 },
-  { label: '3 - 5 tỷ', min: 3000000000, max: 5000000000 },
-  { label: 'Trên 5 tỷ', min: 5000000000, max: '' },
+  { label: 'Dưới 1 tỷ', min: '', max: 1_000_000_000 },
+  { label: '1 - 3 tỷ', min: 1_000_000_000, max: 3_000_000_000 },
+  { label: '3 - 5 tỷ', min: 3_000_000_000, max: 5_000_000_000 },
+  { label: 'Trên 5 tỷ', min: 5_000_000_000, max: '' },
 ];
 
 const AREA_PRESETS: Array<{ label: string; min: number | ''; max: number | '' }> = [
@@ -40,527 +43,447 @@ const AREA_PRESETS: Array<{ label: string; min: number | ''; max: number | '' }>
   { label: 'Trên 200 m²', min: 200, max: '' },
 ];
 
-// Thu gọn thanh lọc khi cuộn xuống (feedback 21/09): chỉ tính khi đã cuộn qua ngưỡng này và
-// mỗi nhịp cuộn đủ xa để không giật khi cuộn lắt nhắt.
-const COLLAPSE_AFTER_PX = 160;
-const SCROLL_DELTA_PX = 8;
+const BEDROOM_OPTIONS = [
+  { value: 'any', label: 'Bất kỳ' }, { value: '1', label: '1' }, { value: '2', label: '2' },
+  { value: '3', label: '3' }, { value: '4', label: '4+' },
+];
+const BATHROOM_OPTIONS = [
+  { value: 'any', label: 'Bất kỳ' }, { value: '1', label: '1' }, { value: '2', label: '2' }, { value: '3', label: '3+' },
+];
 
-const BEDROOM_OPTIONS = ['Bất kỳ', '1', '2', '3', '4+'];
-const BATHROOM_OPTIONS = ['Bất kỳ', '1', '2', '3+'];
-const DIRECTION_OPTIONS = ['Đông', 'Tây', 'Nam', 'Bắc', 'Đông Nam', 'Tây Nam', 'Đông Bắc', 'Tây Bắc'];
-const LEGAL_OPTIONS = ['Sổ đỏ', 'Sổ hồng', 'Hợp đồng mua bán', 'Chưa có sổ'];
+type DropdownKey = 'more' | 'type' | 'price' | 'area' | 'region' | 'features' | 'sort';
+interface FeatureOption { id: number; name: string }
 
+/**
+ * Thanh lọc một hàng dạng chip (thiết kế 23/09): Bộ lọc · Loại nhà đất · Giá · Diện tích ·
+ * Khu vực · Tiện ích · Sắp xếp, ô tìm kiếm ở cuối hàng.
+ *
+ * Bản trước có hai công tắc "Tin xác thực" / "Môi giới chuyên nghiệp" chỉ đổi trạng thái hiển thị
+ * mà không lọc gì, và ô tìm kiếm, diện tích, hướng, pháp lý đều không được gửi lên API — đã gỡ
+ * công tắc và nối đủ các bộ lọc còn lại (xem PropertyListingPage + api/v2/properties).
+ */
 export function FilterHorizontal({
   filters,
   onFilterChange,
   onReset,
   searchQuery,
   onSearchQueryChange,
-  onSearchSubmit,
+  sort,
+  onSortChange,
   context = 'sell',
 }: FilterHorizontalProps) {
-  const [activeDropdown, setActiveDropdown] = useState<'type' | 'price' | 'area' | 'advanced' | null>(null);
+  const [open, setOpen] = useState<DropdownKey | null>(null);
   const [localSearch, setLocalSearch] = useState(searchQuery);
-  const [isVerified, setIsVerified] = useState(false);
-  const [isProAgent, setIsProAgent] = useState(false);
+  const [featureOptions, setFeatureOptions] = useState<FeatureOption[]>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
   const propertyTypes = getCategoriesForContext(context);
 
-  const containerRef = useRef<HTMLDivElement>(null);
-  // Cuộn xuống → thu gọn (chỉ còn ô tìm kiếm nhỏ); cuộn lên → mở đầy đủ. Không thu khi đang
-  // mở dropdown để người dùng không bị mất panel giữa lúc chọn.
-  const [collapsed, setCollapsed] = useState(false);
-  const lastScrollY = useRef(0);
-
-  useEffect(() => {
-    lastScrollY.current = window.scrollY;
-    let frame = 0;
-    const onScroll = () => {
-      if (frame) return;
-      frame = window.requestAnimationFrame(() => {
-        frame = 0;
-        const y = window.scrollY;
-        const delta = y - lastScrollY.current;
-        if (Math.abs(delta) < SCROLL_DELTA_PX) return;
-        lastScrollY.current = y;
-        if (y <= COLLAPSE_AFTER_PX) setCollapsed(false);
-        else setCollapsed(delta > 0);
-      });
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', onScroll);
-      if (frame) window.cancelAnimationFrame(frame);
-    };
-  }, []);
-
-  const isCollapsed = collapsed && activeDropdown === null;
-
-  // Sync external search query to local input
-  useEffect(() => {
+  // Từ khoá đổi từ bên ngoài (back/forward, bấm xoá lọc) thì đồng bộ lại ô nhập ngay trong lúc
+  // render — mẫu "điều chỉnh state khi prop đổi" của React, tránh setState trong effect.
+  const [syncedQuery, setSyncedQuery] = useState(searchQuery);
+  if (syncedQuery !== searchQuery) {
+    setSyncedQuery(searchQuery);
     setLocalSearch(searchQuery);
-  }, [searchQuery]);
+  }
 
-  // Click outside to close dropdowns
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setActiveDropdown(null);
-      }
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) setOpen(null);
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleSearchClick = () => {
-    onSearchQueryChange(localSearch);
-    if (onSearchSubmit) {
-      onSearchSubmit();
-    }
+  // Danh sách tiện ích lấy từ DB (chung với form đăng tin) — không hardcode id.
+  useEffect(() => {
+    let cancelled = false;
+    axios
+      .get('/api/v2/features')
+      .then((res) => {
+        if (!cancelled && Array.isArray(res.data?.data)) setFeatureOptions(res.data.data);
+      })
+      .catch(() => { /* thiếu danh sách thì chip Tiện ích hiện thông báo trống, không chặn trang */ });
+    return () => { cancelled = true; };
+  }, []);
+
+  const toggle = (key: DropdownKey) => setOpen((cur) => (cur === key ? null : key));
+  const submitSearch = () => onSearchQueryChange(localSearch.trim());
+
+  const toggleInList = (list: string[], id: string) =>
+    list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
+
+  const hasPrice = filters.priceMin !== '' || filters.priceMax !== '';
+  const hasArea = filters.areaMin !== '' || filters.areaMax !== '';
+  const moreCount =
+    Number(filters.bedrooms !== 'any') + Number(filters.bathrooms !== 'any') +
+    Number(!!filters.direction) + Number(!!filters.legal);
+  const activeCount =
+    moreCount + Number(filters.types.length > 0) + Number(hasPrice) + Number(hasArea) +
+    Number(filters.district !== '') + Number(filters.features.length > 0);
+
+  const rangeLabel = (min: number | '', max: number | '', fmt: (v: number) => string, fallback: string) => {
+    if (min === '' && max === '') return fallback;
+    if (max === '') return `Trên ${fmt(min as number)}`;
+    if (min === '') return `Dưới ${fmt(max as number)}`;
+    return `${fmt(min)} - ${fmt(max)}`;
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSearchClick();
-    }
-  };
-
-  const toggleType = (categoryId: string) => {
-    const newTypes = filters.types.includes(categoryId)
-      ? filters.types.filter(t => t !== categoryId)
-      : [...filters.types, categoryId];
-    onFilterChange({ types: newTypes });
-  };
-
-  const typeLabel = () => {
-    if (filters.types.length === 0) return 'Loại nhà đất';
-    const names = filters.types
-      .map((id) => propertyTypes.find((t) => String(t.id) === id)?.name)
-      .filter(Boolean);
-    return `Loại: ${names.join(', ')}`;
-  };
-
-  const handlePricePreset = (min: number | '', max: number | '') => {
-    onFilterChange({ priceMin: min, priceMax: max });
-  };
-
-  const handleAreaPreset = (min: number | '', max: number | '') => {
-    onFilterChange({ areaMin: min, areaMax: max });
-  };
-
-  const getPriceLabel = () => {
-    if (filters.priceMin === '' && filters.priceMax === '') return 'Khoảng giá';
-    if (filters.priceMin !== '' && filters.priceMax === '') return `Trên ${formatPrice(filters.priceMin as number)}`;
-    if (filters.priceMin === '' && filters.priceMax !== '') return `Dưới ${formatPrice(filters.priceMax as number)}`;
-    return `${formatPrice(filters.priceMin as number)} - ${formatPrice(filters.priceMax as number)}`;
-  };
-
-  const getAreaLabel = () => {
-    if (filters.areaMin === '' && filters.areaMax === '') return 'Diện tích';
-    if (filters.areaMin !== '' && filters.areaMax === '') return `Trên ${filters.areaMin} m²`;
-    if (filters.areaMin === '' && filters.areaMax !== '') return `Dưới ${filters.areaMax} m²`;
-    return `${filters.areaMin} - ${filters.areaMax} m²`;
-  };
+  const typeLabel =
+    filters.types.length === 0
+      ? 'Loại nhà đất'
+      : filters.types.length === 1
+        ? propertyTypes.find((t) => String(t.id) === filters.types[0])?.name ?? 'Loại nhà đất'
+        : `${filters.types.length} loại nhà đất`;
+  const sortLabel = SORT_OPTIONS.find((o) => o.value === sort)?.label ?? 'Mới nhất';
 
   return (
-    <div
-      ref={containerRef}
-      data-collapsed={isCollapsed ? 'true' : 'false'}
-      className={`w-full bg-white shadow-md border border-gray-150 rounded-2xl mb-6 z-30 sticky top-[72px] transition-all duration-300 ${
-        isCollapsed ? 'px-4 py-2' : 'p-4'
-      }`}
-    >
-      
-      {/* ══ ROW 1: SEARCH & MAP ══ */}
-      <div className={`flex flex-col md:flex-row gap-3 items-stretch md:items-center transition-[margin] duration-300 ${isCollapsed ? 'mb-0' : 'mb-4'}`}>
-        
-        {/* Search Input Box */}
-        <div className={`flex-1 relative flex items-center border border-gray-200 hover:border-gray-300 rounded-xl bg-gray-50/50 px-3.5 focus-within:ring-2 focus-within:ring-primary/10 focus-within:border-primary focus-within:bg-white transition-all duration-300 ${isCollapsed ? 'h-[40px]' : 'h-[48px]'}`}>
-          <Search className="w-5 h-5 text-gray-400 mr-2.5 shrink-0" />
-          <input
-            type="text"
-            value={localSearch}
-            onChange={(e) => setLocalSearch(e.target.value)}
-            onKeyDown={handleKeyPress}
-            onFocus={() => setCollapsed(false)}
-            placeholder="Nhập tên đường, dự án hoặc khu vực tại Quảng Ngãi..."
-            className="w-full bg-transparent border-none outline-none text-[14px] text-gray-800 placeholder:text-gray-450 h-full font-medium"
-          />
-          {localSearch && (
-            <button 
-              onClick={() => { setLocalSearch(''); onSearchQueryChange(''); }}
-              className="p-1 rounded-full hover:bg-gray-200 text-gray-400"
-              aria-label="Xóa từ khóa"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
+    <div ref={containerRef} className="sticky top-[60px] z-30 -mx-4 mb-5 border-b border-gray-100 bg-white/95 px-4 py-3 backdrop-blur lg:-mx-6 lg:px-6">
+      <div className="flex flex-wrap items-center gap-2 text-[13px] text-gray-700">
+        {/* Bộ lọc — nút tối, số đếm = số nhóm lọc đang bật; mở phần lọc nâng cao. */}
+        <Chip
+          dark
+          active={open === 'more'}
+          onClick={() => toggle('more')}
+          icon={<SlidersHorizontal className="h-3.5 w-3.5" />}
+          label={activeCount > 0 ? `Bộ lọc ${activeCount}` : 'Bộ lọc'}
+          noChevron
+        >
+          {open === 'more' && (
+            <Panel wide onClose={() => setOpen(null)} onClear={onReset} clearLabel="Đặt lại tất cả">
+              <PanelSection title="Số phòng ngủ">
+                <OptionRow options={BEDROOM_OPTIONS} value={filters.bedrooms} onChange={(v) => onFilterChange({ bedrooms: v })} />
+              </PanelSection>
+              <PanelSection title="Số phòng tắm">
+                <OptionRow options={BATHROOM_OPTIONS} value={filters.bathrooms} onChange={(v) => onFilterChange({ bathrooms: v })} />
+              </PanelSection>
+              <PanelSection title="Hướng nhà">
+                <OptionRow
+                  options={DIRECTION_OPTIONS.filter((o) => o.value !== 'khong_xac_dinh')}
+                  value={filters.direction}
+                  onChange={(v) => onFilterChange({ direction: filters.direction === v ? '' : v })}
+                />
+              </PanelSection>
+              <PanelSection title="Pháp lý">
+                <OptionRow
+                  options={LEGAL_OPTIONS}
+                  value={filters.legal}
+                  onChange={(v) => onFilterChange({ legal: filters.legal === v ? '' : v })}
+                />
+              </PanelSection>
+            </Panel>
           )}
-        </div>
+        </Chip>
 
-        {/* Action Buttons — đã bỏ nút "Xem bản đồ" riêng (feedback 28/07); bản đồ nằm trong
-            split-view của trang danh sách. */}
-        <div className="flex gap-2 shrink-0">
-          <button
-            onClick={handleSearchClick}
-            className={`flex-1 md:flex-none bg-cta hover:bg-cta-dark text-white font-semibold text-[14px] px-8 rounded-xl transition-all duration-300 shadow-md shadow-cta/10 hover:shadow-lg active:scale-[0.98] ${isCollapsed ? 'h-[40px]' : 'h-[48px]'}`}
-          >
-            Tìm kiếm
-          </button>
-        </div>
-      </div>
+        <Chip active={filters.types.length > 0} open={open === 'type'} onClick={() => toggle('type')} label={typeLabel}>
+          {open === 'type' && (
+            <Panel onClose={() => setOpen(null)} onClear={() => onFilterChange({ types: [] })}>
+              <div className="max-h-72 space-y-2.5 overflow-auto">
+                {propertyTypes.map((t) => (
+                  <label key={t.id} className="group flex cursor-pointer items-center gap-2.5">
+                    <Checkbox
+                      checked={filters.types.includes(String(t.id))}
+                      onCheckedChange={() => onFilterChange({ types: toggleInList(filters.types, String(t.id)) })}
+                      className="data-[state=checked]:border-primary data-[state=checked]:bg-primary"
+                    />
+                    <span className="text-[13px] text-gray-700 group-hover:text-gray-900">{t.name}</span>
+                  </label>
+                ))}
+              </div>
+            </Panel>
+          )}
+        </Chip>
 
-      {/* Hàng 2 co/giãn bằng grid-rows 0fr↔1fr: trượt mượt, không nhảy layout (thanh đang sticky). */}
-      <div
-        className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${
-          isCollapsed ? 'grid-rows-[0fr] opacity-0 pointer-events-none' : 'grid-rows-[1fr] opacity-100'
-        }`}
-        aria-hidden={isCollapsed}
-      >
-        <div className={`min-h-0 ${activeDropdown ? '' : 'overflow-hidden'}`}>
-        {/* ══ ROW 2: HORIZONTAL FILTER DROPDOWNS & TOGGLES ══ */}
-        <div className="flex flex-wrap items-center gap-2 md:gap-3 text-[13px] text-gray-700 select-none">
-        
-          {/* 1. ADVANCED FILTER TRIGGER */}
-          <button
-            onClick={() => setActiveDropdown(activeDropdown === 'advanced' ? null : 'advanced')}
-            className={`h-9 px-3.5 rounded-lg border font-semibold flex items-center gap-1.5 transition-all duration-200 ${
-              activeDropdown === 'advanced' || filters.bedrooms !== 'any' || filters.direction || filters.legal || filters.district !== ''
-                ? 'bg-primary text-white border-primary shadow-sm shadow-primary/10'
-                : 'bg-white hover:bg-gray-50 border-gray-200 text-gray-700'
-            }`}
-          >
-            <SlidersHorizontal className="w-3.5 h-3.5" />
-            <span>Lọc</span>
-            {(filters.bedrooms !== 'any' || filters.direction || filters.legal || filters.district !== '') && (
-              <span className="w-2 h-2 rounded-full bg-cta animate-pulse" />
-            )}
-          </button>
+        <Chip
+          active={hasPrice}
+          open={open === 'price'}
+          onClick={() => toggle('price')}
+          label={rangeLabel(filters.priceMin, filters.priceMax, formatPrice, 'Giá')}
+        >
+          {open === 'price' && (
+            <Panel onClose={() => setOpen(null)} onClear={() => onFilterChange({ priceMin: '', priceMax: '' })}>
+              <RangeInputs
+                min={filters.priceMin}
+                max={filters.priceMax}
+                minPlaceholder="Từ (VNĐ)"
+                maxPlaceholder="Đến (VNĐ)"
+                onChange={(min, max) => onFilterChange({ priceMin: min, priceMax: max })}
+              />
+              <Presets
+                presets={PRICE_PRESETS}
+                min={filters.priceMin}
+                max={filters.priceMax}
+                onPick={(min, max) => onFilterChange({ priceMin: min, priceMax: max })}
+              />
+            </Panel>
+          )}
+        </Chip>
 
-          {/* 2. TIN XÁC THỰC SWITCH TOGGLE */}
-          <div className="h-9 px-3.5 rounded-lg border border-gray-200 bg-white flex items-center gap-2.5 font-medium hover:border-gray-300 transition-all">
-            <div className="flex items-center gap-1 text-emerald-600 font-semibold">
-              <ShieldCheck className="w-4 h-4 fill-emerald-50" />
-              <span>Tin xác thực</span>
-            </div>
-            <Switch 
-              checked={isVerified}
-              onCheckedChange={setIsVerified}
-              className="data-[state=checked]:bg-emerald-500 scale-90"
-            />
-          </div>
+        <Chip
+          active={hasArea}
+          open={open === 'area'}
+          onClick={() => toggle('area')}
+          label={rangeLabel(filters.areaMin, filters.areaMax, (v) => `${v} m²`, 'Diện tích')}
+        >
+          {open === 'area' && (
+            <Panel onClose={() => setOpen(null)} onClear={() => onFilterChange({ areaMin: '', areaMax: '' })}>
+              <RangeInputs
+                min={filters.areaMin}
+                max={filters.areaMax}
+                minPlaceholder="Từ m²"
+                maxPlaceholder="Đến m²"
+                onChange={(min, max) => onFilterChange({ areaMin: min, areaMax: max })}
+              />
+              <Presets
+                presets={AREA_PRESETS}
+                min={filters.areaMin}
+                max={filters.areaMax}
+                onPick={(min, max) => onFilterChange({ areaMin: min, areaMax: max })}
+              />
+            </Panel>
+          )}
+        </Chip>
 
-          {/* 3. LOẠI NHÀ ĐẤT DROPDOWN */}
-          <div className="relative">
-            <button
-              onClick={() => setActiveDropdown(activeDropdown === 'type' ? null : 'type')}
-              className={`h-9 px-3.5 rounded-lg border font-medium flex items-center gap-1.5 transition-all duration-200 ${
-                filters.types.length > 0
-                  ? 'border-primary text-primary bg-primary-light/40 font-semibold'
-                  : 'border-gray-200 hover:border-gray-350 bg-white'
-              }`}
-            >
-              <span>{typeLabel()}</span>
-              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 text-gray-400 ${activeDropdown === 'type' ? 'rotate-180' : ''}`} />
-            </button>
+        <Chip
+          active={filters.district !== ''}
+          open={open === 'region'}
+          onClick={() => toggle('region')}
+          label={filters.district !== '' ? 'Khu vực đã chọn' : 'Khu vực'}
+        >
+          {open === 'region' && (
+            <Panel onClose={() => setOpen(null)} onClear={() => onFilterChange({ district: '' })}>
+              <RegionSelect
+                value={filters.district}
+                onChange={(id) => onFilterChange({ district: id })}
+                buttonClassName="flex h-9 w-full items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 text-[13px] text-gray-700 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+              />
+            </Panel>
+          )}
+        </Chip>
 
-            {activeDropdown === 'type' && (
-              <div className="absolute top-[42px] left-0 w-[280px] bg-white border border-gray-150 rounded-xl shadow-xl p-3.5 z-40 animate-in fade-in-50 slide-in-from-top-2 duration-150 max-h-80 overflow-auto">
-                <h4 className="font-bold text-gray-800 text-[12px] uppercase tracking-wider mb-2.5">Chọn loại nhà đất</h4>
-                <div className="space-y-3">
-                  {propertyTypes.map((type) => (
-                    <label key={type.id} className="flex items-center gap-2.5 cursor-pointer group">
+        <Chip
+          active={filters.features.length > 0}
+          open={open === 'features'}
+          onClick={() => toggle('features')}
+          label={filters.features.length > 0 ? `Tiện ích (${filters.features.length})` : 'Tiện ích'}
+        >
+          {open === 'features' && (
+            <Panel wide onClose={() => setOpen(null)} onClear={() => onFilterChange({ features: [] })}>
+              {featureOptions.length === 0 ? (
+                <p className="text-[13px] text-gray-500">Chưa tải được danh sách tiện ích.</p>
+              ) : (
+                <div className="grid max-h-72 grid-cols-2 gap-x-4 gap-y-2.5 overflow-auto">
+                  {featureOptions.map((f) => (
+                    <label key={f.id} className="group flex cursor-pointer items-center gap-2.5">
                       <Checkbox
-                        id={`type-${type.id}`}
-                        checked={filters.types.includes(String(type.id))}
-                        onCheckedChange={() => toggleType(String(type.id))}
-                        className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                        checked={filters.features.includes(String(f.id))}
+                        onCheckedChange={() => onFilterChange({ features: toggleInList(filters.features, String(f.id)) })}
+                        className="data-[state=checked]:border-primary data-[state=checked]:bg-primary"
                       />
-                      <span className="text-[13px] text-gray-700 group-hover:text-gray-900 transition-colors">{type.name}</span>
+                      <span className="text-[13px] text-gray-700 group-hover:text-gray-900">{shortFeatureName(f.name)}</span>
                     </label>
                   ))}
                 </div>
-                <div className="mt-3.5 pt-2.5 border-t border-gray-100 flex justify-end">
-                  <button
-                    onClick={() => setActiveDropdown(null)}
-                    className="bg-primary text-white text-[12px] font-semibold px-4 py-1.5 rounded-lg hover:bg-primary-dark transition-all"
-                  >
-                    Áp dụng
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+              )}
+            </Panel>
+          )}
+        </Chip>
 
-          {/* 4. KHOẢNG GIÁ DROPDOWN */}
-          <div className="relative">
-            <button
-              onClick={() => setActiveDropdown(activeDropdown === 'price' ? null : 'price')}
-              className={`h-9 px-3.5 rounded-lg border font-medium flex items-center gap-1.5 transition-all duration-200 ${
-                filters.priceMin !== '' || filters.priceMax !== ''
-                  ? 'border-primary text-primary bg-primary-light/40 font-semibold'
-                  : 'border-gray-200 hover:border-gray-350 bg-white'
-              }`}
-            >
-              <span>{getPriceLabel()}</span>
-              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 text-gray-400 ${activeDropdown === 'price' ? 'rotate-180' : ''}`} />
-            </button>
-
-            {activeDropdown === 'price' && (
-              <div className="absolute top-[42px] left-0 w-[280px] bg-white border border-gray-150 rounded-xl shadow-xl p-4 z-40 animate-in fade-in-50 slide-in-from-top-2 duration-150">
-                <h4 className="font-bold text-gray-800 text-[12px] uppercase tracking-wider mb-3">Khoảng giá</h4>
-              
-                {/* Custom Min-Max Input */}
-                <div className="flex items-center gap-2 mb-3">
-                  <input
-                    type="number"
-                    placeholder="Từ VNĐ"
-                    value={filters.priceMin}
-                    onChange={(e) => onFilterChange({ priceMin: e.target.value ? Number(e.target.value) : '' })}
-                    className="w-full h-9 border border-gray-200 rounded-lg px-2.5 text-[13px] focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all placeholder:text-gray-400"
-                  />
-                  <span className="text-gray-400">-</span>
-                  <input
-                    type="number"
-                    placeholder="Đến VNĐ"
-                    value={filters.priceMax}
-                    onChange={(e) => onFilterChange({ priceMax: e.target.value ? Number(e.target.value) : '' })}
-                    className="w-full h-9 border border-gray-200 rounded-lg px-2.5 text-[13px] focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all placeholder:text-gray-400"
-                  />
-                </div>
-
-                {/* Presets */}
-                <div className="grid grid-cols-2 gap-2 mt-2">
-                  {PRICE_PRESETS.map((preset) => (
-                    <button
-                      key={preset.label}
-                      onClick={() => handlePricePreset(preset.min, preset.max)}
-                      className={`px-2 py-1.5 text-[11px] font-semibold rounded-lg transition-colors border text-left ${
-                        filters.priceMin === preset.min && filters.priceMax === preset.max
-                          ? 'bg-primary text-white border-primary shadow-sm'
-                          : 'bg-gray-50 hover:bg-gray-100 text-gray-650 border-gray-200'
-                      }`}
-                    >
-                      {preset.label}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center">
-                  <button
-                    onClick={() => onFilterChange({ priceMin: '', priceMax: '' })}
-                    className="text-[12px] text-gray-500 hover:text-gray-900 font-medium flex items-center gap-1"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    <span>Xóa lọc</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveDropdown(null)}
-                    className="bg-primary text-white text-[12px] font-semibold px-4 py-1.5 rounded-lg hover:bg-primary-dark transition-all"
-                  >
-                    Áp dụng
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* 5. DIỆN TÍCH DROPDOWN */}
-          <div className="relative">
-            <button
-              onClick={() => setActiveDropdown(activeDropdown === 'area' ? null : 'area')}
-              className={`h-9 px-3.5 rounded-lg border font-medium flex items-center gap-1.5 transition-all duration-200 ${
-                filters.areaMin !== '' || filters.areaMax !== ''
-                  ? 'border-primary text-primary bg-primary-light/40 font-semibold'
-                  : 'border-gray-200 hover:border-gray-350 bg-white'
-              }`}
-            >
-              <span>{getAreaLabel()}</span>
-              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 text-gray-400 ${activeDropdown === 'area' ? 'rotate-180' : ''}`} />
-            </button>
-
-            {activeDropdown === 'area' && (
-              <div className="absolute top-[42px] left-0 w-[280px] bg-white border border-gray-150 rounded-xl shadow-xl p-4 z-40 animate-in fade-in-50 slide-in-from-top-2 duration-150">
-                <h4 className="font-bold text-gray-800 text-[12px] uppercase tracking-wider mb-3">Diện tích</h4>
-              
-                {/* Custom Min-Max Input */}
-                <div className="flex items-center gap-2 mb-3">
-                  <input
-                    type="number"
-                    placeholder="Từ m²"
-                    value={filters.areaMin}
-                    onChange={(e) => onFilterChange({ areaMin: e.target.value ? Number(e.target.value) : '' })}
-                    className="w-full h-9 border border-gray-200 rounded-lg px-2.5 text-[13px] focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all placeholder:text-gray-400"
-                  />
-                  <span className="text-gray-400">-</span>
-                  <input
-                    type="number"
-                    placeholder="Đến m²"
-                    value={filters.areaMax}
-                    onChange={(e) => onFilterChange({ areaMax: e.target.value ? Number(e.target.value) : '' })}
-                    className="w-full h-9 border border-gray-200 rounded-lg px-2.5 text-[13px] focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all placeholder:text-gray-400"
-                  />
-                </div>
-
-                {/* Presets */}
-                <div className="grid grid-cols-2 gap-2 mt-2">
-                  {AREA_PRESETS.map((preset) => (
-                    <button
-                      key={preset.label}
-                      onClick={() => handleAreaPreset(preset.min, preset.max)}
-                      className={`px-2 py-1.5 text-[11px] font-semibold rounded-lg transition-colors border text-left ${
-                        filters.areaMin === preset.min && filters.areaMax === preset.max
-                          ? 'bg-primary text-white border-primary shadow-sm'
-                          : 'bg-gray-50 hover:bg-gray-100 text-gray-650 border-gray-200'
-                      }`}
-                    >
-                      {preset.label}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center">
-                  <button
-                    onClick={() => onFilterChange({ areaMin: '', areaMax: '' })}
-                    className="text-[12px] text-gray-500 hover:text-gray-900 font-medium flex items-center gap-1"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    <span>Xóa lọc</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveDropdown(null)}
-                    className="bg-primary text-white text-[12px] font-semibold px-4 py-1.5 rounded-lg hover:bg-primary-dark transition-all"
-                  >
-                    Áp dụng
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* 6. MÔI GIỚI CHUYÊN NGHIỆP SWITCH TOGGLE */}
-          <div className="h-9 px-3.5 rounded-lg border border-gray-200 bg-white flex items-center gap-2.5 font-medium hover:border-gray-300 transition-all">
-            <div className="flex items-center gap-1 text-primary font-semibold">
-              <Award className="w-4 h-4 text-amber-500" />
-              <span>Môi giới chuyên nghiệp</span>
-            </div>
-            <Switch 
-              checked={isProAgent}
-              onCheckedChange={setIsProAgent}
-              className="data-[state=checked]:bg-primary scale-90"
-            />
-          </div>
-        </div>
-
-        {/* ══ ROW 3: EXPANDABLE ADVANCED FILTERS SECTION ══ */}
-        {activeDropdown === 'advanced' && (
-          <div className="mt-4 pt-4 border-t border-gray-100 animate-in fade-in-50 duration-200">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-            
-              {/* Bedrooms Selection */}
-              <div>
-                <h5 className="font-bold text-gray-800 text-[12px] uppercase tracking-wider mb-2.5">Số phòng ngủ</h5>
-                <div className="flex flex-wrap gap-1.5">
-                  {BEDROOM_OPTIONS.map((bed) => {
-                    const val = bed === 'Bất kỳ' ? 'any' : bed;
-                    const isSel = filters.bedrooms === val;
-                    return (
-                      <button
-                        key={bed}
-                        onClick={() => onFilterChange({ bedrooms: val })}
-                        className={`px-2.5 py-1.5 text-[11px] font-semibold rounded-lg transition-colors border ${
-                          isSel
-                            ? 'bg-primary text-white border-primary shadow-sm'
-                            : 'bg-white hover:bg-gray-50 border-gray-205 text-gray-700'
-                        }`}
-                      >
-                        {bed}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Bathrooms Selection */}
-              <div>
-                <h5 className="font-bold text-gray-800 text-[12px] uppercase tracking-wider mb-2.5">Số phòng tắm</h5>
-                <div className="flex flex-wrap gap-1.5">
-                  {BATHROOM_OPTIONS.map((bath) => {
-                    const val = bath === 'Bất kỳ' ? 'any' : bath;
-                    const isSel = filters.bathrooms === val;
-                    return (
-                      <button
-                        key={bath}
-                        onClick={() => onFilterChange({ bathrooms: val })}
-                        className={`px-2.5 py-1.5 text-[11px] font-semibold rounded-lg transition-colors border ${
-                          isSel
-                            ? 'bg-primary text-white border-primary shadow-sm'
-                            : 'bg-white hover:bg-gray-50 border-gray-205 text-gray-700'
-                        }`}
-                      >
-                        {bath}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Direction Selection */}
-              <div>
-                <h5 className="font-bold text-gray-800 text-[12px] uppercase tracking-wider mb-2.5">Hướng nhà</h5>
-                <select
-                  value={filters.direction}
-                  onChange={(e) => onFilterChange({ direction: e.target.value })}
-                  className="w-full h-8.5 border border-gray-200 rounded-lg px-2 text-[12.5px] focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all text-gray-750 bg-white"
-                >
-                  <option value="">Bất kỳ</option>
-                  {DIRECTION_OPTIONS.map(dir => <option key={dir} value={dir}>{dir}</option>)}
-                </select>
-              </div>
-
-              {/* Legal Selection */}
-              <div>
-                <h5 className="font-bold text-gray-800 text-[12px] uppercase tracking-wider mb-2.5">Pháp lý</h5>
-                <select
-                  value={filters.legal}
-                  onChange={(e) => onFilterChange({ legal: e.target.value })}
-                  className="w-full h-8.5 border border-gray-200 rounded-lg px-2 text-[12.5px] focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all text-gray-750 bg-white"
-                >
-                  <option value="">Bất kỳ</option>
-                  {LEGAL_OPTIONS.map(leg => <option key={leg} value={leg}>{leg}</option>)}
-                </select>
-              </div>
-            </div>
-
-            {/* District Selection inside Lọc (Advanced) — 96 xã/phường/đặc khu, ưu tiên 9 khu vực nổi bật */}
-            <div className="mt-4 pt-3.5 border-t border-gray-100 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
-              <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
-                <span className="text-[12px] font-bold text-gray-800 uppercase tracking-wider shrink-0 mr-2 sm:mb-0">Khu vực:</span>
-                <RegionSelect
-                  value={filters.district}
-                  onChange={(id) => onFilterChange({ district: id })}
-                  buttonClassName="h-8.5 border border-gray-200 rounded-lg px-3 text-[12.5px] focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all text-gray-700 bg-white min-w-[160px] flex items-center gap-1.5"
-                />
-              </div>
-
-              <div className="flex gap-2 justify-end">
+        <Chip active={sort !== 'newest'} open={open === 'sort'} onClick={() => toggle('sort')} label={sortLabel}>
+          {open === 'sort' && (
+            <div className="absolute left-0 top-[42px] z-40 w-56 rounded-xl border border-gray-150 bg-white p-1.5 shadow-xl">
+              {SORT_OPTIONS.map((o) => (
                 <button
-                  onClick={onReset}
-                  className="text-[12px] text-gray-500 hover:text-gray-900 font-bold px-3 py-1.5 rounded-lg border border-gray-200 bg-white transition-all flex items-center gap-1"
+                  key={o.value}
+                  type="button"
+                  onClick={() => { onSortChange(o.value); setOpen(null); }}
+                  className={`block w-full rounded-lg px-3 py-2 text-left text-[13px] transition-colors ${
+                    sort === o.value ? 'bg-primary-light font-semibold text-primary' : 'text-gray-700 hover:bg-gray-50'
+                  }`}
                 >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span>Đặt lại</span>
+                  {o.label}
                 </button>
-                <button
-                  onClick={() => setActiveDropdown(null)}
-                  className="bg-primary hover:bg-primary-dark text-white text-[12px] font-bold px-4 py-1.5 rounded-lg transition-all shadow-md shadow-primary/10"
-                >
-                  Đóng bộ lọc
-                </button>
-              </div>
+              ))}
             </div>
-          </div>
-        )}
-        </div>
+          )}
+        </Chip>
+
+        {/* Ô tìm kiếm — Enter hoặc bấm kính lúp để tìm; trên điện thoại chiếm cả dòng. */}
+        <form
+          onSubmit={(e) => { e.preventDefault(); submitSearch(); }}
+          className="order-first flex h-10 w-full items-center rounded-full border border-gray-200 bg-gray-50 px-3.5 transition-colors focus-within:border-primary focus-within:bg-white md:order-none md:ml-auto md:h-9 md:w-72"
+          role="search"
+        >
+          <input
+            type="search"
+            value={localSearch}
+            onChange={(e) => setLocalSearch(e.target.value)}
+            placeholder="Tìm theo khu vực, dự án, tên đường..."
+            aria-label="Từ khoá tìm kiếm"
+            className="h-full w-full bg-transparent text-[13px] text-gray-800 outline-none placeholder:text-gray-400"
+          />
+          {localSearch && (
+            <button
+              type="button"
+              onClick={() => { setLocalSearch(''); onSearchQueryChange(''); }}
+              className="rounded-full p-1 text-gray-400 hover:bg-gray-200"
+              aria-label="Xoá từ khoá"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+          <button type="submit" className="ml-1 text-gray-500 hover:text-primary" aria-label="Tìm kiếm">
+            <Search className="h-4 w-4" />
+          </button>
+        </form>
       </div>
+    </div>
+  );
+}
+
+function Chip({
+  label, onClick, active = false, open = false, dark = false, noChevron = false, icon, children,
+}: {
+  label: string;
+  onClick: () => void;
+  active?: boolean;
+  open?: boolean;
+  dark?: boolean;
+  noChevron?: boolean;
+  icon?: ReactNode;
+  children?: ReactNode;
+}) {
+  const tone = dark
+    ? 'border-gray-900 bg-gray-900 text-white hover:bg-gray-800'
+    : active
+      ? 'border-primary bg-primary-light font-semibold text-primary'
+      : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300';
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={onClick}
+        aria-expanded={open || undefined}
+        className={`flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full border px-3.5 font-medium transition-colors ${tone}`}
+      >
+        {icon}
+        <span>{label}</span>
+        {!noChevron && <ChevronDown className={`h-3.5 w-3.5 opacity-60 transition-transform ${open ? 'rotate-180' : ''}`} />}
+      </button>
+      {children}
+    </div>
+  );
+}
+
+function Panel({
+  children, onClose, onClear, clearLabel = 'Xoá lọc', wide = false,
+}: {
+  children: ReactNode;
+  onClose: () => void;
+  onClear: () => void;
+  clearLabel?: string;
+  wide?: boolean;
+}) {
+  return (
+    <div
+      className={`absolute left-0 top-[42px] z-40 max-w-[calc(100vw-2rem)] rounded-xl border border-gray-150 bg-white p-4 shadow-xl ${
+        wide ? 'w-[380px]' : 'w-[290px]'
+      }`}
+    >
+      <div className="space-y-4">{children}</div>
+      <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3">
+        <button type="button" onClick={onClear} className="flex items-center gap-1 text-[12px] font-medium text-gray-500 hover:text-gray-900">
+          <RotateCcw className="h-3.5 w-3.5" />
+          {clearLabel}
+        </button>
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-lg bg-primary px-4 py-1.5 text-[12px] font-semibold text-white transition-colors hover:bg-primary-dark"
+        >
+          Xong
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function PanelSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div>
+      <h5 className="mb-2 text-[12px] font-bold uppercase tracking-wider text-gray-800">{title}</h5>
+      {children}
+    </div>
+  );
+}
+
+function OptionRow({
+  options, value, onChange,
+}: {
+  options: ReadonlyArray<{ value: string; label: string }>;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {options.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          onClick={() => onChange(o.value)}
+          className={`rounded-lg border px-2.5 py-1 text-[12.5px] font-medium transition-colors ${
+            value === o.value ? 'border-primary bg-primary text-white' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+          }`}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function RangeInputs({
+  min, max, minPlaceholder, maxPlaceholder, onChange,
+}: {
+  min: number | '';
+  max: number | '';
+  minPlaceholder: string;
+  maxPlaceholder: string;
+  onChange: (min: number | '', max: number | '') => void;
+}) {
+  const parse = (v: string): number | '' => (v === '' ? '' : Math.max(0, Number(v)));
+  const inputClass =
+    'h-9 w-full rounded-lg border border-gray-200 px-2.5 text-[13px] outline-none transition-all placeholder:text-gray-400 focus:border-primary focus:ring-2 focus:ring-primary/10';
+  return (
+    <div className="flex items-center gap-2">
+      <input type="number" min={0} placeholder={minPlaceholder} value={min} onChange={(e) => onChange(parse(e.target.value), max)} className={inputClass} />
+      <span className="text-gray-400">-</span>
+      <input type="number" min={0} placeholder={maxPlaceholder} value={max} onChange={(e) => onChange(min, parse(e.target.value))} className={inputClass} />
+    </div>
+  );
+}
+
+function Presets({
+  presets, min, max, onPick,
+}: {
+  presets: Array<{ label: string; min: number | ''; max: number | '' }>;
+  min: number | '';
+  max: number | '';
+  onPick: (min: number | '', max: number | '') => void;
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      {presets.map((p) => (
+        <button
+          key={p.label}
+          type="button"
+          onClick={() => onPick(p.min, p.max)}
+          className={`rounded-lg border px-2 py-1.5 text-left text-[12px] font-semibold transition-colors ${
+            min === p.min && max === p.max ? 'border-primary bg-primary text-white' : 'border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100'
+          }`}
+        >
+          {p.label}
+        </button>
+      ))}
     </div>
   );
 }

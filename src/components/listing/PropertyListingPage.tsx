@@ -2,19 +2,13 @@
 
 import { Suspense, useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import Link from 'next/link';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
-import { PropertyCard } from '@/components/property/PropertyCard';
 import { FeaturedPropertyCard } from '@/components/property/FeaturedPropertyCard';
-import { FilterSidebar, FilterState, DEFAULT_FILTERS } from '@/components/search/FilterSidebar';
+import { ListingGridCard } from '@/components/listing/ListingGridCard';
+import { FilterState, DEFAULT_FILTERS } from '@/components/search/FilterSidebar';
 import { FilterHorizontal } from '@/components/search/FilterHorizontal';
-import { SortBar } from '@/components/search/SortBar';
-import { FilterTags } from '@/components/shared/FilterTags';
 import { PropertyCardSkeleton } from '@/components/property/PropertyCardSkeleton';
-import { buildFilterTags, removeTag } from '@/lib/filter-properties';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { SearchX, Search as SearchIcon, ChevronRight, Home, Bell, X, Map as MapIcon, List } from 'lucide-react';
-import { Switch } from '@/components/ui/switch';
+import { SearchX, Search as SearchIcon, X, Map as MapIcon, List } from 'lucide-react';
 import { useProperties } from '@/hooks/useProperties';
 import {
   parseFiltersFromSearchParams,
@@ -107,6 +101,10 @@ const mapApiProperty = (apiProp: any) => {
     images: Array.isArray(apiProp.media)
       ? apiProp.media.filter((m: any) => m.type === 'image' && m.url).map((m: any) => m.url as string)
       : [],
+    // Nhãn "Video" / "Virtual tour" chỉ bật khi tin có media loại đó thật.
+    hasVideo: Array.isArray(apiProp.media) && apiProp.media.some((m: any) => m.type === 'video'),
+    hasTour: Array.isArray(apiProp.media) && apiProp.media.some((m: any) => m.type === 'virtual_tour'),
+    features: Array.isArray(apiProp.features) ? apiProp.features : [],
     isVip: apiProp.is_vip || 'normal',
     user: {
       name: apiProp.owner?.name || 'Môi giới',
@@ -151,8 +149,6 @@ function PropertyListingContent({ type }: { type: ListingType }) {
   const [sort, setSort] = useState(initialUrlState.sort);
   const [view, setView] = useState<ListingView>(initialUrlState.view);
   const [isFiltering, setIsFiltering] = useState(false);
-  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
-  const [receiveEmail, setReceiveEmail] = useState(false);
 
   const isMapView = view === 'map';
 
@@ -183,12 +179,22 @@ function PropertyListingContent({ type }: { type: ListingType }) {
         page,
         per_page: isMapView ? PER_PAGE_MAP : PER_PAGE,
         sort: API_SORT[sort] ?? sort,
+        // Kèm tiện ích để thẻ tin hiện "Hồ bơi, Thang máy..." như thiết kế.
+        with: 'features',
       };
 
+      // Gửi ĐỦ mọi bộ lọc trên thanh chip. Trước đây ô tìm kiếm, diện tích, hướng, pháp lý,
+      // phòng tắm và các loại nhà đất thứ 2 trở đi đều không được gửi — lọc mà kết quả không đổi.
+      if (searchQuery.trim()) apiFilters.q = searchQuery.trim();
       if (filters.priceMin !== '') apiFilters.price_min = filters.priceMin;
       if (filters.priceMax !== '') apiFilters.price_max = filters.priceMax;
-      if (filters.types.length > 0) apiFilters.category = filters.types[0];
+      if (filters.areaMin !== '') apiFilters.area_min = filters.areaMin;
+      if (filters.areaMax !== '') apiFilters.area_max = filters.areaMax;
+      if (filters.types.length > 0) apiFilters.category = filters.types.join(',');
       if (filters.district !== '') apiFilters.district = filters.district;
+      if (filters.direction) apiFilters.direction = filters.direction;
+      if (filters.legal) apiFilters.legal = filters.legal;
+      if (filters.features.length > 0) apiFilters.features = filters.features.join(',');
       if (bbox) {
         apiFilters.min_lat = bbox.minLat;
         apiFilters.max_lat = bbox.maxLat;
@@ -199,6 +205,10 @@ function PropertyListingContent({ type }: { type: ListingType }) {
       if (filters.bedrooms !== 'any') {
         const bedVal = parseInt(filters.bedrooms);
         if (!isNaN(bedVal)) apiFilters.bedrooms = bedVal;
+      }
+      if (filters.bathrooms !== 'any') {
+        const bathVal = parseInt(filters.bathrooms);
+        if (!isNaN(bathVal)) apiFilters.bathrooms = bathVal;
       }
 
       const res = await fetchProperties(apiFilters);
@@ -221,7 +231,7 @@ function PropertyListingContent({ type }: { type: ListingType }) {
     };
 
     loadProperties();
-  }, [type, page, filters, sort, bbox, isMapView, fetchProperties]);
+  }, [type, page, filters, searchQuery, sort, bbox, isMapView, fetchProperties]);
 
   // Đổi trang thì đưa người dùng về đầu danh sách — 30 tin/trang, đứng nguyên cuối trang là lạc.
   const changePage = useCallback((next: number) => {
@@ -241,14 +251,15 @@ function PropertyListingContent({ type }: { type: ListingType }) {
     setPage(1);
   }, []);
 
-  const activeTags = useMemo(() => buildFilterTags(filters), [filters]);
-
-  const handleRemoveTag = useCallback((tagId: string) => {
-    setFilters((prev) => ({ ...prev, ...removeTag(prev, tagId) }));
+  const changeSearch = useCallback((q: string) => {
+    setSearchQuery(q);
     setPage(1);
   }, []);
 
-  const clearAllTags = useCallback(() => resetFilters(), [resetFilters]);
+  const changeSort = useCallback((next: string) => {
+    setSort(next);
+    setPage(1);
+  }, []);
 
   // Rời chế độ bản đồ thì bỏ luôn vùng lọc theo khung nhìn — nó là khái niệm chỉ có trên bản đồ,
   // mang về danh sách sẽ thành bộ lọc vô hình không ai tắt được.
@@ -275,46 +286,16 @@ function PropertyListingContent({ type }: { type: ListingType }) {
   const featured = properties[0];
   const gridProperties = properties.slice(1);
 
+  // Thiết kế 23/09 bỏ breadcrumb và hàng "Nhận email / sắp xếp" (sắp xếp đã vào thanh chip).
+  // Giữ một dòng h1 nhỏ vì đây là tiêu đề chính của trang cho công cụ tìm kiếm.
   const header = (
     <>
-      <div ref={listTopRef} className="mb-3.5 flex items-center gap-2 text-[13px] font-medium text-gray-500 scroll-mt-[76px]">
-        <Link href="/" className="flex items-center gap-1 transition-colors hover:text-primary">
-          <Home className="h-3.5 w-3.5" />
-          Trang chủ
-        </Link>
-        <ChevronRight className="h-3.5 w-3.5" />
-        <span className="text-gray-900">{copy.breadcrumb}</span>
-      </div>
-
-      <div className="mb-5">
-        <h1 className="text-[22px] font-bold tracking-tight text-gray-900" style={{ fontFamily: 'var(--font-heading)' }}>
+      <div ref={listTopRef} className="mb-4 flex flex-wrap items-baseline gap-x-3 gap-y-1 scroll-mt-[130px]">
+        <h1 className="text-[18px] font-bold tracking-tight text-gray-900" style={{ fontFamily: 'var(--font-heading)' }}>
           {copy.heading}
         </h1>
-        <p className="mt-1 text-[14px] text-gray-500">Hiện có {apiPagination.total} bất động sản.</p>
+        <span className="text-[13px] text-gray-500">{apiPagination.total} bất động sản</span>
       </div>
-
-      <div className="mb-5 flex flex-col gap-4 border-b border-gray-150 pb-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-white">
-            <Bell className="h-4 w-4 fill-white" />
-          </div>
-          <span className="text-[13px] font-semibold text-gray-750">Nhận email tin mới</span>
-          <Switch
-            checked={receiveEmail}
-            onCheckedChange={setReceiveEmail}
-            className="scale-90 data-[state=checked]:bg-primary"
-          />
-        </div>
-        <div className="flex-1 sm:flex-none">
-          <SortBar totalResults={apiPagination.total} sort={sort} onSortChange={setSort} />
-        </div>
-      </div>
-
-      {activeTags.length > 0 && (
-        <div className="mb-4">
-          <FilterTags tags={activeTags} onRemove={handleRemoveTag} onClearAll={clearAllTags} />
-        </div>
-      )}
 
       {loadFailed && !busy && (
         <div className="mb-4 rounded-xl border border-cta/30 bg-white px-4 py-3 text-[13px] text-gray-700">
@@ -355,37 +336,22 @@ function PropertyListingContent({ type }: { type: ListingType }) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="mx-auto max-w-[1440px] px-4 py-6 lg:px-6">
+      <div className="mx-auto max-w-[1440px] px-4 pb-6 lg:px-6">
         <FilterHorizontal
           filters={filters}
           onFilterChange={updateFilters}
           onReset={resetFilters}
           searchQuery={searchQuery}
-          onSearchQueryChange={setSearchQuery}
+          onSearchQueryChange={changeSearch}
+          sort={sort}
+          onSortChange={changeSort}
           context={type}
         />
-
-        <Sheet open={mobileFilterOpen} onOpenChange={setMobileFilterOpen}>
-          <SheetContent side="left" className="w-[300px] overflow-y-auto p-0">
-            <SheetHeader className="border-b border-gray-100 px-4 py-3">
-              <SheetTitle className="text-[15px] font-bold text-gray-900">Bộ lọc tìm kiếm</SheetTitle>
-            </SheetHeader>
-            <div className="p-4">
-              <FilterSidebar
-                filters={filters}
-                onFilterChange={(updates) => { updateFilters(updates); }}
-                context={type}
-                onApply={() => setMobileFilterOpen(false)}
-                onReset={() => { resetFilters(); setMobileFilterOpen(false); }}
-              />
-            </div>
-          </SheetContent>
-        </Sheet>
 
         {isMapView ? (
           /* ══ CHẾ ĐỘ BẢN ĐỒ ══ bản đồ chiếm trọn bề ngang và phần lớn chiều cao, KHÔNG kèm
              lưới tin bên cạnh. Bộ lọc phía trên giữ nguyên nên đổi qua lại không mất kết quả. */
-          <section className="relative mt-2 h-[calc(100vh-190px)] min-h-[460px] overflow-hidden rounded-2xl border border-gray-200 shadow-sm">
+          <section className="relative h-[calc(100vh-150px)] min-h-[460px] overflow-hidden rounded-2xl border border-gray-200 shadow-sm">
             {pendingBounds && (
               <button
                 type="button"
@@ -423,7 +389,7 @@ function PropertyListingContent({ type }: { type: ListingType }) {
             <button
               type="button"
               onClick={showListView}
-              className="absolute bottom-5 left-1/2 z-10 flex h-11 -translate-x-1/2 items-center gap-2 rounded-full bg-white px-5 text-[14px] font-semibold text-gray-900 shadow-[0_8px_24px_rgba(0,0,0,0.18)] transition-colors hover:bg-gray-50"
+              className="absolute bottom-5 left-1/2 z-10 flex h-11 -translate-x-1/2 items-center gap-2 rounded-full bg-gray-900 px-5 text-[14px] font-semibold text-white shadow-[0_8px_24px_rgba(0,0,0,0.25)] transition-colors hover:bg-gray-800"
             >
               <List className="h-4 w-4" />
               Hiện danh sách
@@ -459,17 +425,18 @@ function PropertyListingContent({ type }: { type: ListingType }) {
                   </div>
 
                   <div className="relative min-h-[280px] overflow-hidden rounded-2xl border border-gray-200 shadow-sm md:col-span-1">
+                    {/* Xem trước: có nút +/- và kéo được, nhưng tắt zoom bằng con lăn để không cướp
+                        thao tác cuộn trang. Muốn đầy đủ thì mở chế độ bản đồ. */}
                     <PropertyMapView
                       properties={properties}
                       highlightedId={hoveredId}
-                      interactive={false}
+                      scrollZoom={false}
                       className="h-full w-full"
                     />
-                    {/* Bản đồ ở đây chỉ để xem trước; muốn thao tác thật thì mở chế độ bản đồ. */}
                     <button
                       type="button"
                       onClick={showMapView}
-                      className="absolute left-1/2 top-1/2 z-10 flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 whitespace-nowrap rounded-full bg-white px-5 py-2.5 text-[13px] font-semibold text-gray-900 shadow-[0_6px_20px_rgba(0,0,0,0.2)] transition-colors hover:bg-gray-50"
+                      className="absolute left-1/2 top-3 z-10 flex max-w-[calc(100%-5.5rem)] -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full bg-white px-4 py-2 text-[13px] font-semibold text-gray-900 shadow-[0_4px_16px_rgba(0,0,0,0.18)] transition-colors hover:bg-gray-50"
                     >
                       <MapIcon className="h-4 w-4 text-primary" />
                       Xem tất cả kết quả trên bản đồ
@@ -490,7 +457,7 @@ function PropertyListingContent({ type }: { type: ListingType }) {
                           String(hoveredId) === String(property.id) ? 'ring-2 ring-primary ring-offset-2' : ''
                         }`}
                       >
-                        <PropertyCard property={property} variant="default" />
+                        <ListingGridCard property={property} />
                       </div>
                     ))}
                   </div>

@@ -18,8 +18,11 @@ export interface FilterState {
   areaMax: number | '';
   bedrooms: string;
   bathrooms: string;
+  // Mã hướng/pháp lý khớp cột DB (vd. 'dong_nam', 'so_do'), không phải nhãn tiếng Việt.
   direction: string;
   legal: string;
+  // id tiện ích (bảng features), dạng string như `types`.
+  features: string[];
 }
 
 export const DEFAULT_FILTERS: FilterState = {
@@ -33,6 +36,7 @@ export const DEFAULT_FILTERS: FilterState = {
   bathrooms: 'any',
   direction: '',
   legal: '',
+  features: [],
 };
 
 export type FilterContext = 'sell' | 'rent' | 'project';

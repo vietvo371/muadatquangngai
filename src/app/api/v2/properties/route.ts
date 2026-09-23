@@ -33,6 +33,18 @@ export async function GET(request: NextRequest) {
   const bedroomsParam = searchParams.get('bedrooms');
   const sort = searchParams.get('sort') ?? 'newest';
 
+  // Bộ lọc bổ sung 23/09 — trước đây thanh lọc có sẵn ô tìm kiếm, diện tích, hướng, pháp lý,
+  // phòng tắm nhưng route không đọc tham số nào trong số đó, người dùng lọc mà kết quả không đổi.
+  // Tất cả đều tuỳ chọn: không gửi thì dạng và kết quả phản hồi y hệt trước.
+  const keyword = (searchParams.get('q') ?? '').trim().slice(0, 100);
+  const areaMin = searchParams.get('area_min');
+  const areaMax = searchParams.get('area_max');
+  const direction = searchParams.get('direction');
+  const legal = searchParams.get('legal');
+  const bathroomsParam = searchParams.get('bathrooms');
+  // category nhận nhiều id cách nhau dấu phẩy (thanh lọc cho chọn nhiều loại nhà đất).
+  const categoryIds = (category ?? '').split(',').filter((v) => /^\d+$/.test(v)).slice(0, 20).map((v) => BigInt(v));
+
   // Khung nhìn bản đồ (feedback: phóng to/kéo bản đồ → tìm tin trong khu vực đang xem). Chỉ
   // áp khi đủ 4 cạnh hợp lệ; tin thiếu toạ độ tự loại (latitude not null).
   const parseNum = (v: string | null) => (v !== null && v !== '' && Number.isFinite(Number(v)) ? Number(v) : null);
@@ -47,6 +59,24 @@ export async function GET(request: NextRequest) {
   const pageParam = parseInt(searchParams.get('page') ?? '1', 10);
   const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1;
 
+  // Tuỳ chọn, CHỈ trang danh sách gửi: `with=features` kèm tiện ích của từng tin (thẻ tin cần
+  // hiện "Hồ bơi, Thang máy..."), `features=1,2` lọc tin có ít nhất một tiện ích trong danh sách.
+  // Không gửi thì dạng phản hồi y hệt trước — scripts/diff-api.mjs vẫn đối chiếu route này với
+  // Laravel theo các URL không có tham số này.
+  const withFeatures = (searchParams.get('with') ?? '').split(',').includes('features');
+  const featureIds = (searchParams.get('features') ?? '')
+    .split(',')
+    .map((v) => v.trim())
+    .filter((v) => /^\d+$/.test(v))
+    .slice(0, 20)
+    .map((v) => BigInt(v));
+  const include = withFeatures
+    ? {
+        ...PROPERTY_INCLUDE,
+        property_features: { include: { features: { select: { id: true, name: true, icon: true } } } },
+      }
+    : PROPERTY_INCLUDE;
+
   const isNumeric = (v: string | null): v is string => v !== null && /^\d+$/.test(v);
 
   const where = {
@@ -56,7 +86,11 @@ export async function GET(request: NextRequest) {
     // scopePublished(): đã published + active — status đã ràng buộc ở trên nên chỉ cần thêm published_at
     published_at: { not: null },
     ...(type ? { type } : {}),
-    ...(isNumeric(category) ? { category_id: BigInt(category) } : {}),
+    ...(categoryIds.length === 1
+      ? { category_id: categoryIds[0] }
+      : categoryIds.length > 1
+        ? { category_id: { in: categoryIds } }
+        : {}),
     ...(isNumeric(province) ? { province_id: BigInt(province) } : {}),
     ...(isNumeric(district) ? { district_id: BigInt(district) } : {}),
     ...(priceMin || priceMax
@@ -74,6 +108,41 @@ export async function GET(request: NextRequest) {
           longitude: { not: null, gte: minLng as number, lte: maxLng as number },
         }
       : {}),
+    ...(featureIds.length > 0 ? { property_features: { some: { feature_id: { in: featureIds } } } } : {}),
+    ...(areaMin || areaMax
+      ? {
+          area: {
+            ...(areaMin && Number.isFinite(Number(areaMin)) ? { gte: Number(areaMin) } : {}),
+            ...(areaMax && Number.isFinite(Number(areaMax)) ? { lte: Number(areaMax) } : {}),
+          },
+        }
+      : {}),
+    ...(direction && /^[a-z_]{2,20}$/.test(direction) ? { direction } : {}),
+    // "Sổ đỏ / Sổ hồng" là một lựa chọn trên form nhưng tin cũ còn lưu tách `so_hong`.
+    ...(legal && /^[a-z_]{2,20}$/.test(legal)
+      ? { legal: legal === 'so_do' ? { in: ['so_do', 'so_hong'] } : legal }
+      : {}),
+    ...(bathroomsParam && Number.isFinite(parseInt(bathroomsParam, 10))
+      ? (() => {
+          const bt = parseInt(bathroomsParam, 10);
+          return { bathrooms: bt >= 3 ? { gte: 3 } : bt };
+        })()
+      : {}),
+    // Từ khoá khớp tiêu đề, tên đường hoặc mô tả. Dùng AND bọc OR riêng để không đè lên OR
+    // hạn tin (expired_at) ở trên.
+    ...(keyword
+      ? {
+          AND: [
+            {
+              OR: [
+                { title: { contains: keyword, mode: 'insensitive' as const } },
+                { street: { contains: keyword, mode: 'insensitive' as const } },
+                { description: { contains: keyword, mode: 'insensitive' as const } },
+              ],
+            },
+          ],
+        }
+      : {}),
   };
 
   const total = await db.properties.count({ where });
@@ -84,7 +153,7 @@ export async function GET(request: NextRequest) {
   // dần, chuyển sang $queryRaw với CASE WHEN native.
   let rows;
   if (sort === 'newest') {
-    const all = await db.properties.findMany({ where, include: PROPERTY_INCLUDE });
+    const all = await db.properties.findMany({ where, include });
     all.sort((a, b) => {
       const rankDiff = vipRank(a.is_vip, a.vip_expired_at) - vipRank(b.is_vip, b.vip_expired_at);
       if (rankDiff !== 0) return rankDiff;
@@ -114,7 +183,7 @@ export async function GET(request: NextRequest) {
       orderBy,
       skip: (page - 1) * perPage,
       take: perPage,
-      include: PROPERTY_INCLUDE,
+      include,
     });
   }
 

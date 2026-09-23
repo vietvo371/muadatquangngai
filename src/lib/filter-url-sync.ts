@@ -32,6 +32,7 @@ export function parseFiltersFromSearchParams(searchParams: URLSearchParams | nul
   const bathrooms = get('bathrooms');
   const direction = get('direction');
   const legal = get('legal');
+  const features = get('tien_ich');
   const q = get('q');
   const sort = get('sort');
   const pageParam = get('page');
@@ -49,6 +50,7 @@ export function parseFiltersFromSearchParams(searchParams: URLSearchParams | nul
       bathrooms: bathrooms || DEFAULT_FILTERS.bathrooms,
       direction: direction || DEFAULT_FILTERS.direction,
       legal: legal || DEFAULT_FILTERS.legal,
+      features: features ? features.split(',').filter((v) => /^\d+$/.test(v)) : DEFAULT_FILTERS.features,
     },
     searchQuery: q || '',
     sort: sort || DEFAULT_SORT,
@@ -71,6 +73,7 @@ export function buildSearchParamsFromState(state: UrlSyncedState): URLSearchPara
   if (filters.bathrooms !== 'any') params.set('bathrooms', filters.bathrooms);
   if (filters.direction) params.set('direction', filters.direction);
   if (filters.legal) params.set('legal', filters.legal);
+  if (filters.features.length > 0) params.set('tien_ich', filters.features.join(','));
   if (searchQuery.trim()) params.set('q', searchQuery.trim());
   if (sort !== DEFAULT_SORT) params.set('sort', sort);
   if (page > 1) params.set('page', String(page));

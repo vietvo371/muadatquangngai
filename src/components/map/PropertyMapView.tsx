@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { formatPrice } from '@/lib/formatters';
+import { Map as MapIcon, Tag, Satellite } from 'lucide-react';
+import { formatPrice, derivePrices } from '@/lib/formatters';
 
 /** Tin tối thiểu để vẽ marker — chỉ những tin có toạ độ mới lên bản đồ. */
 export interface MapProperty {
@@ -36,8 +37,11 @@ interface PropertyMapViewProps {
   cluster?: boolean;
   /** Hiện nút chuyển Bản đồ / Vệ tinh. */
   showLayerSwitch?: boolean;
-  /** false = bản đồ tĩnh chỉ để xem trước: không kéo, không zoom, không nút điều khiển. */
+  /** false = bản đồ tĩnh hoàn toàn: không kéo, không zoom, không nút điều khiển. */
   interactive?: boolean;
+  /** false = tắt zoom bằng con lăn chuột (bản đồ xem trước nằm giữa trang, không cướp thao tác
+   * cuộn trang); vẫn còn nút +/- và kéo thả. */
+  scrollZoom?: boolean;
   className?: string;
 }
 
@@ -51,8 +55,15 @@ export interface MapBounds {
 const QUANG_NGAI: [number, number] = [108.7922, 15.1212]; // MapLibre dùng [lng, lat]
 const GOONG_API_KEY = process.env.NEXT_PUBLIC_GOONG_API_KEY ?? '';
 const styleUrl = (name: string) => `https://tiles.goong.io/assets/${name}.json?api_key=${GOONG_API_KEY}`;
-const MAP_STYLES = { map: styleUrl('goong_map_web'), satellite: styleUrl('goong_satellite') } as const;
-type LayerKind = keyof typeof MAP_STYLES;
+/** Ba lớp nền như thiết kế: "Giá" dùng nền bản đồ thường + lớp nhiệt theo giá mỗi m². */
+const LAYERS = {
+  map: { label: 'Bản đồ', style: styleUrl('goong_map_web'), Icon: MapIcon },
+  price: { label: 'Giá', style: styleUrl('goong_map_web'), Icon: Tag },
+  satellite: { label: 'Vệ tinh', style: styleUrl('goong_satellite'), Icon: Satellite },
+} as const;
+type LayerKind = keyof typeof LAYERS;
+const PRICE_SOURCE_ID = 'bds-price-heat';
+const PRICE_LAYER_ID = 'bds-price-heat-layer';
 
 /** Ô lưới (pixel màn hình) để gom marker — hai tin cách nhau dưới mức này gộp thành một cụm. */
 const CLUSTER_GRID_PX = 64;
@@ -94,7 +105,7 @@ function createClusterMarker(count: number) {
     height: ${size}px;
     border-radius: 9999px;
     border: 2px solid #ffffff;
-    background: #1075b1;
+    background: #111827;
     color: #ffffff;
     display: flex;
     align-items: center;
@@ -121,6 +132,7 @@ export function PropertyMapView({
   cluster = false,
   showLayerSwitch = false,
   interactive = true,
+  scrollZoom = true,
   className = '',
 }: PropertyMapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -149,10 +161,12 @@ export function PropertyMapView({
     if (!containerRef.current || mapRef.current || !GOONG_API_KEY) return;
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: MAP_STYLES.map,
+      style: LAYERS.map.style,
       center: QUANG_NGAI,
       zoom: 11,
       interactive,
+      scrollZoom: interactive && scrollZoom,
+      dragRotate: false,
       attributionControl: false,
     });
     if (interactive) {
@@ -177,12 +191,24 @@ export function PropertyMapView({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- interactive cố định theo nơi dùng
   }, []);
 
-  // Đổi lớp nền. Marker là phần tử DOM riêng nên sống sót qua setStyle.
+  // Đổi lớp nền. Marker là phần tử DOM riêng nên sống sót qua setStyle; lớp nhiệt "Giá" thì
+  // KHÔNG (setStyle xoá mọi source/layer tự thêm) nên phải thêm lại sau khi style mới nạp xong.
+  const lastStyleRef = useRef<string>(LAYERS.map.style);
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    map.setStyle(MAP_STYLES[layer]);
-  }, [layer]);
+    const nextStyle = LAYERS[layer].style;
+    const syncHeat = () => updatePriceHeat(map, layer === 'price' ? properties : []);
+    if (nextStyle !== lastStyleRef.current) {
+      lastStyleRef.current = nextStyle;
+      map.setStyle(nextStyle);
+      map.once('style.load', syncHeat);
+    } else if (map.isStyleLoaded()) {
+      syncHeat();
+    } else {
+      map.once('style.load', syncHeat);
+    }
+  }, [layer, properties]);
 
   // Vẽ marker: gom cụm theo lưới pixel khi bật `cluster`, còn lại là viên thuốc giá.
   useEffect(() => {
@@ -262,8 +288,10 @@ export function PropertyMapView({
         map.fitBounds(bounds, { padding: 60, maxZoom: 15, duration: 400 });
       }
     }
+    // Đổi lớp nền KHÔNG vẽ lại/dời khung: marker sống sót qua setStyle, dời khung mỗi lần bấm
+    // "Vệ tinh" sẽ làm người xem mất chỗ đang nhìn.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- highlightedId xử lý ở effect riêng
-  }, [properties, cluster, layer]);
+  }, [properties, cluster]);
 
   // Đổi trạng thái nổi bật của marker đơn khi hover/chọn ở danh sách — không vẽ lại toàn bộ.
   useEffect(() => {
@@ -274,22 +302,24 @@ export function PropertyMapView({
     });
   }, [highlightedId]);
 
-  /** Thẻ xem nhanh khi bấm marker: ảnh, giá, tiêu đề, diện tích và khu vực; bấm vào mở chi tiết. */
+  /** Thẻ xem nhanh khi bấm marker (thiết kế 23/09): ảnh nhỏ bên trái, giá, tiêu đề, diện tích ·
+   * khu vực, mũi tên bên phải; bấm cả thẻ mở trang chi tiết. */
   function openPopup(map: maplibregl.Map, p: MapProperty) {
     popupRef.current?.remove();
     const href = `/${p.type === 'sell' ? 'mua-ban' : 'cho-thue'}/${p.slug}`;
     const img = p.thumbnail || '/images/image_data/Haus-Coastal.jpg';
     const escape = (s: string) => s.replace(/[<>&"]/g, (c) => `&#${c.charCodeAt(0)};`);
     const html = `
-      <a href="${href}" data-property-id="${escape(String(p.id))}" style="display:block;width:210px;text-decoration:none;color:inherit;font-family:var(--font-body,system-ui)">
-        <img src="${img}" alt="" style="width:100%;height:112px;object-fit:cover;border-radius:8px 8px 0 0" referrerpolicy="no-referrer" />
-        <div style="padding:8px 10px">
-          <div style="font-weight:700;color:#e03131;font-size:14px">${escape(formatPrice(p.price, p.priceUnit))}</div>
-          <div style="font-size:12px;color:#374151;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escape(p.title)}</div>
-          <div style="font-size:11px;color:#6b7280;margin-top:3px">${escape(String(p.area))} m²${p.location ? ` · ${escape(p.location)}` : ''}</div>
+      <a href="${href}" data-property-id="${escape(String(p.id))}" style="display:flex;align-items:center;gap:10px;width:260px;padding:8px;text-decoration:none;color:inherit;font-family:var(--font-body,system-ui)">
+        <img src="${img}" alt="" style="width:64px;height:56px;flex-shrink:0;object-fit:cover;border-radius:8px" referrerpolicy="no-referrer" />
+        <div style="min-width:0;flex:1">
+          <div style="font-weight:700;color:#e03131;font-size:14px;line-height:1.2">${escape(formatPrice(p.price, p.priceUnit))}</div>
+          <div style="font-size:12px;font-weight:600;color:#111827;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escape(p.title)}</div>
+          <div style="font-size:11px;color:#6b7280;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escape(String(p.area))} m²${p.location ? ` · ${escape(p.location)}` : ''}</div>
         </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
       </a>`;
-    const popup = new maplibregl.Popup({ offset: 24, closeButton: true, maxWidth: '230px' })
+    const popup = new maplibregl.Popup({ offset: 24, closeButton: false, maxWidth: '280px', className: 'bds-mini-card' })
       .setLngLat([p.longitude as number, p.latitude as number])
       .setHTML(html)
       .addTo(map);
@@ -316,22 +346,82 @@ export function PropertyMapView({
     <div className={`relative ${className}`}>
       <div ref={containerRef} className="h-full w-full" />
       {showLayerSwitch && (
-        <div className="absolute left-3 top-3 z-10 flex overflow-hidden rounded-lg border border-gray-200 bg-white shadow-md">
-          {(['map', 'satellite'] as LayerKind[]).map((kind) => (
-            <button
-              key={kind}
-              type="button"
-              onClick={() => setLayer(kind)}
-              aria-pressed={layer === kind}
-              className={`px-3 py-1.5 text-[12.5px] font-semibold transition-colors ${
-                layer === kind ? 'bg-primary text-white' : 'text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              {kind === 'map' ? 'Bản đồ' : 'Vệ tinh'}
-            </button>
-          ))}
+        <div className="absolute bottom-[76px] left-3 z-10 flex gap-1.5 rounded-xl border border-gray-200 bg-white p-1.5 shadow-md md:bottom-4 md:left-4">
+          {(Object.keys(LAYERS) as LayerKind[]).map((kind) => {
+            const { label, Icon } = LAYERS[kind];
+            const selected = layer === kind;
+            return (
+              <button
+                key={kind}
+                type="button"
+                onClick={() => setLayer(kind)}
+                aria-pressed={selected}
+                className={`flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[12px] font-semibold transition-colors ${
+                  selected ? 'border-gray-900 text-gray-900' : 'border-transparent text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <span className={`flex h-6 w-6 items-center justify-center rounded-md ${selected ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                  <Icon className="h-3.5 w-3.5" />
+                </span>
+                {label}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
   );
+}
+
+/**
+ * Lớp nhiệt "Giá": mỗi tin là một điểm, trọng số = giá mỗi m² chuẩn hoá về 0..1 trong tập kết
+ * quả đang xem (vùng đỏ = đắt hơn các tin xung quanh). Truyền mảng rỗng để gỡ lớp.
+ * Lưu ý: dữ liệu càng thưa thì bản đồ nhiệt càng chỉ là vài đốm rời.
+ */
+function updatePriceHeat(map: maplibregl.Map, properties: MapProperty[]) {
+  if (map.getLayer(PRICE_LAYER_ID)) map.removeLayer(PRICE_LAYER_ID);
+  if (map.getSource(PRICE_SOURCE_ID)) map.removeSource(PRICE_SOURCE_ID);
+
+  const points = properties
+    .filter((p) => p.latitude != null && p.longitude != null && p.area > 0)
+    .map((p) => {
+      const { perM2 } = derivePrices(p.price, p.priceUnit, p.area);
+      return { p, perM2: perM2 ?? p.price / p.area };
+    })
+    .filter(({ perM2 }) => Number.isFinite(perM2) && perM2 > 0);
+  if (points.length === 0) return;
+
+  const values = points.map(({ perM2 }) => perM2);
+  const min = Math.min(...values);
+  const span = Math.max(...values) - min || 1;
+
+  map.addSource(PRICE_SOURCE_ID, {
+    type: 'geojson',
+    data: {
+      type: 'FeatureCollection',
+      features: points.map(({ p, perM2 }) => ({
+        type: 'Feature' as const,
+        properties: { weight: 0.2 + 0.8 * ((perM2 - min) / span) },
+        geometry: { type: 'Point' as const, coordinates: [p.longitude as number, p.latitude as number] },
+      })),
+    },
+  });
+  map.addLayer({
+    id: PRICE_LAYER_ID,
+    type: 'heatmap',
+    source: PRICE_SOURCE_ID,
+    paint: {
+      'heatmap-weight': ['get', 'weight'],
+      'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 8, 25, 14, 60],
+      'heatmap-intensity': 1,
+      'heatmap-opacity': 0.7,
+      'heatmap-color': [
+        'interpolate', ['linear'], ['heatmap-density'],
+        0, 'rgba(16,117,177,0)',
+        0.3, 'rgba(16,117,177,0.45)',
+        0.6, 'rgba(250,176,5,0.7)',
+        1, 'rgba(224,49,49,0.85)',
+      ],
+    },
+  });
 }
