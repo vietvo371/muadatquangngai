@@ -6,6 +6,7 @@ import { formatPrice, formatPriceByMode, derivePrices } from '@/lib/formatters';
 import { CONFIG } from '@/lib/config';
 import { useFavorite } from '@/hooks/useFavorite';
 import { ListingMediaBadges } from './ListingMediaBadges';
+import { CardImageSlider } from './CardImageSlider';
 
 export interface GridCardProperty {
   id: number | string;
@@ -18,6 +19,8 @@ export interface GridCardProperty {
   type: string;
   category?: string;
   thumbnail?: string;
+  /** Toàn bộ ảnh của tin, đã sắp theo sort_order — để lướt ảnh ngay trên thẻ. */
+  images?: string[];
   location?: string;
   bedrooms?: number;
   bathrooms?: number;
@@ -44,24 +47,18 @@ export function ListingGridCard({ property }: { property: GridCardProperty }) {
   const { isSaved, toggle } = useFavorite(property.id);
   const promoted = CONFIG.enableVip && !!property.isVip && property.isVip !== 'normal';
   const hasRooms = (property.bedrooms ?? 0) > 0 || (property.bathrooms ?? 0) > 0;
+  const images = (property.images && property.images.length > 0
+    ? property.images
+    : property.thumbnail ? [property.thumbnail] : []
+  ).filter(Boolean);
 
   return (
     <Link
       href={href}
       className="group flex h-full flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl"
     >
-      <div className="relative aspect-[16/9] overflow-hidden bg-gray-100">
-        {property.thumbnail ? (
-          <img
-            src={property.thumbnail}
-            alt={property.title}
-            referrerPolicy="no-referrer"
-            loading="lazy"
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-xs uppercase text-gray-400">Không có ảnh</div>
-        )}
+      <div className="relative overflow-hidden bg-gray-100">
+        <CardImageSlider images={images} alt={property.title} frameClassName="aspect-[16/9]" />
         <ListingMediaBadges hasVideo={property.hasVideo} hasTour={property.hasTour} promoted={promoted} />
         <button
           type="button"

@@ -24,6 +24,7 @@ import {
   Star,
   AlertCircle,
   Calendar,
+  UserPlus,
 } from 'lucide-react';
 import api from '@/lib/axios';
 import { formatDistanceToNow } from '@/lib/formatters';
@@ -52,6 +53,7 @@ const typeConfig = {
   review: { icon: Star, color: 'bg-[#e8f4fb] text-[#1075b1]' },
   appointment: { icon: Calendar, color: 'bg-[#e8f4fb] text-[#1075b1]' },
   report: { icon: AlertCircle, color: 'bg-[#e8f4fb] text-[#1075b1]' },
+  lead: { icon: UserPlus, color: 'bg-[#e8f4fb] text-[#1075b1]' },
 };
 
 /**

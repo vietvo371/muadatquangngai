@@ -164,7 +164,7 @@ export function ContactSidebar({ user, propertySlug, propertyTitle }: ContactSid
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-[15px] font-bold text-gray-900 leading-tight mb-0.5 truncate">{user.name}</div>
-            <div className="text-[13px] text-gray-500">{user.role || 'Môi giới chuyên nghiệp'}</div>
+            {user.role && <div className="text-[13px] text-gray-500">{user.role}</div>}
             {user.joinDate && (
               <div className="text-[12px] text-gray-400 mt-0.5">Thành viên từ {user.joinDate}</div>
             )}

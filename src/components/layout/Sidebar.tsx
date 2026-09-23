@@ -37,6 +37,7 @@ const mainNavItems = [
   { href: '/dashboard', label: 'Tổng quan', icon: LayoutDashboard, exact: true },
   { href: '/dashboard/dang-tin', label: 'Đăng tin mới', icon: Plus },
   { href: '/dashboard/quan-ly-tin', label: 'Quản lý tin', icon: List },
+  { href: '/dashboard/khach-hang', label: 'Khách hàng', icon: Users },
   { href: '/dashboard/tin-da-luu', label: 'Tin đã lưu', icon: Heart },
   { href: '/dashboard/thong-bao', label: 'Thông báo', icon: Bell },
   { href: '/dashboard/tin-nhan', label: 'Tin nhắn', icon: MessageSquare },

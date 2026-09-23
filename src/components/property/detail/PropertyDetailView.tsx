@@ -139,13 +139,17 @@ const mapApiPropertyDetail = (apiProp: any) => {
       name: apiProp.category?.name || 'Bất động sản',
       slug: apiProp.category?.slug || 'nha-dat',
     },
+    // Thẻ người đăng CHỈ hiện dữ liệu thật (Notion 23/09 "Thông tin môi giới – Số điện thoại").
+    // Trước đây số điện thoại rơi về số cứng '0901234567' vì API công khai không trả owner.phone
+    // → MỌI tin đều hiện cùng một số giả; kèm "Đã xác thực", "Thành viên từ 2024" và "Môi giới
+    // chuyên nghiệp" gắn cho tất cả mọi người. Số đúng là `contact_phone` của tin: form đăng tin
+    // tự điền sẵn số của tài khoản người đăng, người đăng sửa được nếu muốn nhận cuộc gọi số khác.
     user: {
-      id: apiProp.owner?.id || 1,
-      name: apiProp.owner?.name || 'Môi giới',
+      id: apiProp.owner?.id ?? null,
+      name: apiProp.contact_name || apiProp.owner?.name || 'Người đăng tin',
       avatar: apiProp.owner?.avatar || null,
-      phone: apiProp.owner?.phone || '0901234567',
-      is_verified: true,
-      joinDate: '2024',
+      phone: apiProp.contact_phone || apiProp.owner?.phone || '',
+      role: apiProp.owner?.role === 'agent' ? 'Môi giới' : 'Cá nhân',
     },
     features: apiProp.features || [],
   };
