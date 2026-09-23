@@ -4,14 +4,20 @@ import { DEFAULT_FILTERS, type FilterState } from '@/components/search/FilterSid
 // forward/chia sẻ link giữ đúng kết quả đã lọc — khớp hành vi chuẩn của các trang BĐS lớn.
 // Chỉ ghi các field khác giá trị mặc định vào URL để URL luôn gọn (?category=6&price_min=...).
 
+export type ListingView = 'list' | 'map';
+
 export interface UrlSyncedState {
   filters: FilterState;
   searchQuery: string;
   sort: string;
   page: number;
+  /** Danh sách hay bản đồ toàn màn hình. Nằm trong URL để đổi chế độ KHÔNG mất bộ lọc, và để
+   * chia sẻ được link bản đồ đã lọc (yêu cầu 23/09 mục "Giữ Filter" / "Đồng bộ Filter"). */
+  view: ListingView;
 }
 
 export const DEFAULT_SORT = 'newest';
+export const DEFAULT_VIEW: ListingView = 'list';
 
 export function parseFiltersFromSearchParams(searchParams: URLSearchParams | null): UrlSyncedState {
   const get = (key: string) => searchParams?.get(key) ?? null;
@@ -29,6 +35,7 @@ export function parseFiltersFromSearchParams(searchParams: URLSearchParams | nul
   const q = get('q');
   const sort = get('sort');
   const pageParam = get('page');
+  const view = get('view');
 
   return {
     filters: {
@@ -46,11 +53,12 @@ export function parseFiltersFromSearchParams(searchParams: URLSearchParams | nul
     searchQuery: q || '',
     sort: sort || DEFAULT_SORT,
     page: pageParam && /^\d+$/.test(pageParam) ? Number(pageParam) : 1,
+    view: view === 'map' ? 'map' : DEFAULT_VIEW,
   };
 }
 
 export function buildSearchParamsFromState(state: UrlSyncedState): URLSearchParams {
-  const { filters, searchQuery, sort, page } = state;
+  const { filters, searchQuery, sort, page, view } = state;
   const params = new URLSearchParams();
 
   if (filters.types.length > 0) params.set('category', filters.types.join(','));
@@ -66,6 +74,7 @@ export function buildSearchParamsFromState(state: UrlSyncedState): URLSearchPara
   if (searchQuery.trim()) params.set('q', searchQuery.trim());
   if (sort !== DEFAULT_SORT) params.set('sort', sort);
   if (page > 1) params.set('page', String(page));
+  if (view !== DEFAULT_VIEW) params.set('view', view);
 
   return params;
 }
