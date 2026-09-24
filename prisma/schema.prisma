@@ -914,3 +914,49 @@ model broker_certifications {
 
   @@index([status], map: "idx_broker_certifications_status")
 }
+
+/// Báo cáo giá — giá của từng tin bán ghi nhận theo tháng (prisma/sql/2026-09-24-03-price-report.sql).
+/// Không có FK sang properties: tin bị xoá cứng về sau thì lịch sử giá vẫn còn.
+model price_observations {
+  id            BigInt   @id @default(autoincrement())
+  period_month  DateTime @db.Date
+  property_id   BigInt
+  province_id   BigInt
+  area_id       BigInt
+  category_id   BigInt
+  property_type String   @default("sell") @db.VarChar(10)
+  price         Decimal  @db.Decimal(20, 0)
+  area_m2       Decimal  @db.Decimal(10, 2)
+  price_per_m2  Decimal  @db.Decimal(20, 2)
+  data_source   String   @default("listing") @db.VarChar(20)
+  recorded_at   DateTime @db.Timestamp(0)
+
+  @@unique([period_month, property_id, data_source], map: "uniq_price_observations_month_property_source")
+  @@index([data_source, period_month], map: "idx_price_observations_source_month")
+  @@index([area_id, period_month], map: "idx_price_observations_area_month")
+}
+
+/// Báo cáo giá — bản tổng hợp theo tháng × khu vực × loại BĐS × nguồn. NULL ở area/category = tất cả.
+/// Unique index thật dùng COALESCE nên không khai báo được ở đây — xem file SQL.
+model price_snapshots {
+  id                   BigInt   @id @default(autoincrement())
+  period_month         DateTime @db.Date
+  province_id          BigInt?
+  area_id              BigInt?
+  category_id          BigInt?
+  property_type        String   @default("sell") @db.VarChar(10)
+  price_min            Decimal? @db.Decimal(20, 0)
+  price_max            Decimal? @db.Decimal(20, 0)
+  price_average        Decimal? @db.Decimal(20, 0)
+  price_median         Decimal? @db.Decimal(20, 0)
+  price_per_m2         Decimal? @db.Decimal(20, 2)
+  price_per_m2_min     Decimal? @db.Decimal(20, 2)
+  price_per_m2_max     Decimal? @db.Decimal(20, 2)
+  price_per_m2_average Decimal? @db.Decimal(20, 2)
+  listing_count        Int
+  outlier_count        Int      @default(0)
+  data_source          String   @default("listing") @db.VarChar(20)
+  recorded_at          DateTime @db.Timestamp(0)
+
+  @@index([area_id, period_month], map: "idx_price_snapshots_area_month")
+}

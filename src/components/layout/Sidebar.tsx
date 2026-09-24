@@ -29,6 +29,7 @@ import {
   X,
   ShieldCheck,
   Briefcase,
+  LineChart,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores/authStore';
@@ -60,6 +61,7 @@ const adminNavItems = [
   { href: '/admin/packages', label: 'Gói VIP', icon: Star },
   { href: '/admin/projects', label: 'Dự án', icon: Landmark },
   { href: '/admin/transactions', label: 'Giao dịch', icon: CreditCard },
+  { href: '/admin/bao-cao-gia', label: 'Báo cáo giá', icon: LineChart },
   { href: '/admin/reports', label: 'Báo cáo', icon: AlertTriangle },
   { href: '/admin/settings', label: 'Cấu hình', icon: Settings },
 ];
