@@ -54,7 +54,10 @@ export async function POST(request: Request) {
       email: email!,
       password: passwordHash,
       phone,
-      role: typeof body.role === 'string' ? body.role : 'user',
+      // LUÔN là 'user'. Trước đây lưu nguyên body.role của người gửi — ai cũng tự đăng ký được
+      // tài khoản 'admin' bằng một request sửa tay. Form đăng ký không gửi role; vai trò môi giới /
+      // doanh nghiệp chỉ được cấp qua duyệt hồ sơ xác thực hoặc admin đổi quyền.
+      role: 'user',
       created_at: now,
       updated_at: now,
     },
