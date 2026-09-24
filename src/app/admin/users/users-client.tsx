@@ -40,6 +40,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
+  Trash2,
   MoreVertical,
   Eye,
   CheckCircle,
@@ -63,6 +64,7 @@ import {
 } from 'lucide-react';
 import { formatDate } from '@/lib/formatters';
 import { userAdminApi, type AdminUser } from '@/lib/admin-api';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 type UserRole = 'admin' | 'agent' | 'user';
 type UserStatus = 'active' | 'inactive' | 'banned';
@@ -84,7 +86,11 @@ const statusTabs = [
   { value: 'agent', label: 'Môi giới / Đại lý' },
   { value: 'user', label: 'Người dùng thường' },
   { value: 'banned', label: 'Bị cấm / Khóa' },
+  { value: 'deleted', label: 'Đã xóa' },
 ];
+
+/** Dòng trong tab "Đã xóa" — API trả thêm thời điểm xoá, admin thực hiện và số tin còn trong DB. */
+type DeletedUser = AdminUser & { deleted_at?: string | null; deleted_by_name?: string | null; listings_count?: number };
 
 export default function UsersClient() {
   const confirm = useConfirm();
@@ -98,6 +104,10 @@ export default function UsersClient() {
   // Pagination state
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(5);
+
+  // Xoá mềm (Notion 24/09): hộp xác nhận riêng thay cho useConfirm vì hộp chung đóng ngay khi
+  // bấm — khách yêu cầu hiện trạng thái đang xử lý trong lúc gọi API.
+  const [userToDelete, setUserToDelete] = useState<AdminUser | null>(null);
 
   // Dialog states
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
@@ -204,6 +214,28 @@ export default function UsersClient() {
   const bannedCount = loadFailed ? '—' : users.filter((u) => u.status === 'banned' || u.status === 'inactive').length;
 
   // Mutations
+  const deletedQuery = useQuery({
+    queryKey: ['admin-users-deleted'],
+    queryFn: async () => {
+      const res = await userAdminApi.list({ status: 'deleted' });
+      return { users: (res?.data ?? []) as DeletedUser[], total: res?.meta?.total ?? res?.data?.length ?? 0 };
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => userAdminApi.remove(id),
+    onSuccess: (res) => {
+      toast.success(res?.message || 'Đã xóa người dùng.');
+      setUserToDelete(null);
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-users-deleted'] });
+    },
+    onError: (err: unknown) => {
+      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(message || 'Không xóa được người dùng. Tài khoản vẫn giữ nguyên, vui lòng thử lại.');
+    },
+  });
+
   const banMutation = useMutation({
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     mutationFn: async ({ id, reason }: { id: number; reason: string }) => {
@@ -568,6 +600,7 @@ export default function UsersClient() {
             else if (tab.value === 'agent') count = users.filter(u => u.role === 'agent').length;
             else if (tab.value === 'user') count = users.filter(u => u.role === 'user').length;
             else if (tab.value === 'banned') count = users.filter(u => u.status === 'banned' || u.status === 'inactive').length;
+            else if (tab.value === 'deleted') count = deletedQuery.data?.total ?? 0;
 
             return (
               <button
@@ -622,6 +655,10 @@ export default function UsersClient() {
         </div>
       </div>
 
+      {statusFilter === 'deleted' ? (
+        <DeletedUsersTable users={deletedQuery.data?.users ?? []} isLoading={deletedQuery.isLoading} />
+      ) : (
+      <>
       {/* Card Table View */}
       <Card className="border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.03)] rounded-2xl overflow-hidden bg-white">
         <CardContent className="p-0">
@@ -824,6 +861,20 @@ export default function UsersClient() {
                                   Khóa tài khoản
                                 </DropdownMenuItem>
                               )}
+                              {user.role !== 'admin' && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => setUserToDelete(user)}
+                                    data-testid={`delete-user-btn-${user.id}`}
+                                    className="text-cta font-bold text-xs gap-2 focus:text-cta focus:bg-cta/5 rounded-lg cursor-pointer"
+                                    disabled={deleteMutation.isPending}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                    Xóa người dùng
+                                  </DropdownMenuItem>
+                                </>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
@@ -917,6 +968,22 @@ export default function UsersClient() {
           </div>
         </CardContent>
       </Card>
+      </>
+      )}
+
+      <ConfirmDialog
+        open={userToDelete !== null}
+        onOpenChange={(open) => { if (!open && !deleteMutation.isPending) setUserToDelete(null); }}
+        title="Xóa người dùng"
+        description={`Bạn có chắc chắn muốn xóa người dùng ${userToDelete?.name ?? ''} không? Hành động này không thể hoàn tác.`}
+        confirmText="Xóa"
+        cancelText="Hủy"
+        variant="destructive"
+        isLoading={deleteMutation.isPending}
+        onConfirm={async () => {
+          if (userToDelete) await deleteMutation.mutateAsync(userToDelete.id).catch(() => undefined);
+        }}
+      />
 
       {/* Ban User Dialog */}
       <Dialog open={showBanDialog} onOpenChange={(open) => !open && setShowBanDialog(false)}>
@@ -1366,5 +1433,53 @@ export default function UsersClient() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+/**
+ * Tab "Đã xóa": tài khoản xoá mềm không nằm ở danh sách thường nhưng admin vẫn tra được lịch sử —
+ * ai xoá, lúc nào, và số tin từng thuộc người đó (dữ liệu vẫn nằm nguyên trong DB).
+ */
+function DeletedUsersTable({ users, isLoading }: { users: DeletedUser[]; isLoading: boolean }) {
+  return (
+    <Card className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.03)]">
+      <CardContent className="p-0">
+        {isLoading ? (
+          <p className="p-8 text-center text-sm text-gray-500">Đang tải...</p>
+        ) : users.length === 0 ? (
+          <p className="p-8 text-center text-sm text-gray-500">Chưa có tài khoản nào bị xóa.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-[13px]">
+              <thead className="bg-gray-50/50 text-[10.5px] font-extrabold uppercase tracking-wider text-gray-400">
+                <tr>
+                  <th className="py-3.5 pl-6">ID</th>
+                  <th className="py-3.5">Thành viên</th>
+                  <th className="py-3.5">Vai trò</th>
+                  <th className="py-3.5">Số tin đăng</th>
+                  <th className="py-3.5">Xóa lúc</th>
+                  <th className="py-3.5 pr-6">Người xóa</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {users.map((u) => (
+                  <tr key={u.id}>
+                    <td className="py-3 pl-6 font-mono text-gray-500">#{u.id}</td>
+                    <td className="py-3">
+                      <div className="font-bold text-gray-900">{u.name}</div>
+                      <div className="text-[12px] text-gray-500">{u.email}</div>
+                    </td>
+                    <td className="py-3 text-gray-600">{u.role === 'agent' ? 'Môi giới' : u.role === 'agency' ? 'Doanh nghiệp' : 'Người dùng'}</td>
+                    <td className="py-3 font-semibold text-gray-800">{u.listings_count ?? 0} tin (đã ẩn)</td>
+                    <td className="py-3 text-gray-600">{u.deleted_at ? formatDate(u.deleted_at) : '—'}</td>
+                    <td className="py-3 pr-6 text-gray-600">{u.deleted_by_name ?? '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

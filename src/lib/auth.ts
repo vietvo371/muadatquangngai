@@ -33,7 +33,7 @@ export function forbiddenResponse(): NextResponse {
  * - `abilities` lưu JSON string — mặc định '["*"]' (không giới hạn), khớp
  *   $user->createToken('auth_token') không truyền ability trong AuthController.php.
  */
-const TOKENABLE_TYPE = 'App\\Models\\User';
+export const TOKENABLE_TYPE = 'App\\Models\\User';
 const DEFAULT_ABILITIES = '["*"]';
 
 export async function createToken(userId: bigint, name = 'auth_token'): Promise<string> {
@@ -149,6 +149,8 @@ export async function getAuthContext(request: Request): Promise<AuthContext | nu
 
   const user = await db.users.findUnique({ where: { id: tokenRow.tokenable_id }, select: USER_SELECT });
   if (!user) return null;
+  // Tài khoản đã bị admin xoá mềm: token đã thu hồi lúc xoá, chặn thêm ở đây phòng token nào sót.
+  if (user.status === 'deleted') return null;
 
   // Không chặn user 'banned' ở đây — Laravel cũng không tự động chặn qua middleware
   // auth:sanctum (chỉ AuthController::login() chặn LÚC đăng nhập); route nào cần chặn

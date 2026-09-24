@@ -65,6 +65,11 @@ export async function POST(request: Request) {
 
   // Người dùng tự đóng tài khoản (POST /api/v2/user/account/close) — phân biệt với bị admin khoá
   // để báo đúng nguyên nhân và hướng dẫn cách mở lại.
+  // Admin đã xoá tài khoản (xoá mềm) — dữ liệu còn trong DB nhưng không được đăng nhập lại.
+  if (user.status === 'deleted') {
+    return apiError('Tài khoản này không còn tồn tại.', 403);
+  }
+
   if (user.status === 'closed') {
     return apiError('Tài khoản này đã được đóng. Vui lòng liên hệ hỗ trợ nếu bạn muốn mở lại.', 403);
   }

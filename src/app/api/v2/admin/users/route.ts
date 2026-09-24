@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { toVietnamIso8601 } from '@/lib/api-resources/carbon-format';
 import { requireAdmin, hashPassword } from '@/lib/auth';
 import { apiPaginated, apiSuccess, buildPaginationMeta } from '@/lib/api-response';
 import { mapAdminUserRawDump } from '@/lib/api-resources/admin-user-resource';
@@ -26,7 +27,10 @@ export async function GET(request: Request) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const where: Record<string, any> = {};
   if (role) where.role = role;
+  // Tài khoản đã xoá mềm KHÔNG nằm trong danh sách thường (Notion 24/09); chỉ hiện khi lọc
+  // đúng status=deleted (tab "Đã xoá" để admin tra lịch sử).
   if (status) where.status = status;
+  else where.status = { not: 'deleted' };
   if (search) {
     where.OR = [
       { name: { contains: search, mode: 'insensitive' } },
@@ -38,6 +42,32 @@ export async function GET(request: Request) {
     db.users.count({ where }),
     db.users.findMany({ where, orderBy: { created_at: 'desc' }, skip: (page - 1) * perPage, take: perPage }),
   ]);
+
+  // Tab "Đã xoá": kèm thời điểm xoá, admin thực hiện và SỐ TIN THẬT còn trong DB (Notion 24/09
+  // "Số tin đăng" — dữ liệu không mất sau khi xoá mềm, admin vẫn tra được).
+  if (status === 'deleted') {
+    const ids = rows.map((u) => u.id);
+    const adminIds = [...new Set(rows.map((u) => u.deleted_by).filter((v): v is bigint => v !== null))];
+    const [counts, admins] = await Promise.all([
+      ids.length
+        ? db.properties.groupBy({ by: ['user_id'], where: { user_id: { in: ids } }, _count: { _all: true } })
+        : Promise.resolve([]),
+      adminIds.length
+        ? db.users.findMany({ where: { id: { in: adminIds } }, select: { id: true, name: true } })
+        : Promise.resolve([]),
+    ]);
+    const countMap = new Map(counts.map((c) => [c.user_id.toString(), c._count._all]));
+    const adminMap = new Map(admins.map((a) => [a.id.toString(), a.name]));
+    return apiPaginated(
+      rows.map((u) => ({
+        ...mapAdminUserRawDump(u),
+        deleted_at: toVietnamIso8601(u.deleted_at),
+        deleted_by_name: u.deleted_by !== null ? adminMap.get(u.deleted_by.toString()) ?? null : null,
+        listings_count: countMap.get(u.id.toString()) ?? 0,
+      })),
+      buildPaginationMeta(total, page, perPage)
+    );
+  }
 
   return apiPaginated(rows.map((u) => mapAdminUserRawDump(u)), buildPaginationMeta(total, page, perPage));
 }

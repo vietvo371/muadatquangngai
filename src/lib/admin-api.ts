@@ -594,6 +594,12 @@ export const userAdminApi = {
     const { data } = await api.put<{ success: boolean; data: AdminUser }>(`/api/v2/admin/users/${id}`, payload);
     return data;
   },
+
+  /** Xoá MỀM: tài khoản chuyển 'deleted', tin chuyển Tạm ẩn, dữ liệu giữ nguyên trong DB. */
+  remove: async (id: number) => {
+    const { data } = await api.delete<{ success: boolean; message?: string }>(`/api/v2/admin/users/${id}`);
+    return data;
+  },
 };
 
 export interface AdminSetting {
