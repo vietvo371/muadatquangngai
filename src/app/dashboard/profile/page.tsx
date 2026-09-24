@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -13,7 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { PillTabs } from '@/components/ui/pill-tabs';
 import { PackageCard } from '@/components/dashboard/PackageCard';
-import { BrokerVerificationSection } from '@/components/broker/BrokerVerificationSection';
+import { BrokerVerificationSection, BROKER_SECTION_HASH } from '@/components/broker/BrokerVerificationSection';
 import { 
   Camera,
   Save,
@@ -34,6 +34,21 @@ const PACKAGES = [
 export default function ProfilePage() {
   const { user, isLoading, updateProfile, changePassword } = useAuth();
   const [activeTab, setActiveTab] = useState('info');
+
+  // Popup chặn đăng tin và thông báo duyệt/từ chối dẫn về /dashboard/profile#xac-thuc-moi-gioi
+  // → mở thẳng tab Thông tin hành nghề thay vì để người dùng tự tìm (Notion 24/09).
+  useEffect(() => {
+    const openBrokerTabFromHash = () => {
+      if (window.location.hash === BROKER_SECTION_HASH) setActiveTab('broker');
+    };
+    // setTimeout chứ không requestAnimationFrame: rAF không chạy khi tab đang mở nền.
+    const timer = window.setTimeout(openBrokerTabFromHash, 0);
+    window.addEventListener('hashchange', openBrokerTabFromHash);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener('hashchange', openBrokerTabFromHash);
+    };
+  }, []);
   
   // Profile form
   const [profileForm, setProfileForm] = useState({
@@ -184,6 +199,8 @@ export default function ProfilePage() {
               <PillTabs 
                 tabs={[
                   { id: 'info', label: 'Thông tin cá nhân' },
+                  // Chỉ tài khoản môi giới mới có tab hành nghề — tài khoản thường không thấy mục bắt buộc này.
+                  ...(user.role === 'agent' ? [{ id: 'broker', label: 'Thông tin hành nghề' }] : []),
                   { id: 'password', label: 'Đổi mật khẩu' },
                   { id: 'vip', label: 'Nâng cấp VIP' },
                 ]}
@@ -193,6 +210,8 @@ export default function ProfilePage() {
             </div>
 
             <CardContent className="p-6">
+              {activeTab === 'broker' && user.role === 'agent' && <BrokerVerificationSection />}
+
               {/* Info Tab */}
               {activeTab === 'info' && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -349,8 +368,6 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
 
-          {/* Chứng chỉ hành nghề + Công ty/Sàn — chỉ tài khoản môi giới (Notion 24/09). */}
-          {user.role === 'agent' && <BrokerVerificationSection />}
         </div>
       </div>
     </div>

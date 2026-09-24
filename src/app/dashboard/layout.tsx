@@ -6,6 +6,7 @@ import { Sidebar } from '@/components/layout/Sidebar';
 import { Bell, Menu, Plus, Home, Building2, MessageSquare, User } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { useSyncCurrentUser } from '@/hooks/useSyncCurrentUser';
 
 const mobileNavItems = [
   { href: '/dashboard', icon: Home, label: 'Tổng quan' },
@@ -23,6 +24,7 @@ export default function DashboardLayout({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
+  useSyncCurrentUser();
 
   return (
     <div className="min-h-screen bg-gray-50 flex">

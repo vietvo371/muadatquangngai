@@ -10,13 +10,14 @@ import { fileUploadApi } from '@/lib/admin-api';
 import { brokerApi, type BrokerCompany, type BrokerProfile, type ReviewStatus } from '@/lib/broker-api';
 
 const STATUS_BADGE: Record<ReviewStatus, { label: string; className: string; Icon: typeof Clock }> = {
-  pending: { label: 'Đang chờ duyệt', className: 'bg-gray-100 text-gray-700', Icon: Clock },
-  approved: { label: 'Đã duyệt', className: 'bg-primary-light text-primary', Icon: CheckCircle },
-  rejected: { label: 'Bị từ chối', className: 'bg-cta/10 text-cta', Icon: XCircle },
+  // Nhãn theo đúng cách gọi của khách (Notion 24/09 "Trạng thái xác thực").
+  pending: { label: 'Đang chờ kiểm tra', className: 'bg-gray-100 text-gray-700', Icon: Clock },
+  approved: { label: 'Đã xác thực', className: 'bg-primary-light text-primary', Icon: CheckCircle },
+  rejected: { label: 'Không được xác thực', className: 'bg-cta/10 text-cta', Icon: XCircle },
 };
 
 function StatusBadge({ status }: { status: ReviewStatus | null }) {
-  if (!status) return <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-[12px] font-semibold text-gray-600">Chưa nộp</span>;
+  if (!status) return <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-[12px] font-semibold text-gray-600">Chưa gửi</span>;
   const { label, className, Icon } = STATUS_BADGE[status];
   return (
     <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[12px] font-semibold ${className}`}>
@@ -36,6 +37,9 @@ const apiMessage = (err: unknown, fallback: string) => {
  * Mục "Xác thực môi giới" trong trang Hồ sơ (Notion 24/09): chứng chỉ hành nghề + Công ty/Sàn
  * trực thuộc. Chỉ hiện với tài khoản môi giới. Popup chặn đăng tin dẫn về đây (#xac-thuc-moi-gioi).
  */
+/** Hash mà popup chặn đăng tin và thông báo dùng để mở thẳng tab này. */
+export const BROKER_SECTION_HASH = '#xac-thuc-moi-gioi';
+
 export function BrokerVerificationSection() {
   const queryClient = useQueryClient();
   const { data: profile, isLoading } = useQuery({ queryKey: ['broker-profile'], queryFn: brokerApi.profile });
@@ -44,7 +48,7 @@ export function BrokerVerificationSection() {
   // Link từ popup có hash #xac-thuc-moi-gioi — cuộn tới đây sau khi dữ liệu hiện ra.
   const sectionRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (!isLoading && typeof window !== 'undefined' && window.location.hash === '#xac-thuc-moi-gioi') {
+    if (!isLoading && typeof window !== 'undefined' && window.location.hash === BROKER_SECTION_HASH) {
       sectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }, [isLoading]);
@@ -58,7 +62,7 @@ export function BrokerVerificationSection() {
     <div ref={sectionRef} id="xac-thuc-moi-gioi" className="scroll-mt-24 space-y-6">
       <Card className="rounded-2xl border-gray-100 shadow-sm">
         <CardContent className="space-y-3 p-6">
-          <h2 className="text-lg font-bold text-gray-900">Xác thực môi giới</h2>
+          <h2 className="text-lg font-bold text-gray-900">Thông tin hành nghề / Xác thực môi giới</h2>
           <p className={`rounded-xl px-4 py-3 text-[13.5px] ${profile.eligible ? 'bg-primary-light text-primary' : 'border border-gray-200 bg-gray-50 text-gray-700'}`}>
             {profile.eligible
               ? 'Tài khoản đã đủ điều kiện đăng tin: chứng chỉ hành nghề và Công ty/Sàn đều đã được duyệt.'
