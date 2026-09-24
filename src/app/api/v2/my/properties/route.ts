@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { getBrokerEligibility, brokerIneligibleResponse } from '@/lib/broker-eligibility';
 import { db } from '@/lib/db';
 import { apiPaginated, apiSuccess, apiError, buildPaginationMeta } from '@/lib/api-response';
 import { getAuthUser, unauthenticatedResponse } from '@/lib/auth';
@@ -117,6 +118,12 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const user = await getAuthUser(request);
   if (!user) return unauthenticatedResponse();
+
+  // Môi giới phải có chứng chỉ được duyệt + Công ty/Sàn được duyệt mới đăng tin (Notion 24/09).
+  // Kiểm TRƯỚC mọi bước khác — nhất là trước khi trừ tiền gói tin. Nội dung form vẫn được trình
+  // duyệt tự lưu nháp (usePostDraft) nên môi giới không mất công soạn.
+  const eligibility = await getBrokerEligibility(user.id);
+  if (eligibility && !eligibility.eligible) return brokerIneligibleResponse(eligibility);
 
   const body = await request.json().catch(() => ({}));
   const errors: FieldError[] = [];

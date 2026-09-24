@@ -40,6 +40,14 @@ export interface PaginationMeta {
   to: number | null;
 }
 
+/**
+ * Lỗi có MÃ máy đọc được + dữ liệu kèm theo, để giao diện rẽ nhánh theo từng nguyên nhân (vd.
+ * BROKER_NOT_ELIGIBLE_TO_POST kèm điều kiện nào còn thiếu). Vẫn giữ khung {success,message,errors}.
+ */
+export function apiErrorWithCode(message: string, status: number, code: string, data: unknown = null) {
+  return jsonResponse({ success: false, message, code, errors: [], data }, status);
+}
+
 export function apiPaginated(items: unknown[], meta: PaginationMeta) {
   return jsonResponse({ success: true, data: items, meta }, 200);
 }

@@ -8,6 +8,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores/authStore';
 import { usePostDraft, useDraftAutosave } from '@/hooks/usePostDraft';
+import { readBrokerIneligible, type BrokerEligibilityInfo } from '@/lib/broker-api';
+import { BrokerEligibilityDialog } from '@/components/broker/BrokerEligibilityDialog';
 import { usePostForm } from '@/hooks/usePostForm';
 import { PostStepper } from '@/components/dashboard/PostStepper';
 import { PackageCard } from '@/components/dashboard/PackageCard';
@@ -158,6 +160,7 @@ export default function DangTinPage() {
   // Bản nháp (spec mục 13). Chỉ bật autosave sau khi người dùng đã xử lý xong bản nháp
   // cũ (tiếp tục hoặc bỏ), nếu không form rỗng lúc mới mở sẽ ghi đè ngay lên nháp cũ.
   const draft = usePostDraft<PropertyFormData>();
+  const [brokerBlock, setBrokerBlock] = useState<(BrokerEligibilityInfo & { message: string }) | null>(null);
   const [draftHandled, setDraftHandled] = useState(false);
 
   // Chỉ lưu khi người dùng đã nhập gì đó thật sự. Không tính các ô liên hệ vì chúng được
@@ -421,6 +424,14 @@ export default function DangTinPage() {
         throw new Error(response.data?.message || 'Đăng tin thất bại');
       }
     } catch (err: any) {
+      // Môi giới chưa đủ điều kiện (Notion 24/09): popup theo đúng điều kiện thiếu, KHÔNG xoá bản
+      // nháp — nội dung đã soạn vẫn còn nguyên để đăng lại sau khi được duyệt.
+      const brokerBlock = readBrokerIneligible(err);
+      if (brokerBlock) {
+        setBrokerBlock(brokerBlock);
+        return;
+      }
+
       const errors = err.response?.data?.errors;
       const message = err.response?.data?.message || err.message || 'Có lỗi xảy ra khi đăng tin';
 
@@ -443,6 +454,7 @@ export default function DangTinPage() {
 
   return (
     <div className="max-w-4xl mx-auto py-2">
+      <BrokerEligibilityDialog info={brokerBlock} onClose={() => setBrokerBlock(null)} />
       <div className="mb-8 text-center">
         <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900">Đăng tin bất động sản</h1>
         <p className="text-gray-500 mt-2 text-sm sm:text-base">Điền đầy đủ thông tin để thu hút khách hàng tốt nhất</p>

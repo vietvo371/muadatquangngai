@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { PillTabs } from '@/components/ui/pill-tabs';
 import { PackageCard } from '@/components/dashboard/PackageCard';
+import { BrokerVerificationSection } from '@/components/broker/BrokerVerificationSection';
 import { 
   Camera,
   Save,
@@ -177,7 +178,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Right Main Content */}
-        <div className="lg:col-span-8">
+        <div className="lg:col-span-8 space-y-6">
           <Card className="rounded-2xl shadow-sm border-gray-100">
             <div className="px-6 pt-6 pb-2 border-b border-gray-100">
               <PillTabs 
@@ -347,6 +348,9 @@ export default function ProfilePage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Chứng chỉ hành nghề + Công ty/Sàn — chỉ tài khoản môi giới (Notion 24/09). */}
+          {user.role === 'agent' && <BrokerVerificationSection />}
         </div>
       </div>
     </div>

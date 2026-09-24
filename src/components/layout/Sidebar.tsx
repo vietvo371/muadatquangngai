@@ -28,6 +28,7 @@ import {
   Menu,
   X,
   ShieldCheck,
+  Briefcase,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores/authStore';
@@ -51,7 +52,10 @@ const adminNavItems = [
   { href: '/admin/properties', label: 'Quản lý tin', icon: Building2 },
   { href: '/admin/users', label: 'Quản lý users', icon: Users },
   { href: '/admin/agencies', label: 'Doanh nghiệp', icon: Building2 },
-  { href: '/admin/verifications', label: 'Xác thực', icon: ShieldCheck },
+  // Quản lý môi giới (Notion 24/09). Thay mục "Xác thực" cũ: trang đó không có đường nào để người
+  // dùng nộp hồ sơ vào, và điều kiện đăng tin giờ dựa trên chứng chỉ + Công ty/Sàn.
+  { href: '/admin/moi-gioi/chung-chi', label: 'Xác thực chứng chỉ', icon: ShieldCheck },
+  { href: '/admin/moi-gioi/cong-ty', label: 'Công ty/Sàn giao dịch', icon: Briefcase },
   { href: '/admin/categories', label: 'Danh mục', icon: Package },
   { href: '/admin/packages', label: 'Gói VIP', icon: Star },
   { href: '/admin/projects', label: 'Dự án', icon: Landmark },

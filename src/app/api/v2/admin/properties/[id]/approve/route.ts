@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
 import { apiError, apiSuccess } from '@/lib/api-response';
 import { mapPropertyResource } from '@/lib/api-resources/property-resource';
+import { getBrokerEligibility, brokerIneligibleResponse, brokerIneligibleMessage } from '@/lib/broker-eligibility';
 
 const PROPERTY_INCLUDE = {
   provinces: { select: { id: true, name: true, slug: true } },
@@ -34,6 +35,16 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
   const existing = await db.properties.findUnique({ where: { id: BigInt(id) } });
   if (!existing) return apiError('Không tìm thấy tin đăng.', 404);
+
+  // Admin duyệt cũng không được đưa lên tin của môi giới chưa đủ điều kiện — nếu không, tin gửi
+  // trước khi có luật này (đang chờ duyệt) vẫn lên được, vòng qua đúng thứ luật muốn chặn.
+  const eligibility = await getBrokerEligibility(existing.user_id);
+  if (eligibility && !eligibility.eligible) {
+    return brokerIneligibleResponse(
+      eligibility,
+      `Không thể duyệt: chủ tin là môi giới chưa đủ điều kiện đăng tin. ${brokerIneligibleMessage(eligibility)}`
+    );
+  }
 
   const now = new Date();
   const expiresAt = new Date(now);

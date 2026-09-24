@@ -1,4 +1,5 @@
 import { db } from '@/lib/db';
+import { getBrokerEligibility, brokerIneligibleResponse } from '@/lib/broker-eligibility';
 import { apiSuccess, apiError } from '@/lib/api-response';
 import { getAuthUser, unauthenticatedResponse, forbiddenResponse } from '@/lib/auth';
 import { effectiveVipTier } from '@/lib/vip';
@@ -26,6 +27,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const property = await db.properties.findUnique({ where: { id: BigInt(id) } });
   if (!property || property.deleted_at !== null) return apiError('Không tìm thấy tin đăng.', 404);
   if (property.user_id !== user.id && user.role !== 'admin') return forbiddenResponse();
+
+  // Đăng lại cũng là đưa tin ra công khai → cùng điều kiện môi giới như đăng mới (xét CHỦ TIN).
+  const eligibility = await getBrokerEligibility(property.user_id);
+  if (eligibility && !eligibility.eligible) return brokerIneligibleResponse(eligibility);
 
   // Tin còn hạn gói trả phí thì dùng chức năng Gia hạn (có trừ tiền), không đi đường miễn phí này.
   const tier = effectiveVipTier(property.is_vip, property.vip_expired_at);

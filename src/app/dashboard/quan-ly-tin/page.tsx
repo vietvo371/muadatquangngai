@@ -25,6 +25,8 @@ import { EmptyState, BoostModal } from '@/components/shared';
 import { PillTabs } from '@/components/ui/pill-tabs';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import api from '@/lib/axios';
+import { readBrokerIneligible, type BrokerEligibilityInfo } from '@/lib/broker-api';
+import { BrokerEligibilityDialog } from '@/components/broker/BrokerEligibilityDialog';
 import { formatPrice } from '@/lib/formatters';
 
 export default function PropertyManagementPage() {
@@ -36,6 +38,7 @@ export default function PropertyManagementPage() {
    * chủ tin buộc phải nhập lại tin từ đầu.
    */
   const [repostingId, setRepostingId] = useState<number | null>(null);
+  const [brokerBlock, setBrokerBlock] = useState<(BrokerEligibilityInfo & { message: string }) | null>(null);
   const repost = async (id: number) => {
     setRepostingId(id);
     try {
@@ -43,6 +46,12 @@ export default function PropertyManagementPage() {
       toast.success(res.data?.message || 'Đã đăng lại tin.');
       refetch();
     } catch (err: unknown) {
+      // Đăng lại cũng là đưa tin ra công khai → cùng điều kiện môi giới như đăng mới.
+      const brokerIneligible = readBrokerIneligible(err);
+      if (brokerIneligible) {
+        setBrokerBlock(brokerIneligible);
+        return;
+      }
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
         'Không đăng lại được tin. Vui lòng thử lại.';
@@ -99,6 +108,7 @@ export default function PropertyManagementPage() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
+      <BrokerEligibilityDialog info={brokerBlock} onClose={() => setBrokerBlock(null)} />
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
         <div>
