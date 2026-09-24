@@ -5,22 +5,17 @@ import { dbNow } from '@/lib/db-time';
 import { FieldError, validationErrorResponse } from '@/lib/validation';
 import { isValidPhone, isValidEmail } from '@/lib/property-form-config';
 import { BROKER_ROLE } from '@/lib/broker-eligibility';
-import { companyResource, loadBrokerProfile } from '@/lib/broker-profile';
+import { loadBrokerProfile, searchSelectableCompanies } from '@/lib/broker-profile';
 
-/** GET /api/v2/broker-companies?q= — Công ty/Sàn ĐÃ DUYỆT cho ô chọn có tìm kiếm (tối đa 20). */
+/**
+ * GET /api/v2/broker-companies?q= — lựa chọn cho ô Công ty/Sàn (tối đa 20): Công ty/Sàn đã duyệt +
+ * sàn môi giới thật đang hoạt động trong danh bạ Doanh nghiệp.
+ */
 export async function GET(request: Request) {
   const user = await getAuthUser(request);
   if (!user) return unauthenticatedResponse();
   const q = (new URL(request.url).searchParams.get('q') ?? '').trim().slice(0, 100);
-  const rows = await db.broker_companies.findMany({
-    where: {
-      status: 'approved',
-      ...(q ? { OR: [{ name: { contains: q, mode: 'insensitive' as const } }, { tax_code: { contains: q } }] } : {}),
-    },
-    orderBy: { name: 'asc' },
-    take: 20,
-  });
-  return apiSuccess(rows.map(companyResource));
+  return apiSuccess(await searchSelectableCompanies(q));
 }
 
 /**

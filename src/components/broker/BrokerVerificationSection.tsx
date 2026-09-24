@@ -218,7 +218,7 @@ function CompanyCard({ profile, onSaved }: { profile: BrokerProfile; onSaved: (p
   });
 
   const select = useMutation({
-    mutationFn: (c: BrokerCompany) => brokerApi.selectCompany(c.id),
+    mutationFn: (c: BrokerCompany) => brokerApi.selectCompany(c),
     onSuccess: (res) => { toast.success(res.message); onSaved(res.data); setOpen(false); setQuery(''); },
     onError: (err) => toast.error(apiMessage(err, 'Không cập nhật được Công ty/Sàn.')),
   });
@@ -239,7 +239,7 @@ function CompanyCard({ profile, onSaved }: { profile: BrokerProfile; onSaved: (p
         {company && (
           <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 text-[13.5px]">
             <p className="font-semibold text-gray-900">{company.name}</p>
-            <p className="text-gray-500">MST {company.tax_code ?? '—'}{company.address ? ` · ${company.address}` : ''}</p>
+            <p className="text-gray-500">{[company.tax_code ? `MST ${company.tax_code}` : null, company.address].filter(Boolean).join(' · ')}</p>
             {company.status === 'rejected' && company.rejection_reason && (
               <p className="mt-1 text-cta">Lý do từ chối: {company.rejection_reason}. Vui lòng chọn Công ty/Sàn khác.</p>
             )}
@@ -267,14 +267,16 @@ function CompanyCard({ profile, onSaved }: { profile: BrokerProfile; onSaved: (p
               ) : (
                 companies.map((c) => (
                   <button
-                    key={c.id}
+                    key={c.id ?? `agency-${c.agency_id}`}
                     type="button"
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => select.mutate(c)}
                     className="block w-full rounded-lg px-3 py-2 text-left hover:bg-gray-50"
                   >
                     <span className="block text-[13.5px] font-semibold text-gray-900">{c.name}</span>
-                    <span className="block text-[12px] text-gray-500">MST {c.tax_code ?? '—'}{c.address ? ` · ${c.address}` : ''}</span>
+                    <span className="block text-[12px] text-gray-500">
+                      {[c.tax_code ? `MST ${c.tax_code}` : null, c.address].filter(Boolean).join(' · ') || 'Sàn trong danh bạ Doanh nghiệp'}
+                    </span>
                   </button>
                 ))
               )}

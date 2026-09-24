@@ -3,7 +3,9 @@ import api from '@/lib/axios';
 export type ReviewStatus = 'pending' | 'approved' | 'rejected';
 
 export interface BrokerCompany {
-  id: number;
+  /** null = sàn trong danh bạ Doanh nghiệp chưa có dòng Công ty/Sàn; chọn bằng agency_id. */
+  id: number | null;
+  agency_id: number | null;
   name: string;
   tax_code: string | null;
   address: string | null;
@@ -58,8 +60,9 @@ export const brokerApi = {
   profile: () => api.get('/api/v2/my/broker-profile').then((r) => r.data.data as BrokerProfile),
   submitCertification: (payload: Omit<BrokerCertification, 'status' | 'rejection_reason' | 'reviewed_at' | 'submitted_at'>) =>
     api.put('/api/v2/my/broker-profile/certification', payload).then((r) => r.data as { message: string; data: BrokerProfile }),
-  selectCompany: (companyId: number) =>
-    api.put('/api/v2/my/broker-profile/company', { company_id: companyId }).then((r) => r.data as { message: string; data: BrokerProfile }),
+  selectCompany: (company: Pick<BrokerCompany, 'id' | 'agency_id'>) =>
+    api.put('/api/v2/my/broker-profile/company', company.id !== null ? { company_id: company.id } : { agency_id: company.agency_id })
+      .then((r) => r.data as { message: string; data: BrokerProfile }),
   searchCompanies: (q: string) =>
     api.get('/api/v2/broker-companies', { params: { q } }).then((r) => r.data.data as BrokerCompany[]),
   proposeCompany: (payload: { name: string; tax_code: string; address: string; phone: string; email?: string }) =>

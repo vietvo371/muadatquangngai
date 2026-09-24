@@ -722,6 +722,7 @@ model agencies {
   provinces provinces? @relation(fields: [province_id], references: [id], onUpdate: NoAction, map: "agencies_province_id_foreign")
   districts districts? @relation(fields: [district_id], references: [id], onUpdate: NoAction, map: "agencies_district_id_foreign")
   users     users[]
+  broker_companies broker_companies[]
 
   @@index([district_id], map: "idx_agencies_district")
   @@index([is_active, is_verified], map: "idx_agencies_listing")
@@ -890,6 +891,10 @@ model broker_companies {
   approved_at      DateTime? @db.Timestamp(0)
   created_at       DateTime? @db.Timestamp(0)
   updated_at       DateTime? @db.Timestamp(0)
+  /// Sàn trong danh bạ Doanh nghiệp mà dòng này được tạo từ đó (SQL 2026-09-24-04). Unique một phần
+  /// (WHERE agency_id IS NOT NULL) nên không khai báo @unique ở đây.
+  agency_id        BigInt?
+  agency           agencies? @relation(fields: [agency_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
   users            users[]   @relation("UserBrokerCompany")
 
   @@index([status], map: "idx_broker_companies_status")
