@@ -1,4 +1,6 @@
 import { db } from '@/lib/db';
+import { BROKER_VERIFIED_WHERE } from '@/lib/broker-eligibility';
+import { toVietnamIso8601 } from '@/lib/api-resources/carbon-format';
 import { apiSuccess, apiError } from '@/lib/api-response';
 import { mapPropertyResource, type WardRow } from '@/lib/api-resources/property-resource';
 
@@ -52,9 +54,10 @@ export async function GET(request: Request, ctx: { params: Promise<{ id: string 
       include: PROPERTY_INCLUDE,
     }),
     db.reviews.count({ where: { agent_id: agent.id } }),
-    db.verifications.findFirst({
-      where: { user_id: agent.id, type: 'agent', status: 'approved' },
-      select: { verified_at: true, license_number: true },
+    // Nhãn xác thực lấy từ chứng chỉ hành nghề + Công ty/Sàn đã duyệt (nguồn duy nhất, Notion 25/09).
+    db.users.findFirst({
+      where: { id: agent.id, ...BROKER_VERIFIED_WHERE },
+      select: { broker_company: { select: { name: true } }, broker_certification: { select: { reviewed_at: true } } },
     }),
     db.reviews.findMany({
       where: { agent_id: agent.id },
@@ -89,12 +92,13 @@ export async function GET(request: Request, ctx: { params: Promise<{ id: string 
     rating: Number(agent.rating),
     review_count: reviewCount,
     total_listings: properties.length,
-    company: agent.agency_name,
+    company: verification?.broker_company?.name ?? agent.agency_name,
     district: agent.districts ? { id: Number(agent.districts.id), name: agent.districts.name } : null,
     province: agent.provinces ? { id: Number(agent.provinces.id), name: agent.provinces.name } : null,
     verified: verification !== null,
-    verified_at: verification?.verified_at ?? null,
-    license_number: verification?.license_number ?? null,
+    verified_at: toVietnamIso8601(verification?.broker_certification?.reviewed_at ?? null),
+    // Không công khai số chứng chỉ hành nghề — dữ liệu cá nhân, chỉ admin và chính chủ xem.
+    license_number: null,
     joined_at: agent.created_at,
     reviews: reviews.map((r) => ({
       id: Number(r.id),

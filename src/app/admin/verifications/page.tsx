@@ -1,11 +1,9 @@
-import VerificationsClient from './verifications-client';
-import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 
-export const metadata: Metadata = {
-  title: 'Xác Thực Môi Giới | Quản trị Bất Động Sản Quảng Ngãi',
-  description: 'Duyệt hồ sơ đăng ký môi giới cá nhân và công ty đại lý bất động sản Quảng Ngãi.',
-};
-
-export default function Page() {
-  return <VerificationsClient />;
+/**
+ * Luồng "Xác thực môi giới" cũ (bảng `verifications`) đã gộp vào Xác thực chứng chỉ hành nghề
+ * (Notion 25/09 — chỉ một nguồn xác thực môi giới). Giữ route để link/bookmark cũ không bị 404.
+ */
+export default function LegacyVerificationsPage() {
+  redirect('/admin/moi-gioi/chung-chi');
 }

@@ -69,6 +69,27 @@ export async function getBrokerEligibility(userId: bigint): Promise<BrokerEligib
   };
 }
 
+/**
+ * Điều kiện "Đã xác thực" của môi giới (Notion 25/09) — CÙNG điều kiện với đăng tin, là nguồn
+ * duy nhất cho mọi nơi hiện nhãn xác thực (Hồ sơ, danh bạ /moi-gioi, trang môi giới). Thay cho
+ * bảng `verifications` của luồng "Xác thực môi giới" cũ đã bỏ.
+ */
+export const BROKER_VERIFIED_WHERE = {
+  role: BROKER_ROLE,
+  is_certified: true,
+  broker_company: { status: 'approved' },
+} as const;
+
+/** id (dạng chuỗi) của các môi giới đã xác thực trong danh sách — một truy vấn, không N+1. */
+export async function brokerVerifiedIds(ids: bigint[]): Promise<Set<string>> {
+  if (ids.length === 0) return new Set();
+  const rows = await db.users.findMany({
+    where: { id: { in: ids }, ...BROKER_VERIFIED_WHERE },
+    select: { id: true },
+  });
+  return new Set(rows.map((r) => r.id.toString()));
+}
+
 /** Câu thông báo theo đúng điều kiện đang thiếu (dùng chung cho API và popup). */
 export function brokerIneligibleMessage(e: BrokerEligibility): string {
   const certMissing = !e.isCertified;

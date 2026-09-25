@@ -264,66 +264,6 @@ export const transactionApi = {
   },
 };
 
-// Verifications
-export interface Verification {
-  id: number;
-  user_id: number;
-  user?: {
-    id: number;
-    name: string;
-    email: string;
-    phone?: string;
-    avatar?: string;
-    role: string;
-  };
-  type: 'agent' | 'agency';
-  status: 'pending' | 'approved' | 'rejected';
-  license_number?: string;
-  agency_name?: string;
-  documents?: string[];
-  verified_at?: string;
-  rejected_at?: string;
-  rejection_reason?: string;
-  reject_reason?: string;
-  admin?: { id: number; name: string };
-  created_at: string;
-}
-
-export interface VerificationStats {
-  pending: number;
-  approved: number;
-  rejected: number;
-}
-
-export const verificationApi = {
-  list: async (params?: { type?: string; page?: number; per_page?: number }) => {
-    const { data } = await api.get<{ data: Verification[]; meta: Record<string, number> }>(
-      '/api/v2/admin/verifications', { params }
-    );
-    return data;
-  },
-
-  get: async (id: number) => {
-    const { data } = await api.get<{ data: Verification }>(`/api/v2/admin/verifications/${id}`);
-    return data;
-  },
-
-  approve: async (id: number) => {
-    const { data } = await api.put(`/api/v2/admin/verifications/${id}/approve`);
-    return data;
-  },
-
-  reject: async (id: number, rejection_reason: string) => {
-    const { data } = await api.put(`/api/v2/admin/verifications/${id}/reject`, { rejection_reason });
-    return data;
-  },
-
-  stats: async () => {
-    const { data } = await api.get<{ data: VerificationStats }>('/api/v2/admin/verifications/stats');
-    return data;
-  },
-};
-
 // Banners (admin)
 export interface AdminBanner {
   id: number;

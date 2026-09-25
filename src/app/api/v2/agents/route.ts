@@ -1,4 +1,5 @@
 import { db } from '@/lib/db';
+import { brokerVerifiedIds } from '@/lib/broker-eligibility';
 import { apiPaginated, buildPaginationMeta } from '@/lib/api-response';
 
 /**
@@ -113,18 +114,13 @@ export async function GET(request: Request) {
     ids.length
       ? db.reviews.groupBy({ by: ['agent_id'], where: { agent_id: { in: ids } }, _count: { _all: true } })
       : [],
-    ids.length
-      ? db.verifications.findMany({
-          where: { user_id: { in: ids }, type: 'agent', status: 'approved' },
-          select: { user_id: true },
-        })
-      : [],
+    brokerVerifiedIds(ids),
   ]);
 
   const reviewBy = new Map(reviewCounts.map((r) => [r.agent_id.toString(), r._count._all]));
   // Dùng lại số đã đếm ở bước xếp thứ tự — không truy vấn lại.
   const activeBy = activeByAll;
-  const verifiedSet = new Set(verified.map((v) => v.user_id.toString()));
+  const verifiedSet = verified;
 
   // Thẻ "khu vực hoạt động" (kiểu "Bán nhà riêng ở Xã Bình Sơn") — tính từ tin đăng THẬT
   // của chính môi giới đó, không phải bịa. group theo (loại giao dịch, danh mục, xã/phường)

@@ -162,7 +162,6 @@ function AdminLayoutContent({
       } else {
         const mapping: Record<string, string> = {
           properties: 'Quản lý tin đăng',
-          verifications: 'Xác thực môi giới',
           projects: 'Quản lý dự án',
           transactions: 'Quản lý giao dịch',
           users: 'Quản lý người dùng',
@@ -301,16 +300,16 @@ function AdminLayoutContent({
                           </DropdownMenuItem>
                         </Link>
                         
-                        <Link href="/admin/verifications?status=pending" className="block w-full">
+                        <Link href="/admin/moi-gioi/chung-chi" className="block w-full">
                           <DropdownMenuItem className="p-2.5 text-xs flex flex-col items-start gap-1 cursor-pointer hover:bg-gray-50">
                             <div className="flex items-center gap-2 w-full justify-between">
-                              <span className="font-semibold text-gray-800">Xác thực môi giới</span>
+                              <span className="font-semibold text-gray-800">Xác thực chứng chỉ</span>
                               <span className="bg-yellow-50 text-yellow-600 text-[10px] px-1.5 py-0.5 rounded font-bold border border-yellow-100">
                                 Yêu cầu mới
                               </span>
                             </div>
                             <p className="text-[11px] text-gray-500 font-normal">
-                              Kiểm tra hồ sơ đăng ký xác thực của các môi giới trên hệ thống.
+                              Kiểm tra hồ sơ chứng chỉ hành nghề môi giới đang chờ duyệt.
                             </p>
                           </DropdownMenuItem>
                         </Link>

@@ -17,13 +17,12 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { 
   dashboardApi, 
   propertyAdminApi, 
-  verificationApi,
   transactionApi,
   AdminProperty,
-  Verification,
   Transaction,
 } from '@/lib/admin-api';
 import Link from 'next/link';
+import api from '@/lib/axios';
 
 // Đậm dần theo thứ hạng, đủ 5 mức cho top 5 + 1 mức nhạt cho nhóm "Khu vực khác".
 /** Màu thanh theo hạng VIP — dùng đúng 2 màu brand + sắc độ, không thêm màu lạ. */
@@ -54,13 +53,20 @@ interface DashboardStat {
   color: string;
 }
 
+/** Hồ sơ chứng chỉ đang chờ duyệt — rút gọn từ GET /api/v2/admin/broker-certifications. */
+interface PendingCertification {
+  id: number;
+  submitted_at: string | null;
+  user: { name: string; company_name: string | null } | null;
+}
+
 export default function DashboardClient() {
   // CHỈ dùng dữ liệu THẬT. Trước đây các khối này khởi tạo bằng số liệu bịa hardcode (doanh thu
   // 18.500.000 đ, 24 tin chờ duyệt, giao dịch và hồ sơ môi giới không tồn tại) và khi API lỗi thì
   // vẫn giữ nguyên các số đó — quản trị viên đọc ra báo cáo hoàn toàn không có thật.
   const [stats, setStats] = useState<DashboardStat[]>([]);
   const [recentProperties, setRecentProperties] = useState<RecentPropertyRow[]>([]);
-  const [recentVerifications, setRecentVerifications] = useState<Verification[]>([]);
+  const [recentVerifications, setRecentVerifications] = useState<PendingCertification[]>([]);
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -82,15 +88,17 @@ export default function DashboardClient() {
         
         // 1. Fetch dashboard stats
         const statsRes = await dashboardApi.getStats();
-        // 2. Fetch verifications stats to get pending count
+        // 2. Hồ sơ chứng chỉ môi giới chờ duyệt — cùng nguồn với trang Xác thực chứng chỉ
+        // (Notion 25/09), thay cho API "Xác thực môi giới" cũ đã bỏ.
         let pendingVerificationsCount = 0;
         try {
-          const verStatsRes = await verificationApi.stats();
-          if (verStatsRes && verStatsRes.data) {
-            pendingVerificationsCount = verStatsRes.data.pending || 0;
-          }
+          const certRes = await api.get('/api/v2/admin/broker-certifications', { params: { status: 'pending' } });
+          const payload = certRes.data?.data as { counts: Record<string, number>; data: PendingCertification[] } | undefined;
+          pendingVerificationsCount = payload?.counts?.pending ?? 0;
+          const newestFirst = [...(payload?.data ?? [])].sort((a, b) => (b.submitted_at ?? '').localeCompare(a.submitted_at ?? ''));
+          setRecentVerifications(newestFirst.slice(0, 3));
         } catch (e) {
-          console.warn('Lỗi khi lấy stats môi giới chờ duyệt:', e);
+          console.warn('Lỗi khi lấy hồ sơ chứng chỉ chờ duyệt:', e);
         }
 
         if (statsRes && statsRes.success && statsRes.data) {
@@ -181,16 +189,6 @@ export default function DashboardClient() {
           }
         } catch (e) {
           console.warn('Lỗi khi lấy tin đăng gần đây:', e);
-        }
-
-        // 4. Fetch recent verifications
-        try {
-          const verRes = await verificationApi.list({ per_page: 3 });
-          if (verRes && verRes.data && verRes.data.length > 0) {
-            setRecentVerifications(verRes.data.slice(0, 3));
-          }
-        } catch (e) {
-          console.warn('Lỗi khi lấy môi giới gần đây:', e);
         }
 
         // 5. Fetch recent transactions
@@ -310,7 +308,7 @@ export default function DashboardClient() {
               </div>
             </Link>
 
-            <Link href="/admin/verifications">
+            <Link href="/admin/moi-gioi/chung-chi">
               <div className="p-4 rounded-xl border border-gray-100 bg-gray-50 hover:bg-primary-light/40 hover:border-primary/20 transition-all cursor-pointer group flex items-start gap-3">
                 <div className="p-2 rounded-lg bg-white border border-gray-100 text-primary shrink-0 shadow-inner">
                   <UserCheck className="h-4 w-4" />
@@ -480,7 +478,7 @@ export default function DashboardClient() {
                 <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Môi giới mới đăng ký xác thực</h2>
                 <p className="text-[10px] text-gray-400 font-medium">Duyệt hồ sơ chứng chỉ hành nghề môi giới BĐS</p>
               </div>
-              <Link href="/admin/verifications" className="text-xs font-bold text-primary hover:underline flex items-center gap-0.5">
+              <Link href="/admin/moi-gioi/chung-chi" className="text-xs font-bold text-primary hover:underline flex items-center gap-0.5">
                 Xem tất cả
                 <ArrowRight className="h-3 w-3" />
               </Link>
@@ -491,32 +489,18 @@ export default function DashboardClient() {
                 <p className="text-xs text-gray-400 py-2">Chưa có yêu cầu xác thực nào để hiển thị.</p>
               )}
               {recentVerifications.map((item) => (
-                <div key={item.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0 last:pb-0">
+                <Link key={item.id} href="/admin/moi-gioi/chung-chi"
+                  className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0 last:pb-0 hover:bg-gray-50">
                   <div className="min-w-0 pr-3">
-                    <div className="flex items-center gap-2">
-                      <p className="text-xs font-semibold text-gray-800 truncate">{item.user?.name}</p>
-                      <span className={`text-[9px] font-semibold px-1.5 rounded-full ${
-                        item.type === 'agent' ? 'bg-primary-light text-primary' : 'bg-blue-50 text-blue-600 border border-blue-100'
-                      }`}>
-                        {item.type === 'agent' ? 'Môi giới' : 'Đại lý'}
-                      </span>
-                    </div>
+                    <p className="text-xs font-semibold text-gray-800 truncate">{item.user?.name}</p>
                     <p className="text-[10px] text-gray-400 font-medium mt-0.5 truncate">
-                      {item.type === 'agent' ? `Số chứng chỉ: ${item.license_number || 'N/A'}` : `Tên công ty: ${item.agency_name || 'N/A'}`}
+                      {item.user?.company_name ? `Công ty/Sàn: ${item.user.company_name}` : 'Chưa chọn Công ty/Sàn'}
                     </p>
                   </div>
-                  <div className="shrink-0 flex items-center gap-2">
-                    <span className={`inline-block text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
-                      item.status === 'approved' 
-                        ? 'bg-emerald-50 text-emerald-600' 
-                        : item.status === 'pending'
-                        ? 'bg-amber-50 text-amber-600 font-medium'
-                        : 'bg-red-50 text-red-600'
-                    }`}>
-                      {item.status === 'approved' ? 'Đã duyệt' : item.status === 'pending' ? 'Chờ duyệt' : 'Từ chối'}
-                    </span>
-                  </div>
-                </div>
+                  <span className="shrink-0 inline-block text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                    Chờ duyệt
+                  </span>
+                </Link>
               ))}
             </div>
           </CardContent>

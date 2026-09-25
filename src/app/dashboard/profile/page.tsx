@@ -13,15 +13,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { PillTabs } from '@/components/ui/pill-tabs';
 import { PackageCard } from '@/components/dashboard/PackageCard';
-import { BrokerVerificationSection, BROKER_SECTION_HASH } from '@/components/broker/BrokerVerificationSection';
+import { BrokerVerificationSection, BrokerVerifiedBadge, BROKER_SECTION_HASH } from '@/components/broker/BrokerVerificationSection';
 import { 
   Camera,
   Save,
   Lock,
   Bell,
   Eye,
-  CheckCircle,
-  ShieldAlert,
   Star
 } from 'lucide-react';
 
@@ -102,19 +100,7 @@ export default function ProfilePage() {
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Hồ sơ cá nhân</h1>
           <p className="text-gray-500 text-sm mt-1">Quản lý thông tin và cài đặt tài khoản của bạn</p>
         </div>
-        <div className="flex items-center gap-3">
-          {user.phone_verified_at ? (
-            <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-0 gap-1.5 px-3 py-1">
-              <CheckCircle className="h-3.5 w-3.5" />
-              Đã xác thực
-            </Badge>
-          ) : (
-            <Badge className="bg-gray-100 text-gray-600 hover:bg-gray-100 border-0 gap-1.5 px-3 py-1">
-              <ShieldAlert className="h-3.5 w-3.5" />
-              Chưa xác thực
-            </Badge>
-          )}
-        </div>
+        {user.role === 'agent' && <BrokerVerifiedBadge />}
       </div>
 
       <div className="grid lg:grid-cols-12 gap-6 items-start">

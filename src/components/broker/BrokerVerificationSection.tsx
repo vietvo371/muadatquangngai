@@ -16,8 +16,8 @@ const STATUS_BADGE: Record<ReviewStatus, { label: string; className: string; Ico
   rejected: { label: 'Không được xác thực', className: 'bg-cta/10 text-cta', Icon: XCircle },
 };
 
-function StatusBadge({ status }: { status: ReviewStatus | null }) {
-  if (!status) return <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-[12px] font-semibold text-gray-600">Chưa gửi</span>;
+function StatusBadge({ status, emptyLabel = 'Chưa gửi' }: { status: ReviewStatus | null; emptyLabel?: string }) {
+  if (!status) return <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-[12px] font-semibold text-gray-600">{emptyLabel}</span>;
   const { label, className, Icon } = STATUS_BADGE[status];
   return (
     <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[12px] font-semibold ${className}`}>
@@ -37,6 +37,27 @@ const apiMessage = (err: unknown, fallback: string) => {
  * Mục "Xác thực môi giới" trong trang Hồ sơ (Notion 24/09): chứng chỉ hành nghề + Công ty/Sàn
  * trực thuộc. Chỉ hiện với tài khoản môi giới. Popup chặn đăng tin dẫn về đây (#xac-thuc-moi-gioi).
  */
+/**
+ * Nhãn xác thực tổng thể ở đầu trang Hồ sơ (Notion 25/09). Dùng CHUNG query ['broker-profile'] với
+ * tab Thông tin hành nghề nên hai nơi không thể lệch nhau; "Đã xác thực" chỉ khi chứng chỉ đã duyệt
+ * VÀ Công ty/Sàn đã duyệt — đúng điều kiện đăng tin (`eligible` từ server).
+ */
+export function BrokerVerifiedBadge() {
+  const { data: profile } = useQuery({ queryKey: ['broker-profile'], queryFn: brokerApi.profile });
+  if (!profile?.applies) return null;
+  return profile.eligible ? (
+    <span data-testid="broker-verified-badge" className="inline-flex items-center gap-1.5 rounded-full bg-primary-light px-3 py-1 text-[13px] font-semibold text-primary">
+      <CheckCircle className="h-3.5 w-3.5" />
+      Đã xác thực
+    </span>
+  ) : (
+    <span data-testid="broker-verified-badge" className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1 text-[13px] font-semibold text-gray-600">
+      <Clock className="h-3.5 w-3.5" />
+      Chưa xác thực
+    </span>
+  );
+}
+
 /** Hash mà popup chặn đăng tin và thông báo dùng để mở thẳng tab này. */
 export const BROKER_SECTION_HASH = '#xac-thuc-moi-gioi';
 
@@ -233,7 +254,7 @@ function CompanyCard({ profile, onSaved }: { profile: BrokerProfile; onSaved: (p
             <Building2 className="h-5 w-5 text-primary" />
             Công ty/Sàn giao dịch trực thuộc *
           </h3>
-          <StatusBadge status={company?.status ?? null} />
+          <StatusBadge status={company?.status ?? null} emptyLabel="Chưa chọn" />
         </div>
 
         {company && (

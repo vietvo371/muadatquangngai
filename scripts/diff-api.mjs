@@ -264,8 +264,6 @@ if (adminLogin.status !== 200) {
     { name: 'admin/packages', path: '/admin/packages', laravelPath: '/api/admin/packages' },
     { name: 'admin/packages/stats', path: '/admin/packages/stats', laravelPath: '/api/admin/packages/stats' },
     { name: 'admin/packages/999999 (404)', path: '/admin/packages/999999', laravelPath: '/api/admin/packages/999999' },
-    { name: 'admin/verifications', path: '/admin/verifications', laravelPath: '/api/admin/verifications' },
-    { name: 'admin/verifications/stats', path: '/admin/verifications/stats', laravelPath: '/api/admin/verifications/stats' },
     { name: 'admin/banners', path: '/admin/banners', laravelPath: '/api/admin/banners' },
     { name: 'admin/banners/999999 (404)', path: '/admin/banners/999999', laravelPath: '/api/admin/banners/999999' },
     { name: 'admin/transactions?per_page=5', path: '/admin/transactions?per_page=5', laravelPath: '/api/admin/transactions?per_page=5' },
