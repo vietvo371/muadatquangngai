@@ -52,11 +52,10 @@ const adminNavItems = [
   { href: '/admin', label: 'Dashboard', icon: BarChart3, exact: true },
   { href: '/admin/properties', label: 'Quản lý tin', icon: Building2 },
   { href: '/admin/users', label: 'Quản lý users', icon: Users },
-  { href: '/admin/agencies', label: 'Doanh nghiệp', icon: Building2 },
-  // Quản lý môi giới (Notion 24/09). Thay mục "Xác thực" cũ: trang đó không có đường nào để người
-  // dùng nộp hồ sơ vào, và điều kiện đăng tin giờ dựa trên chứng chỉ + Công ty/Sàn.
+  // Một module duy nhất cho Doanh nghiệp / Sàn giao dịch (Notion 25/09 — bảng businesses), thay cho
+  // hai mục "Doanh nghiệp" và "Công ty/Sàn giao dịch" cũ.
+  { href: '/admin/businesses', label: 'Doanh nghiệp / Sàn', icon: Briefcase },
   { href: '/admin/moi-gioi/chung-chi', label: 'Xác thực chứng chỉ', icon: ShieldCheck },
-  { href: '/admin/moi-gioi/cong-ty', label: 'Công ty/Sàn giao dịch', icon: Briefcase },
   { href: '/admin/categories', label: 'Danh mục', icon: Package },
   { href: '/admin/packages', label: 'Gói VIP', icon: Star },
   { href: '/admin/projects', label: 'Dự án', icon: Landmark },

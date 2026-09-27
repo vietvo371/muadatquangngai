@@ -106,6 +106,7 @@ model districts {
   users       users[]
   wards       wards[]
   agencies    agencies[]
+  businesses  businesses[]
 
   @@index([province_id], map: "districts_province_id_index")
   @@index([slug], map: "districts_slug_index")
@@ -561,6 +562,7 @@ model provinces {
   properties properties[]
   users      users[]
   agencies   agencies[]
+  businesses businesses[]
 
   @@index([region], map: "provinces_region_index")
   @@index([slug], map: "provinces_slug_index")
@@ -772,7 +774,8 @@ model users {
   /// Chỉ backend đặt true khi admin duyệt chứng chỉ hành nghề (Notion 24/09). Client KHÔNG gửi được.
   is_certified                                Boolean                     @default(false)
   broker_company_id                           BigInt?
-  broker_company                              broker_companies?           @relation("UserBrokerCompany", fields: [broker_company_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  /// Doanh nghiệp / Sàn giao dịch trực thuộc (SQL 2026-09-27-05: trỏ sang businesses, thay broker_companies).
+  broker_company                              businesses?                 @relation("UserBrokerCompany", fields: [broker_company_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
   broker_certification                        broker_certifications?
   banners                                     banners[]
   conversation_participants                   conversation_participants[]
@@ -895,7 +898,6 @@ model broker_companies {
   /// (WHERE agency_id IS NOT NULL) nên không khai báo @unique ở đây.
   agency_id        BigInt?
   agency           agencies? @relation(fields: [agency_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  users            users[]   @relation("UserBrokerCompany")
 
   @@index([status], map: "idx_broker_companies_status")
 }
@@ -964,4 +966,44 @@ model price_snapshots {
   recorded_at          DateTime @db.Timestamp(0)
 
   @@index([area_id, period_month], map: "idx_price_snapshots_area_month")
+}
+
+/// Doanh nghiệp / Sàn giao dịch — nguồn DUY NHẤT cho danh bạ công khai, ô chọn Công ty/Sàn của môi giới
+/// và trang admin (SQL 2026-09-27-05, gộp agencies + broker_companies). id giữ nguyên từ agencies.
+/// status: pending | active | rejected. is_demo: dữ liệu mẫu tự sinh — không bao giờ được chọn làm
+/// Công ty/Sàn của môi giới.
+model businesses {
+  id               BigInt     @id @default(autoincrement())
+  name             String     @db.VarChar(255)
+  slug             String     @unique(map: "uniq_businesses_slug") @db.VarChar(255)
+  /// Lĩnh vực chính: developer|construction|design|brokerage|interior|materials|other.
+  business_type    String     @default("brokerage") @db.VarChar(20)
+  industry         String?    @db.VarChar(255)
+  area             String?    @db.VarChar(255)
+  province_id      BigInt?
+  district_id      BigInt?
+  /// Unique một phần (WHERE tax_code IS NOT NULL) — xem file SQL.
+  tax_code         String?    @db.VarChar(20)
+  address          String?    @db.VarChar(500)
+  phone            String?    @db.VarChar(20)
+  email            String?    @db.VarChar(255)
+  website          String?    @db.VarChar(255)
+  logo             String?    @db.VarChar(500)
+  description      String?
+  status           String     @default("pending") @db.VarChar(20)
+  is_demo          Boolean    @default(false)
+  proposed_by      BigInt?
+  approved_by      BigInt?
+  rejected_by      BigInt?
+  rejection_reason String?    @db.VarChar(500)
+  approved_at      DateTime?  @db.Timestamp(0)
+  rejected_at      DateTime?  @db.Timestamp(0)
+  created_at       DateTime?  @db.Timestamp(0)
+  updated_at       DateTime?  @db.Timestamp(0)
+  provinces        provinces? @relation(fields: [province_id], references: [id], onUpdate: NoAction)
+  districts        districts? @relation(fields: [district_id], references: [id], onUpdate: NoAction)
+  users            users[]    @relation("UserBrokerCompany")
+
+  @@index([status, business_type], map: "idx_businesses_status_type")
+  @@index([district_id], map: "idx_businesses_district")
 }

@@ -87,7 +87,7 @@ export default function CertificationsClient() {
                     {r.user.phone && <p className="flex items-center gap-1.5 text-[12.5px] text-gray-500"><Phone className="h-3.5 w-3.5" />{r.user.phone}</p>}
                     <p className="flex items-center gap-1.5 text-[12.5px] text-gray-500">
                       <Building2 className="h-3.5 w-3.5" />
-                      {r.user.company_name ? `${r.user.company_name}${r.user.company_status === 'approved' ? '' : ' (chưa duyệt)'}` : 'Chưa chọn Công ty/Sàn'}
+                      {r.user.company_name ? `${r.user.company_name}${r.user.company_status === 'active' ? '' : ' (chưa duyệt)'}` : 'Chưa chọn Công ty/Sàn'}
                     </p>
                   </div>
                   <span className="shrink-0 text-[12px] text-gray-400">Gửi {r.submitted_at ? formatDate(r.submitted_at) : '—'}</span>

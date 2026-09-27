@@ -421,51 +421,66 @@ export const dashboardApi = {
   },
 };
 
-/** Khớp phản hồi GET/POST/PUT /api/v2/admin/agencies. */
-export interface AdminAgency {
+/** Doanh nghiệp / Sàn giao dịch — bảng businesses (thay AdminAgency + Công ty/Sàn cũ). */
+export type BusinessStatus = 'pending' | 'active' | 'rejected';
+
+export interface AdminBusiness {
   id: number;
   name: string;
   slug: string;
-  logo: string | null;
-  description: string | null;
+  business_type: string;
+  industry: string | null;
+  area: string | null;
+  province_id: number | null;
+  district_id: number | null;
+  tax_code: string | null;
   address: string | null;
   phone: string | null;
   email: string | null;
   website: string | null;
-  business_type: string;
-  verified: boolean;
-  active: boolean;
-  district_id: number | null;
-  province_id: number | null;
-  agent_count: number;
+  logo: string | null;
+  description: string | null;
+  status: BusinessStatus;
+  is_demo: boolean;
+  rejection_reason: string | null;
+  broker_count: number;
+  proposed_by_name: string | null;
+  reviewed_by_name: string | null;
+  approved_at: string | null;
+  rejected_at: string | null;
   created_at: string | null;
   updated_at: string | null;
 }
 
-export const agencyAdminApi = {
-  list: async () => {
-    const { data } = await api.get<{ success: boolean; data: AdminAgency[] }>('/api/v2/admin/agencies');
-    return data;
-  },
+export type BusinessPayload = Partial<Pick<AdminBusiness,
+  'name' | 'business_type' | 'industry' | 'area' | 'district_id' | 'tax_code' | 'address' | 'phone' |
+  'email' | 'website' | 'logo' | 'description' | 'is_demo'>>;
 
-  create: async (payload: Partial<AdminAgency>) => {
-    const { data } = await api.post<{ success: boolean; data: AdminAgency; message: string }>(
-      '/api/v2/admin/agencies',
-      payload
+export const businessAdminApi = {
+  list: async (status: BusinessStatus) => {
+    const { data } = await api.get<{ success: boolean; data: { counts: Record<BusinessStatus, number>; data: AdminBusiness[] } }>(
+      '/api/v2/admin/businesses', { params: { status } }
     );
+    return data.data;
+  },
+  create: async (payload: BusinessPayload) => {
+    const { data } = await api.post<{ success: boolean; data: AdminBusiness; message: string }>('/api/v2/admin/businesses', payload);
     return data;
   },
-
-  update: async (id: number, payload: Partial<AdminAgency>) => {
-    const { data } = await api.put<{ success: boolean; data: AdminAgency; message: string }>(
-      `/api/v2/admin/agencies/${id}`,
-      payload
-    );
+  update: async (id: number, payload: BusinessPayload) => {
+    const { data } = await api.put<{ success: boolean; data: AdminBusiness; message: string }>(`/api/v2/admin/businesses/${id}`, payload);
     return data;
   },
-
+  approve: async (id: number) => {
+    const { data } = await api.post<{ success: boolean; message: string }>(`/api/v2/admin/businesses/${id}/approve`);
+    return data;
+  },
+  reject: async (id: number, rejection_reason: string) => {
+    const { data } = await api.post<{ success: boolean; message: string }>(`/api/v2/admin/businesses/${id}/reject`, { rejection_reason });
+    return data;
+  },
   delete: async (id: number) => {
-    const { data } = await api.delete<{ success: boolean; message: string }>(`/api/v2/admin/agencies/${id}`);
+    const { data } = await api.delete<{ success: boolean; message: string }>(`/api/v2/admin/businesses/${id}`);
     return data;
   },
 };

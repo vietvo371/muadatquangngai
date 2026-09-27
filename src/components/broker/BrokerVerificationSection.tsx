@@ -7,16 +7,18 @@ import { ShieldCheck, Building2, Upload, Loader2, Search, Plus, CheckCircle, Clo
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { fileUploadApi } from '@/lib/admin-api';
-import { brokerApi, type BrokerCompany, type BrokerProfile, type ReviewStatus } from '@/lib/broker-api';
+import { brokerApi, type BrokerCompany, type BrokerProfile, type BusinessStatus, type ReviewStatus } from '@/lib/broker-api';
 
-const STATUS_BADGE: Record<ReviewStatus, { label: string; className: string; Icon: typeof Clock }> = {
+const STATUS_BADGE: Record<ReviewStatus | BusinessStatus, { label: string; className: string; Icon: typeof Clock }> = {
   // Nhãn theo đúng cách gọi của khách (Notion 24/09 "Trạng thái xác thực").
   pending: { label: 'Đang chờ kiểm tra', className: 'bg-gray-100 text-gray-700', Icon: Clock },
   approved: { label: 'Đã xác thực', className: 'bg-primary-light text-primary', Icon: CheckCircle },
+  // Doanh nghiệp / Sàn đang hoạt động (bảng businesses dùng status active thay cho approved).
+  active: { label: 'Đã xác thực', className: 'bg-primary-light text-primary', Icon: CheckCircle },
   rejected: { label: 'Không được xác thực', className: 'bg-cta/10 text-cta', Icon: XCircle },
 };
 
-function StatusBadge({ status, emptyLabel = 'Chưa gửi' }: { status: ReviewStatus | null; emptyLabel?: string }) {
+function StatusBadge({ status, emptyLabel = 'Chưa gửi' }: { status: ReviewStatus | BusinessStatus | null; emptyLabel?: string }) {
   if (!status) return <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-[12px] font-semibold text-gray-600">{emptyLabel}</span>;
   const { label, className, Icon } = STATUS_BADGE[status];
   return (
@@ -239,7 +241,7 @@ function CompanyCard({ profile, onSaved }: { profile: BrokerProfile; onSaved: (p
   });
 
   const select = useMutation({
-    mutationFn: (c: BrokerCompany) => brokerApi.selectCompany(c),
+    mutationFn: (c: BrokerCompany) => brokerApi.selectCompany(c.id),
     onSuccess: (res) => { toast.success(res.message); onSaved(res.data); setOpen(false); setQuery(''); },
     onError: (err) => toast.error(apiMessage(err, 'Không cập nhật được Công ty/Sàn.')),
   });
@@ -288,7 +290,7 @@ function CompanyCard({ profile, onSaved }: { profile: BrokerProfile; onSaved: (p
               ) : (
                 companies.map((c) => (
                   <button
-                    key={c.id ?? `agency-${c.agency_id}`}
+                    key={c.id}
                     type="button"
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => select.mutate(c)}
@@ -296,7 +298,7 @@ function CompanyCard({ profile, onSaved }: { profile: BrokerProfile; onSaved: (p
                   >
                     <span className="block text-[13.5px] font-semibold text-gray-900">{c.name}</span>
                     <span className="block text-[12px] text-gray-500">
-                      {[c.tax_code ? `MST ${c.tax_code}` : null, c.address].filter(Boolean).join(' · ') || 'Sàn trong danh bạ Doanh nghiệp'}
+                      {[c.tax_code ? `MST ${c.tax_code}` : null, c.address].filter(Boolean).join(' · ') || 'Doanh nghiệp / Sàn giao dịch'}
                     </span>
                   </button>
                 ))

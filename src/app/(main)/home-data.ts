@@ -149,9 +149,9 @@ export interface PartnerData {
 }
 
 export async function getPartners(limit = 12): Promise<PartnerData[]> {
-  const rows = await db.agencies.findMany({
+  const rows = await db.businesses.findMany({
     // Lọc bỏ dữ liệu demo (is_demo) — chỉ doanh nghiệp thật, đang hoạt động, có logo.
-    where: { is_active: true, is_demo: false, logo: { not: null } },
+    where: { status: 'active', is_demo: false, logo: { not: null } },
     select: { id: true, name: true, logo: true },
     orderBy: { created_at: 'desc' },
     take: limit,

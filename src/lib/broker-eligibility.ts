@@ -11,7 +11,7 @@ import { apiErrorWithCode } from '@/lib/api-response';
  * Môi giới chỉ được đưa tin lên khi ĐỦ cả ba:
  *  - users.is_certified = true   (chỉ bật khi admin duyệt chứng chỉ — client không gửi được)
  *  - users.broker_company_id có giá trị
- *  - công ty đó status = 'approved'
+ *  - Doanh nghiệp / Sàn đó status = 'active' và không phải dữ liệu demo (bảng businesses, SQL 05)
  *
  * Kiểm ở MỌI cửa có thể đưa tin ra công khai (đăng mới, đăng lại, admin duyệt tin) để không
  * vòng qua được bằng cách gọi API trực tiếp (Notion "Publish API – Anti Bypass").
@@ -30,13 +30,17 @@ export interface BrokerEligibility {
   /** Trạng thái hồ sơ chứng chỉ gần nhất: null = chưa nộp bao giờ. */
   certificationStatus: 'pending' | 'approved' | 'rejected' | null;
   certificationRejectionReason: string | null;
-  companyStatus: 'pending' | 'approved' | 'rejected' | null;
+  /** Trạng thái Doanh nghiệp / Sàn trực thuộc (bảng businesses). */
+  companyStatus: 'pending' | 'active' | 'rejected' | null;
   companyName: string | null;
 }
 
 type Status = 'pending' | 'approved' | 'rejected';
 const asStatus = (v: string | null | undefined): Status | null =>
   v === 'pending' || v === 'approved' || v === 'rejected' ? v : null;
+type BusinessStatus = 'pending' | 'active' | 'rejected';
+const asBusinessStatus = (v: string | null | undefined): BusinessStatus | null =>
+  v === 'pending' || v === 'active' || v === 'rejected' ? v : null;
 
 export async function getBrokerEligibility(userId: bigint): Promise<BrokerEligibility | null> {
   const user = await db.users.findUnique({
@@ -45,7 +49,7 @@ export async function getBrokerEligibility(userId: bigint): Promise<BrokerEligib
       role: true,
       is_certified: true,
       broker_company_id: true,
-      broker_company: { select: { status: true, name: true } },
+      broker_company: { select: { status: true, name: true, is_demo: true } },
       broker_certification: { select: { status: true, rejection_reason: true } },
     },
   });
@@ -54,7 +58,8 @@ export async function getBrokerEligibility(userId: bigint): Promise<BrokerEligib
   const applies = user.role === BROKER_ROLE;
   const isCertified = user.is_certified === true;
   const companyAssigned = user.broker_company_id !== null;
-  const companyApproved = user.broker_company?.status === 'approved';
+  // Doanh nghiệp demo không bao giờ là Công ty/Sàn hợp lệ, kể cả khi môi giới demo được gắn sẵn vào.
+  const companyApproved = user.broker_company?.status === 'active' && user.broker_company.is_demo === false;
 
   return {
     applies,
@@ -64,7 +69,7 @@ export async function getBrokerEligibility(userId: bigint): Promise<BrokerEligib
     companyApproved,
     certificationStatus: asStatus(user.broker_certification?.status),
     certificationRejectionReason: user.broker_certification?.rejection_reason ?? null,
-    companyStatus: asStatus(user.broker_company?.status),
+    companyStatus: asBusinessStatus(user.broker_company?.status),
     companyName: user.broker_company?.name ?? null,
   };
 }
@@ -77,7 +82,7 @@ export async function getBrokerEligibility(userId: bigint): Promise<BrokerEligib
 export const BROKER_VERIFIED_WHERE = {
   role: BROKER_ROLE,
   is_certified: true,
-  broker_company: { status: 'approved' },
+  broker_company: { status: 'active', is_demo: false },
 } as const;
 
 /** id (dạng chuỗi) của các môi giới đã xác thực trong danh sách — một truy vấn, không N+1. */

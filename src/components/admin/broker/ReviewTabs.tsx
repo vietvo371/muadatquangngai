@@ -8,10 +8,19 @@ const TABS: Array<{ value: ReviewStatus; label: string }> = [
   { value: 'rejected', label: 'Bị từ chối' },
 ];
 
-export function ReviewTabs({ value, counts, onChange }: { value: ReviewStatus; counts?: Record<string, number>; onChange: (v: ReviewStatus) => void }) {
+/** Tab trạng thái có đếm số. `tabs` tuỳ chọn — mặc định là 3 trạng thái duyệt hồ sơ chứng chỉ. */
+export function ReviewTabs<T extends string = ReviewStatus>({
+  value, counts, onChange, tabs,
+}: {
+  value: T;
+  counts?: Record<string, number>;
+  onChange: (v: T) => void;
+  tabs?: ReadonlyArray<{ value: T; label: string }>;
+}) {
+  const items = tabs ?? (TABS as unknown as ReadonlyArray<{ value: T; label: string }>);
   return (
     <div className="flex w-fit flex-wrap gap-1.5 rounded-full border border-gray-150 bg-gray-50 p-1">
-      {TABS.map((t) => (
+      {items.map((t) => (
         <button
           key={t.value}
           type="button"

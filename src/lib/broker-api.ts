@@ -2,16 +2,18 @@ import api from '@/lib/axios';
 
 export type ReviewStatus = 'pending' | 'approved' | 'rejected';
 
+/** Trạng thái Doanh nghiệp / Sàn giao dịch (bảng businesses). */
+export type BusinessStatus = 'pending' | 'active' | 'rejected';
+
+/** Doanh nghiệp / Sàn giao dịch trực thuộc của môi giới (bảng businesses — nguồn duy nhất). */
 export interface BrokerCompany {
-  /** null = sàn trong danh bạ Doanh nghiệp chưa có dòng Công ty/Sàn; chọn bằng agency_id. */
-  id: number | null;
-  agency_id: number | null;
+  id: number;
   name: string;
   tax_code: string | null;
   address: string | null;
   phone: string | null;
   email: string | null;
-  status: ReviewStatus;
+  status: BusinessStatus;
   rejection_reason: string | null;
 }
 
@@ -34,7 +36,7 @@ export interface BrokerEligibilityInfo {
   companyApproved: boolean;
   certificationStatus: ReviewStatus | null;
   certificationRejectionReason: string | null;
-  companyStatus: ReviewStatus | null;
+  companyStatus: BusinessStatus | null;
 }
 
 export interface BrokerProfile extends BrokerEligibilityInfo {
@@ -60,11 +62,13 @@ export const brokerApi = {
   profile: () => api.get('/api/v2/my/broker-profile').then((r) => r.data.data as BrokerProfile),
   submitCertification: (payload: Omit<BrokerCertification, 'status' | 'rejection_reason' | 'reviewed_at' | 'submitted_at'>) =>
     api.put('/api/v2/my/broker-profile/certification', payload).then((r) => r.data as { message: string; data: BrokerProfile }),
-  selectCompany: (company: Pick<BrokerCompany, 'id' | 'agency_id'>) =>
-    api.put('/api/v2/my/broker-profile/company', company.id !== null ? { company_id: company.id } : { agency_id: company.agency_id })
+  selectCompany: (businessId: number) =>
+    api.put('/api/v2/my/broker-profile/company', { business_id: businessId })
       .then((r) => r.data as { message: string; data: BrokerProfile }),
+  /** Ô chọn: chỉ doanh nghiệp môi giới đang hoạt động, không phải demo (?selectable=1). */
   searchCompanies: (q: string) =>
-    api.get('/api/v2/broker-companies', { params: { q } }).then((r) => r.data.data as BrokerCompany[]),
+    api.get('/api/v2/businesses', { params: { q: q || undefined, selectable: 1, per_page: 20, sort: 'newest' } })
+      .then((r) => r.data.data as BrokerCompany[]),
   proposeCompany: (payload: { name: string; tax_code: string; address: string; phone: string; email?: string }) =>
-    api.post('/api/v2/broker-companies', payload).then((r) => r.data as { message: string; data: BrokerProfile }),
+    api.post('/api/v2/businesses', payload).then((r) => r.data as { message: string; data: BrokerProfile }),
 };

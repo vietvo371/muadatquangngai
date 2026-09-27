@@ -215,8 +215,9 @@ export async function getAgencySeo(slug: string): Promise<SeoResult<AgencySeoDat
   let dbFailed = false;
 
   try {
-    row = await db.agencies.findFirst({
-      where: { slug },
+    row = await db.businesses.findFirst({
+      // Chỉ doanh nghiệp đang hoạt động — trang công khai trả 404 cho doanh nghiệp chờ duyệt / bị từ chối.
+      where: { slug, status: 'active' },
       select: { slug: true, name: true, description: true, address: true, logo: true, updated_at: true },
     });
   } catch (error) {
