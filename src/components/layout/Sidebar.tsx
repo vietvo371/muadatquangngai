@@ -34,6 +34,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@/lib/utils';
+import { isAdminRole } from '@/lib/roles';
 
 const mainNavItems = [
   { href: '/dashboard', label: 'Tổng quan', icon: LayoutDashboard, exact: true },
@@ -83,7 +84,7 @@ export function Sidebar({
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuthStore();
-  const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
+  const isAdmin = isAdminRole(user?.role);
   
   const navItems = variant === 'admin' ? adminNavItems : mainNavItems;
 

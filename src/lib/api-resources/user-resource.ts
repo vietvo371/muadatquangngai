@@ -1,7 +1,7 @@
 import type { AuthUser } from '../auth';
 import { toVietnamIso8601 } from './carbon-format';
+import { isBrokerRole } from '../roles';
 
-const AGENT_ROLES = new Set(['agent', 'agency']);
 
 function toFloat(value: unknown): number {
   if (value === null || value === undefined) return 0;
@@ -31,7 +31,7 @@ export function mapUserResource(
 ) {
   const isOwnProfile = requestingUserId !== null && requestingUserId === user.id;
   const isVerified = user.email_verified_at !== null || user.phone_verified_at !== null;
-  const isAgent = AGENT_ROLES.has(user.role);
+  const isAgent = isBrokerRole(user.role);
 
   return {
     id: user.id,

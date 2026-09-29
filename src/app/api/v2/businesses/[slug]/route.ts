@@ -2,6 +2,7 @@ import { db } from '@/lib/db';
 import { apiSuccess, apiError } from '@/lib/api-response';
 import { mapPropertyResource, type WardRow } from '@/lib/api-resources/property-resource';
 import { PUBLIC_BUSINESS_WHERE } from '@/lib/business';
+import { BROKER_ROLE } from '@/lib/roles';
 
 /**
  * GET /api/v2/businesses/[slug] — hồ sơ doanh nghiệp đang hoạt động: thông tin, môi giới trực thuộc
@@ -42,7 +43,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
       districts: { select: { id: true, name: true } },
       provinces: { select: { id: true, name: true } },
       users: {
-        where: { role: 'agent', deleted_at: null },
+        where: { role: BROKER_ROLE, deleted_at: null },
         select: { id: true, name: true, avatar: true, phone: true, rating: true, district_id: true },
       },
     },

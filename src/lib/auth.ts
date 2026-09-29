@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { NextResponse } from 'next/server';
 import { db } from './db';
+import { isAdminRole } from './roles';
 
 /** Đối chiếu AuthenticationException mặc định của Laravel (đã verify qua curl thật). */
 export function unauthenticatedResponse(): NextResponse {
@@ -175,7 +176,7 @@ export async function getAuthUser(request: Request): Promise<AuthUser | null> {
 export async function requireAdmin(request: Request): Promise<AuthUser | NextResponse> {
   const user = await getAuthUser(request);
   if (!user) return unauthenticatedResponse();
-  if (user.role !== 'admin') return forbiddenResponse();
+  if (!isAdminRole(user.role)) return forbiddenResponse();
   return user;
 }
 

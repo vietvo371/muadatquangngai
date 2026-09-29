@@ -22,6 +22,7 @@ import {
   Eye,
   Star
 } from 'lucide-react';
+import { isBrokerRole, roleLabel } from '@/lib/roles';
 
 const PACKAGES = [
   { id: 'vip', name: 'Gói VIP', price: 50000, duration: 7, color: 'vip' as const, features: ['Hiển thị trên tin thường', 'Có huy hiệu VIP vàng', 'Màu sắc khung thẻ nổi bật'] },
@@ -100,7 +101,7 @@ export default function ProfilePage() {
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Hồ sơ cá nhân</h1>
           <p className="text-gray-500 text-sm mt-1">Quản lý thông tin và cài đặt tài khoản của bạn</p>
         </div>
-        {user.role === 'agent' && <BrokerVerifiedBadge />}
+        {isBrokerRole(user.role) && <BrokerVerifiedBadge />}
       </div>
 
       <div className="grid lg:grid-cols-12 gap-6 items-start">
@@ -134,7 +135,7 @@ export default function ProfilePage() {
                 <h2 className="text-xl font-bold text-gray-900">{user.name}</h2>
                 <p className="text-sm text-gray-500 mb-3">{user.email}</p>
                 <Badge className="bg-primary-light text-primary hover:bg-primary-light border-0">
-                  {user.role === 'admin' ? 'Quản trị viên' : user.role === 'agent' ? 'Môi giới' : 'Người dùng'}
+                  {roleLabel(user.role)}
                 </Badge>
               </div>
 
@@ -186,7 +187,7 @@ export default function ProfilePage() {
                 tabs={[
                   { id: 'info', label: 'Thông tin cá nhân' },
                   // Chỉ tài khoản môi giới mới có tab hành nghề — tài khoản thường không thấy mục bắt buộc này.
-                  ...(user.role === 'agent' ? [{ id: 'broker', label: 'Thông tin hành nghề' }] : []),
+                  ...(isBrokerRole(user.role) ? [{ id: 'broker', label: 'Thông tin hành nghề' }] : []),
                   { id: 'password', label: 'Đổi mật khẩu' },
                   { id: 'vip', label: 'Nâng cấp VIP' },
                 ]}
@@ -196,7 +197,7 @@ export default function ProfilePage() {
             </div>
 
             <CardContent className="p-6">
-              {activeTab === 'broker' && user.role === 'agent' && <BrokerVerificationSection />}
+              {activeTab === 'broker' && isBrokerRole(user.role) && <BrokerVerificationSection />}
 
               {/* Info Tab */}
               {activeTab === 'info' && (

@@ -3,10 +3,11 @@ import { db } from '@/lib/db';
 import { requireAdmin, hashPassword, TOKENABLE_TYPE } from '@/lib/auth';
 import { dbNow } from '@/lib/db-time';
 import { apiError, apiSuccess } from '@/lib/api-response';
+import { isRole } from '@/lib/roles';
+import { RoleChangeError, assertRoleChangeAllowed, roleChangeSideEffects } from '@/lib/user-role-change';
 import { mapUserResource } from '@/lib/api-resources/user-resource';
 import { FieldError, validationErrorResponse, isString, isEmail, inList } from '@/lib/validation';
 
-const ROLES = ['user', 'agent', 'agency', 'admin'] as const;
 const STATUSES = ['active', 'inactive', 'banned'] as const;
 
 /** PUT /api/v2/admin/users/[id] — port của AdminUserController@update. */
@@ -39,17 +40,23 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   if ('password' in body && body.password != null && body.password !== '' && (!isString(body.password) || body.password.length < 8)) {
     errors.push(new FieldError('password', 'Trường mật khẩu phải có ít nhất 8 ký tự.'));
   }
-  if ('role' in body && !inList(body.role, ROLES)) errors.push(new FieldError('role', 'Giá trị đã chọn trong trường vai trò không hợp lệ.'));
+  if ('role' in body && !isRole(body.role)) errors.push(new FieldError('role', 'Giá trị đã chọn trong trường vai trò không hợp lệ.'));
   if ('status' in body && !inList(body.status, STATUSES)) errors.push(new FieldError('status', 'Giá trị đã chọn trong trường status không hợp lệ.'));
   if (errors.length > 0) return validationErrorResponse(errors);
 
-  // Không cho hạ quyền tài khoản admin (đối chiếu Laravel).
-  if (user.role === 'admin' && 'role' in body && body.role && body.role !== 'admin') {
-    return apiError('Không thể hạ quyền tài khoản admin.', 403);
+  // Quy tắc đổi role dùng chung với PUT /role (không hạ quyền admin, không tự đổi role của mình).
+  let roleChanged = false;
+  if ('role' in body) {
+    try {
+      roleChanged = assertRoleChangeAllowed(user, body.role, guard.id);
+    } catch (error) {
+      if (error instanceof RoleChangeError) return apiError(error.message, error.status);
+      throw error;
+    }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const data: Record<string, any> = { updated_at: new Date() };
+  const data: Record<string, any> = { updated_at: dbNow() };
   if ('name' in body) data.name = body.name;
   if ('email' in body) data.email = body.email;
   if ('phone' in body) data.phone = body.phone;
@@ -57,7 +64,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   if ('status' in body) data.status = body.status;
   if ('password' in body && body.password) data.password = await hashPassword(body.password);
 
-  const updated = await db.users.update({ where: { id: user.id }, data });
+  const [updated] = await db.$transaction([
+    db.users.update({ where: { id: user.id }, data }),
+    ...(roleChanged ? roleChangeSideEffects(user, body.role, guard.id) : []),
+  ]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return apiSuccess(mapUserResource(updated as any, guard.id), 'Cập nhật tài khoản thành công!');
 }

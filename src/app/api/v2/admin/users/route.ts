@@ -5,10 +5,11 @@ import { toVietnamIso8601 } from '@/lib/api-resources/carbon-format';
 import { requireAdmin, hashPassword } from '@/lib/auth';
 import { apiPaginated, apiSuccess, buildPaginationMeta } from '@/lib/api-response';
 import { mapAdminUserRawDump } from '@/lib/api-resources/admin-user-resource';
+import { dbNow } from '@/lib/db-time';
+import { isRole } from '@/lib/roles';
 import { mapUserResource } from '@/lib/api-resources/user-resource';
 import { FieldError, validationErrorResponse, isString, isEmail, inList } from '@/lib/validation';
 
-const ROLES = ['user', 'agent', 'agency', 'admin'] as const;
 const STATUSES = ['active', 'inactive', 'banned'] as const;
 
 /** GET /api/v2/admin/users — port của AdminUserController@index (raw dump, không qua UserResource). */
@@ -92,7 +93,7 @@ export async function POST(request: Request) {
   // required kiểm trước (thiếu -> message required), rồi mới in (có nhưng sai -> message in).
   if (body.role === undefined || body.role === null || body.role === '') {
     errors.push(new FieldError('role', 'Trường vai trò không được để trống.'));
-  } else if (!inList(body.role, ROLES)) {
+  } else if (!isRole(body.role)) {
     errors.push(new FieldError('role', 'Giá trị đã chọn trong trường vai trò không hợp lệ.'));
   }
   if (body.status != null && body.status !== '' && !inList(body.status, STATUSES)) {
@@ -109,7 +110,7 @@ export async function POST(request: Request) {
   }
   if (errors.length > 0) return validationErrorResponse(errors);
 
-  const now = new Date();
+  const now = dbNow();
   const created = await db.users.create({
     data: {
       uuid: randomUUID(),

@@ -4,8 +4,8 @@ import { apiErrorWithCode } from '@/lib/api-response';
 /**
  * Điều kiện đăng tin của MÔI GIỚI (Notion 24/09 "Publish – Backend Validation").
  *
- * Khách viết `role = broker`; hệ thống này gọi môi giới là `agent` (xem ROLES ở admin users).
- * Tài khoản `user` / `agency` / `admin` KHÔNG bị áp — giữ nguyên luồng đăng tin cũ
+ * Khách viết `role = broker`; hệ thống này gọi môi giới là `agent` (xem lib/roles.ts).
+ * Tài khoản `user` / `admin` KHÔNG bị áp — giữ nguyên luồng đăng tin cũ
  * (Notion "Acceptance Criteria": role != broker → giữ nguyên logic hiện tại).
  *
  * Môi giới chỉ được đưa tin lên khi ĐỦ cả ba:
@@ -17,7 +17,9 @@ import { apiErrorWithCode } from '@/lib/api-response';
  * vòng qua được bằng cách gọi API trực tiếp (Notion "Publish API – Anti Bypass").
  */
 
-export const BROKER_ROLE = 'agent';
+import { BROKER_ROLE } from '@/lib/roles';
+
+export { BROKER_ROLE };
 export const BROKER_NOT_ELIGIBLE = 'BROKER_NOT_ELIGIBLE_TO_POST';
 
 export interface BrokerEligibility {

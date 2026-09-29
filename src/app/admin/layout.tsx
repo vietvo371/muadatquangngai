@@ -25,6 +25,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import Link from 'next/link';
+import { isAdminRole, roleLabel } from '@/lib/roles';
 
 function AdminLayoutContent({
   children,
@@ -99,7 +100,7 @@ function AdminLayoutContent({
       }
 
       // Check role locally first
-      const isAdmin = user.role === 'admin' || user.role === 'super_admin';
+      const isAdmin = isAdminRole(user.role);
       if (!isAdmin) {
         router.replace('/dashboard');
         return;
@@ -115,7 +116,7 @@ function AdminLayoutContent({
       try {
         const response = await axios.get('/api/v2/user/me');
         const fetchedUser = response.data.data;
-        const fetchedIsAdmin = fetchedUser.role === 'admin' || fetchedUser.role === 'super_admin';
+        const fetchedIsAdmin = isAdminRole(fetchedUser.role);
 
         if (!fetchedIsAdmin) {
           router.replace('/dashboard');
@@ -357,7 +358,7 @@ function AdminLayoutContent({
                       {user?.name || 'Administrator'}
                     </p>
                     <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wider leading-none">
-                      {user?.role === 'super_admin' ? 'Super Admin' : 'Quản trị viên'}
+                      {roleLabel(user?.role)}
                     </p>
                   </div>
                   <ChevronDown className="h-3.5 w-3.5 text-gray-400 hidden lg:block" />

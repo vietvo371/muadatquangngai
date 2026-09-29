@@ -26,6 +26,7 @@ import { timeAgo, derivePrices } from '@/lib/formatters';
 import { CONFIG } from '@/lib/config';
 import { useProperties } from '@/hooks/useProperties';
 import { useFavorite } from '@/hooks/useFavorite';
+import { isBrokerRole } from '@/lib/roles';
 
 const CONTACT_ANCHOR_ID = 'lien-he-nguoi-dang';
 
@@ -149,7 +150,7 @@ const mapApiPropertyDetail = (apiProp: any) => {
       name: apiProp.contact_name || apiProp.owner?.name || 'Người đăng tin',
       avatar: apiProp.owner?.avatar || null,
       phone: apiProp.contact_phone || apiProp.owner?.phone || '',
-      role: apiProp.owner?.role === 'agent' ? 'Môi giới' : 'Cá nhân',
+      role: isBrokerRole(apiProp.owner?.role) ? 'Môi giới' : 'Cá nhân',
     },
     features: apiProp.features || [],
   };

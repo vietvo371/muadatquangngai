@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { db } from '@/lib/db';
 import { SITE_NAME, SITE_OG_IMAGE, SITE_URL, absoluteUrl } from '@/lib/site';
+import { BROKER_ROLE } from '@/lib/roles';
 
 /**
  * Metadata cho 4 nhóm trang công khai còn lại: dự án, tin tức, doanh nghiệp, môi giới.
@@ -277,7 +278,7 @@ export async function getAgentSeo(id: string): Promise<SeoResult<AgentSeoData>> 
   try {
     row = await db.users.findFirst({
       // Chỉ môi giới đang hoạt động mới có trang công khai — khớp bộ lọc của /api/v2/agents.
-      where: { id: BigInt(id), role: 'agent', status: 'active' },
+      where: { id: BigInt(id), role: BROKER_ROLE, status: 'active' },
       select: {
         id: true,
         name: true,

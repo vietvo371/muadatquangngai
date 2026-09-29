@@ -3,6 +3,7 @@ import { BROKER_VERIFIED_WHERE } from '@/lib/broker-eligibility';
 import { toVietnamIso8601 } from '@/lib/api-resources/carbon-format';
 import { apiSuccess, apiError } from '@/lib/api-response';
 import { mapPropertyResource, type WardRow } from '@/lib/api-resources/property-resource';
+import { BROKER_ROLE } from '@/lib/roles';
 
 /**
  * GET /api/v2/agents/[id] — hồ sơ một nhà môi giới kèm các tin đang hiển thị.
@@ -28,7 +29,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ id: string 
   if (!/^\d+$/.test(id)) return apiError('Không tìm thấy nhà môi giới.', 404);
 
   const agent = await db.users.findFirst({
-    where: { id: BigInt(id), role: 'agent' },
+    where: { id: BigInt(id), role: BROKER_ROLE },
     select: {
       id: true,
       name: true,

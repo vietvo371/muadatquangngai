@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import axios from '@/lib/axios';
 import { useAuthStore } from '@/stores/authStore';
+import { isAdminRole } from '@/lib/roles';
 
 /**
  * Đích đến sau khi /api/v2/auth/oauth/google/callback redirect về — đọc access_token từ
@@ -33,7 +34,7 @@ export default function OAuthCallbackPage() {
       .then((res) => {
         const user = res.data.data.user;
         login(user, accessToken);
-        if (user.role === 'admin' || user.role === 'super_admin') {
+        if (isAdminRole(user.role)) {
           router.replace('/admin');
         } else {
           router.replace('/dashboard');

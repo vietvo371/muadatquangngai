@@ -1,4 +1,6 @@
-export type UserRole = "user" | "agent" | "agency" | "admin" | "super_admin";
+import type { Role } from "@/lib/roles";
+
+export type UserRole = Role;
 export type UserStatus = "active" | "inactive" | "banned";
 
 export interface User {

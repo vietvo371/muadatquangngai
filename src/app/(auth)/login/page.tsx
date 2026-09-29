@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAuthStore } from '@/stores/authStore';
 import axios from '@/lib/axios';
+import { isAdminRole } from '@/lib/roles';
 
 const OAUTH_ERROR_MESSAGE = 'Đăng nhập bằng Google thất bại hoặc bạn đã từ chối cấp quyền. Vui lòng thử lại.';
 
@@ -44,7 +45,7 @@ function LoginForm() {
         const loggedInUser = response.data.data.user;
         login(loggedInUser, response.data.data.access_token);
         
-        if (loggedInUser.role === 'admin' || loggedInUser.role === 'super_admin') {
+        if (isAdminRole(loggedInUser.role)) {
           router.push('/admin');
         } else {
           router.push('/dashboard');

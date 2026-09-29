@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Search, MessageSquare, Inbox, Home, AlertCircle } from 'lucide-react';
 import api from '@/lib/axios';
 import { formatDistanceToNow } from '@/lib/formatters';
+import { isBrokerRole } from '@/lib/roles';
 
 interface Participant {
   id: number;
@@ -119,7 +120,7 @@ export default function MessagesPage() {
           ) : (
             filteredConversations.map((conversation) => {
               const name = conversation.participant?.name ?? 'Người dùng đã rời đi';
-              const isAgent = conversation.participant?.role === 'agent';
+              const isAgent = isBrokerRole(conversation.participant?.role);
 
               return (
                 <Link key={conversation.id} href={`/dashboard/tin-nhan/${conversation.id}`} className="block">

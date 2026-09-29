@@ -1,6 +1,7 @@
 import { db } from '@/lib/db';
 import { brokerVerifiedIds } from '@/lib/broker-eligibility';
 import { apiPaginated, buildPaginationMeta } from '@/lib/api-response';
+import { BROKER_ROLE } from '@/lib/roles';
 
 /**
  * GET /api/v2/agents — danh bạ nhà môi giới.
@@ -27,7 +28,7 @@ export async function GET(request: Request) {
   const q = searchParams.get('q')?.trim();
 
   const where = {
-    role: 'agent',
+    role: BROKER_ROLE,
     // Chỉ hiện môi giới còn hoạt động — tài khoản bị khoá (`banned`) hoặc tự đóng (`closed`)
     // không được nằm trong danh bạ công khai, tránh khách gọi vào số không còn phục vụ.
     status: 'active',

@@ -32,6 +32,7 @@ api.interceptors.response.use(
   async (error) => {
     if (
       error.response?.status === 401 &&
+      !error.config?.skipAuthRedirect &&
       !error.config?.url?.includes("/auth/login") &&
       !error.config?.url?.includes("/auth/otp/login")
     ) {
@@ -43,5 +44,12 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+declare module "axios" {
+  interface AxiosRequestConfig {
+    /** Tự xử lý 401 thay vì chuyển về /login (vd đồng bộ hồ sơ nền trên trang công khai). */
+    skipAuthRedirect?: boolean;
+  }
+}
 
 export default api;

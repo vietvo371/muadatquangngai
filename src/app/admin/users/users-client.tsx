@@ -65,14 +65,15 @@ import {
 import { formatDate } from '@/lib/formatters';
 import { userAdminApi, type AdminUser } from '@/lib/admin-api';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { ROLE_LABELS, roleLabel } from '@/lib/roles';
 
 type UserRole = 'admin' | 'agent' | 'user';
 type UserStatus = 'active' | 'inactive' | 'banned';
 
 const roleConfig: Record<UserRole, { label: string; color: string; icon: React.ElementType }> = {
-  admin: { label: 'Quản trị', color: 'bg-blue-50 text-blue-700 border-blue-200/50', icon: ShieldAlert },
-  agent: { label: 'Môi giới / Đại lý', color: 'bg-primary-light text-primary border-primary-200/40', icon: UserCheck },
-  user: { label: 'Người dùng thường', color: 'bg-gray-100 text-gray-700 border-gray-200', icon: User },
+  admin: { label: ROLE_LABELS.admin, color: 'bg-gray-800 text-white border-gray-800', icon: ShieldAlert },
+  agent: { label: ROLE_LABELS.agent, color: 'bg-primary-light text-primary border-primary-200/40', icon: UserCheck },
+  user: { label: ROLE_LABELS.user, color: 'bg-gray-100 text-gray-700 border-gray-200', icon: User },
 };
 
 const statusConfig: Record<UserStatus, { label: string; color: string; icon: React.ElementType }> = {
@@ -83,8 +84,8 @@ const statusConfig: Record<UserStatus, { label: string; color: string; icon: Rea
 
 const statusTabs = [
   { value: 'all', label: 'Tất cả' },
-  { value: 'agent', label: 'Môi giới / Đại lý' },
-  { value: 'user', label: 'Người dùng thường' },
+  { value: 'agent', label: ROLE_LABELS.agent },
+  { value: 'user', label: ROLE_LABELS.user },
   { value: 'banned', label: 'Bị cấm / Khóa' },
   { value: 'deleted', label: 'Đã xóa' },
 ];
@@ -333,13 +334,14 @@ export default function UsersClient() {
       return { previousData };
     },
     onSuccess: () => {
-      toast.success('Đã cập nhật vai trò người dùng thành công!');
+      toast.success('Đã cập nhật vai trò. Quyền mới có hiệu lực ngay và người dùng đã được thông báo.');
     },
-    onError: (error, variables, context: any) => {
+    onError: (error: any, variables, context: any) => {
       if (context) {
         queryClient.setQueryData(['admin-users'], context.previousData);
       }
-      toast.error('Không cập nhật được vai trò người dùng. Vai trò cũ vẫn được giữ nguyên, vui lòng thử lại.');
+      const reason = error?.response?.data?.message;
+      toast.error(reason ? `${reason} Vai trò cũ được giữ nguyên.` : 'Không cập nhật được vai trò người dùng. Vai trò cũ vẫn được giữ nguyên, vui lòng thử lại.');
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
@@ -559,7 +561,7 @@ export default function UsersClient() {
             </div>
             <div>
               <p className="text-2xl font-black text-gray-900">{agentsCount}</p>
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-0.5">Môi giới / Đại lý</p>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-0.5">{ROLE_LABELS.agent}</p>
             </div>
           </CardContent>
         </Card>
@@ -571,7 +573,7 @@ export default function UsersClient() {
             </div>
             <div>
               <p className="text-2xl font-black text-gray-900">{normalCount}</p>
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-0.5">Người dùng thường</p>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-0.5">{ROLE_LABELS.user}</p>
             </div>
           </CardContent>
         </Card>
@@ -648,8 +650,8 @@ export default function UsersClient() {
             <SelectContent className="rounded-xl">
               <SelectItem value="all">Tất cả vai trò</SelectItem>
               <SelectItem value="admin">Quản trị viên</SelectItem>
-              <SelectItem value="agent">Môi giới / Đại lý</SelectItem>
-              <SelectItem value="user">Người dùng thường</SelectItem>
+              <SelectItem value="agent">{ROLE_LABELS.agent}</SelectItem>
+              <SelectItem value="user">{ROLE_LABELS.user}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -1111,8 +1113,8 @@ export default function UsersClient() {
                     <SelectValue placeholder="Chọn vai trò" />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl">
-                    <SelectItem value="user">Người dùng thường</SelectItem>
-                    <SelectItem value="agent">Môi giới / Đại lý</SelectItem>
+                    <SelectItem value="user">{ROLE_LABELS.user}</SelectItem>
+                    <SelectItem value="agent">{ROLE_LABELS.agent}</SelectItem>
                     <SelectItem value="admin">Quản trị viên</SelectItem>
                   </SelectContent>
                 </Select>
@@ -1231,8 +1233,8 @@ export default function UsersClient() {
                     <SelectValue placeholder="Chọn vai trò" />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl">
-                    <SelectItem value="user">Người dùng thường</SelectItem>
-                    <SelectItem value="agent">Môi giới / Đại lý</SelectItem>
+                    <SelectItem value="user">{ROLE_LABELS.user}</SelectItem>
+                    <SelectItem value="agent">{ROLE_LABELS.agent}</SelectItem>
                     <SelectItem value="admin">Quản trị viên</SelectItem>
                   </SelectContent>
                 </Select>
@@ -1310,19 +1312,9 @@ export default function UsersClient() {
                 <p className="text-[11px] text-gray-500 font-medium">{selectedUserForView?.email}</p>
                 <div className="flex flex-wrap gap-1.5 pt-1.5">
                   {/* Role Badge */}
-                  {selectedUserForView?.role === 'admin' && (
-                    <Badge className="bg-red-50 text-red-700 hover:bg-red-50 border-none font-bold text-[10px] px-2 py-0.5 rounded-full">
-                      Quản trị viên
-                    </Badge>
-                  )}
-                  {selectedUserForView?.role === 'agent' && (
-                    <Badge className="bg-primary-light text-primary hover:bg-primary-light border-none font-bold text-[10px] px-2 py-0.5 rounded-full">
-                      Môi giới / Đại lý
-                    </Badge>
-                  )}
-                  {selectedUserForView?.role === 'user' && (
-                    <Badge className="bg-gray-100 text-gray-600 hover:bg-gray-100 border-none font-bold text-[10px] px-2 py-0.5 rounded-full">
-                      Người dùng thường
+                  {selectedUserForView && (
+                    <Badge className={`${(roleConfig[selectedUserForView.role as UserRole] || roleConfig.user).color} border-none font-bold text-[10px] px-2 py-0.5 rounded-full`}>
+                      {roleLabel(selectedUserForView.role)}
                     </Badge>
                   )}
 
@@ -1469,7 +1461,7 @@ function DeletedUsersTable({ users, isLoading }: { users: DeletedUser[]; isLoadi
                       <div className="font-bold text-gray-900">{u.name}</div>
                       <div className="text-[12px] text-gray-500">{u.email}</div>
                     </td>
-                    <td className="py-3 text-gray-600">{u.role === 'agent' ? 'Môi giới' : u.role === 'agency' ? 'Doanh nghiệp' : 'Người dùng'}</td>
+                    <td className="py-3 text-gray-600">{roleLabel(u.role)}</td>
                     <td className="py-3 font-semibold text-gray-800">{u.listings_count ?? 0} tin (đã ẩn)</td>
                     <td className="py-3 text-gray-600">{u.deleted_at ? formatDate(u.deleted_at) : '—'}</td>
                     <td className="py-3 pr-6 text-gray-600">{u.deleted_by_name ?? '—'}</td>

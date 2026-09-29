@@ -24,6 +24,7 @@ import {
   Link as LinkIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { roleLabel as roleLabelOf } from '@/lib/roles';
 
 const TAB_LIST = [
   { id: 'info', label: 'Thông tin cá nhân', icon: User },
@@ -135,14 +136,7 @@ export default function ProfileClient() {
     );
   }
 
-  const roleLabel =
-    user.role === 'super_admin'
-      ? 'Super Admin'
-      : user.role === 'admin'
-      ? 'Quản trị viên'
-      : user.role === 'agent'
-      ? 'Môi giới'
-      : 'Người dùng';
+  const roleLabel = roleLabelOf(user.role);
 
   return (
     <div className="space-y-6">
