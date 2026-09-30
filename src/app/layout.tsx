@@ -55,6 +55,13 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 },
   },
+  // Mã xác minh quyền sở hữu website cho Google Search Console (khách cung cấp 30/09/2026).
+  // Next tự in ra <meta name="google-site-verification" ...> trong <head> mọi trang.
+  // Không phải khoá bí mật — Google yêu cầu công khai trong HTML. Xoá đi thì Search Console
+  // sẽ báo mất xác minh và ngừng gửi báo cáo.
+  verification: {
+    google: "RyEaYevezOvEA6Taoy1lELfWHL-JhN1yCtZgfCCpELc",
+  },
 };
 
 export default function RootLayout({
