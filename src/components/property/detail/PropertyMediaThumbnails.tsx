@@ -10,10 +10,12 @@ import {
   ChevronRight,
   Compass,
   FileText,
+  Map,
   Images,
   LayoutPanelTop,
   Mountain,
   Play,
+  Rotate3d,
   Sofa,
   Sparkles,
   Trees,
@@ -49,6 +51,7 @@ export type ThumbnailIconKey =
   | 'video'
   | 'tour360'
   | 'floorplan'
+  | 'map'
   | 'streetview'
   | 'facade'
   | 'living_room'
@@ -64,8 +67,9 @@ export type ThumbnailIconKey =
 const ICONS: Record<ThumbnailIconKey, LucideIcon> = {
   all: Camera,
   video: Play,
-  tour360: Compass,
+  tour360: Rotate3d,
   floorplan: LayoutPanelTop,
+  map: Map,
   streetview: Compass,
   facade: Images,
   living_room: Sofa,
@@ -135,7 +139,12 @@ export function PropertyMediaThumbnails({ thumbnails, onSelect }: Props) {
               className="group shrink-0 w-[120px] sm:w-[140px] text-left"
               aria-label={thumb.count != null ? `${thumb.label}, ${thumb.count} mục` : thumb.label}
             >
-              <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-gray-200">
+              {/*
+                Nhóm không có ảnh riêng (Bản đồ, Đường phố, Tour 360, mặt bằng dạng PDF, video
+                chưa có khung hình) thì để nền tối trơn kèm biểu tượng — TUYỆT ĐỐI không mượn ảnh
+                của nhóm khác làm nền (Notion 30/09 "Category Isolation", "Empty Media").
+              */}
+              <div className={`relative aspect-square w-full overflow-hidden rounded-xl ${thumb.cover ? 'bg-gray-200' : 'bg-gray-700'}`}>
                 {thumb.cover && (
                   <Image
                     src={thumb.cover}
@@ -146,7 +155,9 @@ export function PropertyMediaThumbnails({ thumbnails, onSelect }: Props) {
                     className="object-cover transition-transform duration-300 group-hover:scale-105"
                   />
                 )}
-                <div className="absolute inset-0 bg-black/45 transition-colors group-hover:bg-black/30" />
+                {thumb.cover && (
+                  <div className="absolute inset-0 bg-black/45 transition-colors group-hover:bg-black/30" />
+                )}
                 <Icon className="absolute inset-0 m-auto h-7 w-7 text-white drop-shadow" strokeWidth={1.75} />
               </div>
               <p className="mt-2 truncate text-[13px] font-semibold text-gray-900">

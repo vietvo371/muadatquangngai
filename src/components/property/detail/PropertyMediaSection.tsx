@@ -4,9 +4,20 @@ import { useState } from 'react';
 import { Camera } from 'lucide-react';
 import Image from 'next/image';
 import { IMAGE_CATEGORY_OPTIONS, VALID_IMAGE_CATEGORIES } from '@/lib/property-form-config';
+import { parseYoutubeId } from '@/components/shared/ImageUploader';
 import { PropertyImageSlider } from './PropertyImageSlider';
 import { PropertyGalleryLightbox, type GalleryTabKey } from './PropertyGalleryLightbox';
 import { PropertyMediaThumbnails, type MediaThumbnail } from './PropertyMediaThumbnails';
+
+/**
+ * Ảnh đại diện của video YouTube — lấy theo mã video trên máy chủ ảnh công khai của YouTube,
+ * không cần khoá API. Video tự tải lên (mp4...) chưa trích được khung hình nên trả null, ô sẽ
+ * hiện nền tối kèm biểu tượng play (Notion 30/09 "Video – Fallback").
+ */
+function youtubeThumbnail(url: string): string | undefined {
+  const id = parseYoutubeId(url);
+  return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : undefined;
+}
 
 export interface PropertyMediaImage {
   id?: number;
@@ -72,8 +83,22 @@ export function PropertyMediaSection({
 
   // Các ô trên thanh Thumbnail Media: "Tất cả ảnh" trước, rồi từng nhóm ảnh theo thứ tự cấu
   // hình đăng tin, cuối cùng là Video / Tour 360 / Mặt bằng / Đường phố nếu tin có.
+  /**
+   * Ảnh nền của mỗi ô PHẢI là media của chính nhóm đó (Notion 30/09 "Thumbnail Media – Data
+   * Binding", "Category Isolation"). Nhóm nào không có ảnh riêng thì để trống — component tự vẽ
+   * ô nền tối kèm biểu tượng, KHÔNG mượn ảnh bìa của tin như bản trước.
+   */
   const thumbnails: MediaThumbnail[] = [];
-  thumbnails.push({ key: 'all', label: 'Tất cả ảnh', count: media.length, cover: media[0], icon: 'all' });
+
+  // "Tất cả ảnh": ưu tiên ảnh bìa người đăng chọn, không có thì ảnh đầu tiên.
+  const primaryImage = images.find((img) => img.is_primary) ?? images[0];
+  thumbnails.push({
+    key: 'all',
+    label: 'Tất cả ảnh',
+    count: media.length,
+    cover: primaryImage?.thumbnail || primaryImage?.url || media[0],
+    icon: 'all',
+  });
 
   const byType = new Map<string, PropertyMediaImage[]>();
   for (const img of images) {
@@ -96,28 +121,46 @@ export function PropertyMediaSection({
     });
   }
   if (videos.length > 0) {
-    thumbnails.push({ key: 'videos', label: 'Video', count: videos.length, cover: videos[0].thumbnail || media[0], icon: 'video' });
+    const video = videos[0];
+    thumbnails.push({
+      key: 'videos',
+      label: 'Video',
+      count: videos.length,
+      // Ưu tiên ảnh đại diện lấy theo mã video YouTube. Trường `thumbnail` của API rơi về chính
+      // đường dẫn video khi người đăng không tải ảnh riêng — dùng thẳng là ô video trống trơn,
+      // nên chỉ nhận khi nó THỰC SỰ khác đường dẫn video.
+      cover:
+        youtubeThumbnail(video.url) ??
+        (video.thumbnail && video.thumbnail !== video.url ? video.thumbnail : undefined),
+      icon: 'video',
+    });
   }
   if (tour360Url) {
-    thumbnails.push({ key: 'tour360', label: 'Tour 360', cover: media[0], icon: 'tour360' });
+    thumbnails.push({ key: 'tour360', label: 'Tour 360', icon: 'tour360' });
   }
   if (floorPlans.length > 0) {
+    // Chỉ lấy đúng bản vẽ mặt bằng người đăng tải lên; file PDF không làm ảnh nền được nên để
+    // trống (Notion "Floor Plan – Data Binding": cấm lấy ảnh flycam/mặt tiền thay thế).
+    const drawing = floorPlans.find((fp) => !fp.url.toLowerCase().endsWith('.pdf'));
     thumbnails.push({
       key: 'floorplans',
       label: 'Mặt bằng',
       count: floorPlans.length,
-      // File PDF không dùng làm ảnh nền được — rơi về ảnh bìa của tin.
-      cover: floorPlans[0].url.toLowerCase().endsWith('.pdf') ? media[0] : floorPlans[0].thumbnail || floorPlans[0].url,
+      cover: drawing?.thumbnail || drawing?.url,
       icon: 'floorplan',
     });
   }
   if (latitude != null && longitude != null) {
-    thumbnails.push({ key: 'streetview', label: 'Đường phố', cover: media[0], icon: 'streetview' });
+    // Bản đồ và Đường phố: ảnh chụp tĩnh theo toạ độ cần khoá API Google có gắn thẻ thanh toán —
+    // khách chốt 22/09 là KHÔNG gắn thẻ, nên hai ô này để nền tối kèm biểu tượng. Bấm vào vẫn mở
+    // bản đồ / ảnh đường phố thật tại đúng vị trí tin. Khi nào khách bật khoá thì gắn ảnh vào đây.
+    thumbnails.push({ key: 'map', label: 'Bản đồ', icon: 'map' });
+    thumbnails.push({ key: 'streetview', label: 'Đường phố', icon: 'streetview' });
   }
 
   /** Bấm một ô Thumbnail → mở album đúng nhóm/loại media đó. */
   const openThumbnail = (key: string) => {
-    if (key === 'videos' || key === 'tour360' || key === 'floorplans' || key === 'streetview') {
+    if (key === 'videos' || key === 'tour360' || key === 'floorplans' || key === 'map' || key === 'streetview') {
       setAlbumTab(key as GalleryTabKey);
       setAlbumCategory(null);
     } else {

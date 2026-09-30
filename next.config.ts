@@ -57,6 +57,12 @@ const nextConfig: NextConfig = {
         hostname: "res.cloudinary.com",
       },
       {
+        // Ảnh đại diện video YouTube — dùng làm ảnh nền ô "Video" trên thanh Thumbnail của trang
+        // chi tiết. Thiếu host này thì next/image từ chối và ô video hiện trống.
+        protocol: "https",
+        hostname: "img.youtube.com",
+      },
+      {
         // Avatar tài khoản đăng nhập bằng Google OAuth.
         protocol: "https",
         hostname: "lh3.googleusercontent.com",
