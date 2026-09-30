@@ -25,6 +25,11 @@ export type GalleryTabKey = 'photos' | 'videos' | 'tour360' | 'floorplans' | 'ma
 interface PropertyGalleryLightboxProps {
   open: boolean;
   onClose: () => void;
+  /** Tab mở sẵn khi bật album (bấm ô Video / Mặt bằng / Đường phố ở thanh Thumbnail). */
+  initialTab?: GalleryTabKey;
+  /** Mã phân loại ảnh mở sẵn — chỉ hiện ảnh thuộc nhóm này ("Category Filtering").
+   * null hoặc 'all' = xem tất cả ảnh, chia theo từng nhóm. */
+  initialCategory?: string | null;
   media: string[];
   images: PropertyMediaImage[];
   videos: PropertyMediaFile[];
@@ -55,6 +60,8 @@ function byImportance(a: PropertyMediaImage, b: PropertyMediaImage): number {
 export function PropertyGalleryLightbox({
   open,
   onClose,
+  initialTab = 'photos',
+  initialCategory = null,
   media,
   images,
   videos,
@@ -66,7 +73,10 @@ export function PropertyGalleryLightbox({
   propertyTitle,
   contactPhone,
 }: PropertyGalleryLightboxProps) {
-  const [activeTab, setActiveTab] = useState<GalleryTabKey>('photos');
+  // Giá trị ban đầu bám theo ô Thumbnail vừa bấm; nơi gọi truyền `key` để album dựng lại mỗi
+  // lần mở một nhóm khác (xem PropertyMediaSection).
+  const [activeTab, setActiveTab] = useState<GalleryTabKey>(initialTab);
+  const [activeCategory, setActiveCategory] = useState<string | null>(initialCategory);
   const [sliderIndex, setSliderIndex] = useState<number | null>(null);
   const { isSaved, toggle } = useFavorite(propertyId);
 
@@ -94,6 +104,14 @@ export function PropertyGalleryLightbox({
     }));
   }, [images, orderedImages]);
 
+  /** Nhóm đang xem (null = xem tất cả). Ảnh trong slider chỉ chạy trong phạm vi đang xem, để
+   * Next/Prev không nhảy sang nhóm khác ("Navigation"). */
+  const activeSection = activeCategory ? sections.find((sec) => sec.key === activeCategory) ?? null : null;
+  const sliderUrls = useMemo(
+    () => (activeSection ? activeSection.items.map((img) => img.url) : orderedUrls),
+    [activeSection, orderedUrls]
+  );
+
   const tabs: Array<{ key: GalleryTabKey; label: string }> = [
     { key: 'photos', label: `Hình ảnh (${orderedUrls.length})` },
     ...(videos.length > 0 ? [{ key: 'videos' as GalleryTabKey, label: 'Video' }] : []),
@@ -120,7 +138,7 @@ export function PropertyGalleryLightbox({
   if (!open) return null;
 
   const openSlider = (url: string) => {
-    const idx = orderedUrls.indexOf(url);
+    const idx = sliderUrls.indexOf(url);
     setSliderIndex(idx >= 0 ? idx : 0);
   };
 
@@ -243,7 +261,38 @@ export function PropertyGalleryLightbox({
         {/* 9: vùng nội dung cuộn dọc mượt */}
         <div className="flex-1 overflow-y-auto scroll-smooth overscroll-contain">
           <div className="max-w-[1200px] mx-auto px-3 sm:px-4 py-5 sm:py-8">
-            {activeTab === 'photos' && (
+            {activeTab === 'photos' && activeSection && (
+              <>
+                {/* Chỉ hiện ảnh thuộc nhóm đã bấm ở thanh Thumbnail ("Category Filtering"). */}
+                <div className="mb-4 flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setActiveCategory(null)}
+                    className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] font-semibold text-gray-600 transition-colors hover:bg-primary-light hover:text-primary"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    Tất cả ảnh
+                  </button>
+                  <h3 className="text-[16px] sm:text-[18px] font-bold text-gray-900">
+                    {activeSection.label}{' '}
+                    <span className="font-normal text-gray-400">({activeSection.items.length})</span>
+                  </h3>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
+                  {activeSection.items.map((img, idx) =>
+                    renderTile(
+                      img,
+                      `${activeSection.label} ${idx + 1}`,
+                      '(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw',
+                      idx === 0,
+                      'relative aspect-[4/3]'
+                    )
+                  )}
+                </div>
+              </>
+            )}
+
+            {activeTab === 'photos' && !activeSection && (
               <>
                 {/* 6-7: lưới bất đối xứng, ảnh quan trọng nhất chiếm ô lớn nhất */}
                 <div className="grid grid-cols-2 md:grid-cols-4 auto-rows-[110px] sm:auto-rows-[140px] md:auto-rows-[170px] gap-2 sm:gap-3">
@@ -392,7 +441,7 @@ export function PropertyGalleryLightbox({
       {/* 11: bấm 1 ảnh → slider toàn màn hình, đóng lại quay về lưới ảnh */}
       {sliderIndex !== null && (
         <PropertyImageSlider
-          media={orderedUrls}
+          media={sliderUrls}
           index={sliderIndex}
           onIndexChange={setSliderIndex}
           onClose={() => setSliderIndex(null)}

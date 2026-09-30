@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { Camera, FileText, ExternalLink } from 'lucide-react';
+import { useState } from 'react';
+import { Camera } from 'lucide-react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
-import { IMAGE_CATEGORY_OPTIONS } from '@/lib/property-form-config';
-import { parseYoutubeId } from '@/components/shared/ImageUploader';
+import { IMAGE_CATEGORY_OPTIONS, VALID_IMAGE_CATEGORIES } from '@/lib/property-form-config';
 import { PropertyImageSlider } from './PropertyImageSlider';
-import { PropertyGalleryLightbox } from './PropertyGalleryLightbox';
+import { PropertyGalleryLightbox, type GalleryTabKey } from './PropertyGalleryLightbox';
+import { PropertyMediaThumbnails, type MediaThumbnail } from './PropertyMediaThumbnails';
 
 // Bản đồ + ảnh đường phố nhúng từ Google, không cần API key (xem src/lib/google-embed.ts).
 // Nạp động vì cả hai là iframe của bên thứ ba, không cần có mặt lúc dựng trang trên máy chủ.
@@ -54,8 +54,6 @@ interface PropertyMediaSectionProps {
   contactPhone?: string;
 }
 
-type TabKey = 'photos' | 'videos' | 'tour360' | 'floorplans' | 'map' | 'streetview';
-
 /**
  * Trang chi tiết James Edition (Đợt 4, III.1-III.8, trừ Street View đã bỏ) — thay `HeroGallery`
  * ở 2 trang chi tiết. Giữ nguyên phần hero-grid + các section media trên trang; phần xem ảnh
@@ -75,37 +73,8 @@ export function PropertyMediaSection({
 }: PropertyMediaSectionProps) {
   const [sliderIndex, setSliderIndex] = useState<number | null>(null);
   const [albumOpen, setAlbumOpen] = useState(false);
-
-  const sectionRefs = useRef<Partial<Record<TabKey, HTMLDivElement | null>>>({});
-  const [activeTab, setActiveTab] = useState<TabKey>('photos');
-
-  // Tab nào có nội dung mới hiện — cần tính trước effect scrollspy vì effect phụ thuộc số tab.
-  const tabs: Array<{ key: TabKey; label: string }> = [
-    { key: 'photos', label: `Ảnh (${media.length})` },
-    ...(videos.length > 0 ? [{ key: 'videos' as TabKey, label: 'Video' }] : []),
-    ...(tour360Url ? [{ key: 'tour360' as TabKey, label: 'Tour 360' }] : []),
-    ...(floorPlans.length > 0 ? [{ key: 'floorplans' as TabKey, label: 'Mặt bằng' }] : []),
-    ...(latitude != null && longitude != null ? [{ key: 'map' as TabKey, label: 'Bản đồ' }] : []),
-    ...(latitude != null && longitude != null ? [{ key: 'streetview' as TabKey, label: 'Đường phố' }] : []),
-  ];
-
-  // Scrollspy — tô đậm tab đang xem khi cuộn qua (III.4), cùng pattern IntersectionObserver đã
-  // dùng ở trang dự án (du-an/[slug]/page.tsx).
-  useEffect(() => {
-    const entries = Object.entries(sectionRefs.current).filter(([, el]) => el) as Array<[TabKey, HTMLDivElement]>;
-    if (entries.length === 0) return;
-    const observer = new IntersectionObserver(
-      (obs) => {
-        obs.forEach((entry) => {
-          if (entry.isIntersecting) setActiveTab(entry.target.getAttribute('data-tab') as TabKey);
-        });
-      },
-      { rootMargin: '-45% 0px -50% 0px' }
-    );
-    entries.forEach(([, el]) => observer.observe(el));
-    return () => observer.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- chỉ chạy lại khi số tab đổi (refs đã gắn xong khi effect chạy)
-  }, [tabs.length]);
+  const [albumTab, setAlbumTab] = useState<GalleryTabKey>('photos');
+  const [albumCategory, setAlbumCategory] = useState<string | null>(null);
 
   if (media.length === 0) return null;
 
@@ -113,23 +82,58 @@ export function PropertyMediaSection({
 
   const handleOpen = (index: number) => setSliderIndex(index);
 
-  // Nhóm ảnh theo loại (III.3/III.6) — chỉ khi có metadata; ảnh không gắn phân loại gộp "Khác".
-  const groups: Array<{ key: string; label: string; items: PropertyMediaImage[] }> = [];
-  if (images.length > 0) {
-    const byType = new Map<string, PropertyMediaImage[]>();
-    for (const img of images) {
-      const key = img.image_type || 'other';
-      if (!byType.has(key)) byType.set(key, []);
-      byType.get(key)!.push(img);
-    }
-    for (const [key, items] of byType) {
-      const label = key === 'other' ? 'Khác' : IMAGE_CATEGORY_OPTIONS.find((o) => o.value === key)?.label ?? 'Khác';
-      groups.push({ key, label, items });
-    }
+  // Các ô trên thanh Thumbnail Media: "Tất cả ảnh" trước, rồi từng nhóm ảnh theo thứ tự cấu
+  // hình đăng tin, cuối cùng là Video / Tour 360 / Mặt bằng / Đường phố nếu tin có.
+  const thumbnails: MediaThumbnail[] = [];
+  thumbnails.push({ key: 'all', label: 'Tất cả ảnh', count: media.length, cover: media[0], icon: 'all' });
+
+  const byType = new Map<string, PropertyMediaImage[]>();
+  for (const img of images) {
+    const key = img.image_type && VALID_IMAGE_CATEGORIES.includes(img.image_type) ? img.image_type : 'other';
+    if (!byType.has(key)) byType.set(key, []);
+    byType.get(key)!.push(img);
+  }
+  for (const option of IMAGE_CATEGORY_OPTIONS) {
+    const items = byType.get(option.value);
+    if (!items?.length) continue;
+    thumbnails.push({
+      key: option.value,
+      label: option.label,
+      count: items.length,
+      cover: items[0].thumbnail || items[0].url,
+      icon: option.value as MediaThumbnail['icon'],
+    });
+  }
+  if (videos.length > 0) {
+    thumbnails.push({ key: 'videos', label: 'Video', count: videos.length, cover: videos[0].thumbnail || media[0], icon: 'video' });
+  }
+  if (tour360Url) {
+    thumbnails.push({ key: 'tour360', label: 'Tour 360', cover: media[0], icon: 'tour360' });
+  }
+  if (floorPlans.length > 0) {
+    thumbnails.push({
+      key: 'floorplans',
+      label: 'Mặt bằng',
+      count: floorPlans.length,
+      // File PDF không dùng làm ảnh nền được — rơi về ảnh bìa của tin.
+      cover: floorPlans[0].url.toLowerCase().endsWith('.pdf') ? media[0] : floorPlans[0].thumbnail || floorPlans[0].url,
+      icon: 'floorplan',
+    });
+  }
+  if (latitude != null && longitude != null) {
+    thumbnails.push({ key: 'streetview', label: 'Đường phố', cover: media[0], icon: 'streetview' });
   }
 
-  const scrollToTab = (key: TabKey) => {
-    sectionRefs.current[key]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  /** Bấm một ô Thumbnail → mở album đúng nhóm/loại media đó. */
+  const openThumbnail = (key: string) => {
+    if (key === 'videos' || key === 'tour360' || key === 'floorplans' || key === 'streetview') {
+      setAlbumTab(key as GalleryTabKey);
+      setAlbumCategory(null);
+    } else {
+      setAlbumTab('photos');
+      setAlbumCategory(key === 'all' ? null : key);
+    }
+    setAlbumOpen(true);
   };
 
   return (
@@ -184,162 +188,12 @@ export function PropertyMediaSection({
         </button>
       </div>
 
-      {/* Sub-tab sticky (III.5) — chỉ hiện khi có nhiều hơn 1 loại media. */}
-      {tabs.length > 1 && (
-        <div className="sticky top-[60px] z-20 bg-white/95 backdrop-blur-sm border-b border-gray-100 mb-6 -mx-4 px-4 sm:mx-0 sm:px-0 sm:rounded-xl sm:border sm:shadow-sm">
-          <div className="flex gap-1 overflow-x-auto">
-            {tabs.map((t) => (
-              <button
-                key={t.key}
-                onClick={() => scrollToTab(t.key)}
-                className={`shrink-0 px-4 py-3 text-sm font-semibold border-b-2 transition-colors ${
-                  activeTab === t.key ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-800'
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Ảnh — nhóm theo loại (III.3/III.6), cuộn mượt tới đây (III.4). */}
-      <div
-        ref={(el) => { sectionRefs.current.photos = el; }}
-        data-tab="photos"
-        className="scroll-mt-24 mb-8"
-      >
-        {groups.length > 0 ? (
-          <div className="space-y-6">
-            {groups.map((g) => (
-              <div key={g.key}>
-                <h3 className="text-[15px] font-bold text-gray-900 mb-3">
-                  {g.label} <span className="text-gray-400 font-normal">({g.items.length})</span>
-                </h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                  {g.items.map((img) => {
-                    const flatIndex = media.indexOf(img.url);
-                    return (
-                      <button
-                        key={img.id ?? img.url}
-                        onClick={() => handleOpen(flatIndex >= 0 ? flatIndex : 0)}
-                        className="relative aspect-square rounded-lg overflow-hidden bg-gray-100 group"
-                      >
-                        <Image
-                          src={img.thumbnail || img.url}
-                          alt={g.label}
-                          fill
-                          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                          loading="lazy"
-                          className="object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            {media.map((url, idx) => (
-              <button key={url} onClick={() => handleOpen(idx)} className="relative aspect-square rounded-lg overflow-hidden bg-gray-100 group">
-                <Image
-                  src={url}
-                  alt={`Ảnh ${idx + 1}`}
-                  fill
-                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                  loading="lazy"
-                  className="object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Video */}
-      {videos.length > 0 && (
-        <div ref={(el) => { sectionRefs.current.videos = el; }} data-tab="videos" className="scroll-mt-24 mb-8 space-y-4">
-          <h3 className="text-[15px] font-bold text-gray-900">Video</h3>
-          {videos.map((v) => {
-            const ytId = parseYoutubeId(v.url);
-            return (
-              <div key={v.id ?? v.url} className="w-full aspect-video rounded-xl overflow-hidden border border-gray-200 bg-black">
-                {ytId ? (
-                  <iframe
-                    src={`https://www.youtube.com/embed/${ytId}`}
-                    className="w-full h-full"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                    loading="lazy"
-                  />
-                ) : (
-                  // eslint-disable-next-line jsx-a11y/media-has-caption
-                  <video src={v.url} controls className="w-full h-full" />
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Tour 360 */}
-      {tour360Url && (
-        <div ref={(el) => { sectionRefs.current.tour360 = el; }} data-tab="tour360" className="scroll-mt-24 mb-8">
-          <h3 className="text-[15px] font-bold text-gray-900 mb-3">Tour 360</h3>
-          <div className="w-full h-[420px] rounded-xl overflow-hidden border border-gray-200">
-            <iframe src={tour360Url} width="100%" height="100%" style={{ border: 0 }} allowFullScreen loading="lazy" />
-          </div>
-        </div>
-      )}
-
-      {/* Mặt bằng */}
-      {floorPlans.length > 0 && (
-        <div ref={(el) => { sectionRefs.current.floorplans = el; }} data-tab="floorplans" className="scroll-mt-24 mb-8">
-          <h3 className="text-[15px] font-bold text-gray-900 mb-3">Mặt bằng</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {floorPlans.map((fp) => {
-              const isPdf = fp.url.toLowerCase().endsWith('.pdf');
-              return isPdf ? (
-                <a
-                  key={fp.id ?? fp.url}
-                  href={fp.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex flex-col items-center justify-center gap-2 aspect-square rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 transition-colors"
-                >
-                  <FileText className="h-8 w-8 text-gray-500" />
-                  <span className="text-xs text-primary flex items-center gap-1">
-                    Xem file <ExternalLink className="h-3 w-3" />
-                  </span>
-                </a>
-              ) : (
-                <a
-                  key={fp.id ?? fp.url}
-                  href={fp.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="relative aspect-square rounded-lg overflow-hidden bg-gray-100"
-                >
-                  <Image
-                    src={fp.thumbnail || fp.url}
-                    alt="Mặt bằng"
-                    fill
-                    sizes="(max-width: 640px) 50vw, 33vw"
-                    loading="lazy"
-                    className="object-cover"
-                  />
-                </a>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      {/* Thanh Thumbnail Media — thay lưới ảnh bày hết ra trang (Notion 29/09). */}
+      <PropertyMediaThumbnails thumbnails={thumbnails} onSelect={openThumbnail} />
 
       {/* Bản đồ — Google Maps theo yêu cầu khách, hiện luôn tên tiện ích quanh khu vực. */}
       {latitude != null && longitude != null && (
-        <div ref={(el) => { sectionRefs.current.map = el; }} data-tab="map" className="scroll-mt-24 mb-8">
+        <div className="mb-8">
           <h3 className="text-[15px] font-bold text-gray-900 mb-3">Bản đồ</h3>
           <GoogleMapEmbed
             latitude={latitude}
@@ -351,7 +205,7 @@ export function PropertyMediaSection({
 
       {/* Ảnh đường phố tại đúng vị trí tin đăng. */}
       {latitude != null && longitude != null && (
-        <div ref={(el) => { sectionRefs.current.streetview = el; }} data-tab="streetview" className="scroll-mt-24 mb-8">
+        <div className="mb-8">
           <h3 className="text-[15px] font-bold text-gray-900 mb-3">Ảnh đường phố</h3>
           {/* Cùng chiều cao với khối bản đồ ngay trên: nơi Google chưa chụp ảnh sẽ là một khung
               tối, để nguyên tỉ lệ 16:9 full width thì mảng tối đó chiếm gần hết màn hình. */}
@@ -365,8 +219,11 @@ export function PropertyMediaSection({
 
       {/* Album ảnh toàn màn hình — thanh điều hướng cố định, tab media, lưới bất đối xứng. */}
       <PropertyGalleryLightbox
+        key={`${albumTab}:${albumCategory ?? 'all'}`}
         open={albumOpen}
         onClose={() => setAlbumOpen(false)}
+        initialTab={albumTab}
+        initialCategory={albumCategory}
         media={media}
         images={images}
         videos={videos}
