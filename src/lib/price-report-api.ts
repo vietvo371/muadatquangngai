@@ -13,6 +13,8 @@ export const DATA_SOURCE_OPTIONS = [
 export interface PriceReportQuery {
   months: number;
   source: string;
+  /** Danh sách id khu vực so sánh, nối bằng dấu phẩy (Notion "So sánh biểu đồ"). */
+  compare: string;
   province: string;
   area: string;
   category: string;
@@ -23,9 +25,15 @@ export interface PriceReportQuery {
 }
 
 export const DEFAULT_REPORT_QUERY: PriceReportQuery = {
-  months: 12, source: 'listing', province: '', area: '', category: '',
+  months: 12, source: 'listing', compare: '', province: '', area: '', category: '',
   area_min: '', area_max: '', price_min: '', price_max: '',
 };
+
+/** Nhiều đường quá thì biểu đồ rối — khớp với giới hạn phía server. */
+export const MAX_COMPARE_AREAS = 5;
+
+export const parseCompare = (value: string): string[] =>
+  value ? value.split(',').filter(Boolean).slice(0, MAX_COMPARE_AREAS) : [];
 
 export interface MonthPoint {
   month: string;
@@ -55,7 +63,14 @@ export interface AreaRow {
   median: number | null;
   count: number;
   change3m: number | null;
+  change6m: number | null;
   change12m: number | null;
+}
+
+export interface AreaSeries {
+  id: string;
+  name: string;
+  points: MonthPoint[];
 }
 
 export interface PriceReport {
@@ -64,6 +79,12 @@ export interface PriceReport {
   months: MonthPoint[];
   kpi: PriceReportKpi | null;
   areas: AreaRow[];
+  compare: AreaSeries[];
+}
+
+export interface PriceMapArea extends AreaRow {
+  latitude: number | null;
+  longitude: number | null;
 }
 
 export interface PriceReportOptions {
@@ -85,10 +106,17 @@ export function parseReportQuery(params: URLSearchParams): PriceReportQuery {
   return {
     months: (REPORT_MONTH_OPTIONS as readonly number[]).includes(months) ? months : DEFAULT_REPORT_QUERY.months,
     source: read('source') || DEFAULT_REPORT_QUERY.source,
+    compare: read('compare'),
     province: read('province'), area: read('area'), category: read('category'),
     area_min: read('area_min'), area_max: read('area_max'),
     price_min: read('price_min'), price_max: read('price_max'),
   };
+}
+
+/** Lấy tên file server đặt trong header Content-Disposition. */
+function fileNameFromDisposition(header: unknown): string | null {
+  if (typeof header !== 'string') return null;
+  return header.match(/filename="([^"]+)"/)?.[1] ?? null;
 }
 
 export const priceReportApi = {
@@ -96,6 +124,27 @@ export const priceReportApi = {
     api.get('/api/v2/admin/price-report', { params: toQueryParams(query) }).then((r) => r.data.data as PriceReport),
   options: () =>
     api.get('/api/v2/admin/price-report/options').then((r) => r.data.data as PriceReportOptions),
+  /**
+   * Tải file Excel. Phải đi qua axios để kèm token đăng nhập (thẻ <a> thường không gửi token,
+   * server sẽ trả 401), nhận về dạng nhị phân rồi mới lưu thành file.
+   */
+  exportExcel: async (query: PriceReportQuery) => {
+    const response = await api.get('/api/v2/admin/price-report/export', {
+      params: toQueryParams(query),
+      responseType: 'blob',
+    });
+    const url = URL.createObjectURL(response.data as Blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileNameFromDisposition(response.headers['content-disposition']) ?? 'bao-cao-gia.xlsx';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  },
+  map: (query: PriceReportQuery) =>
+    api.get('/api/v2/admin/price-report/map', { params: toQueryParams(query) })
+      .then((r) => r.data.data as { month: string | null; areas: PriceMapArea[] }),
   recordCurrentMonth: () =>
     api.post('/api/v2/admin/price-report/snapshot').then((r) => r.data as { message: string; data: { count: number } }),
 };

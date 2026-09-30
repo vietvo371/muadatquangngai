@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { formatMonth, formatPerM2, type MonthPoint } from '@/lib/price-report-api';
+import { formatMonth, formatPerM2, type AreaSeries, type MonthPoint } from '@/lib/price-report-api';
 
 const HEIGHT = 280;
 const PADDING = { top: 16, right: 16, bottom: 32, left: 64 };
@@ -60,15 +60,36 @@ function buildPaths(points: MonthPoint[], x: (i: number) => number, y: (v: numbe
   return { segments, bands };
 }
 
+/**
+ * Bảng màu cho biểu đồ so sánh nhiều khu vực (Notion "So sánh biểu đồ").
+ *
+ * Giữ đúng 2 màu thương hiệu: các sắc độ của #1075b1 cộng màu nhấn #e03131. Vì các sắc độ gần
+ * nhau khó phân biệt, mỗi đường còn có kiểu nét riêng (liền, đứt, chấm...) để nhìn là ra ngay,
+ * kể cả khi in đen trắng hoặc người xem khó phân biệt màu.
+ */
+const SERIES_STYLES = [
+  { color: '#1075b1', dash: undefined },
+  { color: '#e03131', dash: '6 4' },
+  { color: '#0b4f78', dash: '2 3' },
+  { color: '#5ba3cf', dash: '10 4' },
+  { color: '#8a94a0', dash: '4 3 1 3' },
+] as const;
+
 interface PriceTrendChartProps {
   points: MonthPoint[];
+  /** Có giá trị = chế độ so sánh nhiều khu vực: mỗi khu vực một đường, bỏ dải min–max. */
+  series?: AreaSeries[];
 }
 
-export function PriceTrendChart({ points }: PriceTrendChartProps) {
+export function PriceTrendChart({ points, series }: PriceTrendChartProps) {
   const { ref, width } = useElementWidth<HTMLDivElement>();
   const [active, setActive] = useState<number | null>(null);
 
-  const values = points.flatMap((p) => [p.median, p.min, p.max]).filter((v): v is number => v !== null);
+  const comparing = (series?.length ?? 0) > 0;
+  const values = (comparing
+    ? series!.flatMap((line) => line.points.map((p) => p.median))
+    : points.flatMap((p) => [p.median, p.min, p.max])
+  ).filter((v): v is number => v !== null);
   const hasData = values.length > 0;
   const plotWidth = Math.max(width - PADDING.left - PADDING.right, 0);
   const plotHeight = HEIGHT - PADDING.top - PADDING.bottom;
@@ -110,13 +131,25 @@ export function PriceTrendChart({ points }: PriceTrendChartProps) {
             </text>
           ))}
 
-          {bands.map((d, i) => <path key={i} d={d} className="fill-primary/10" />)}
-          {segments.map((d, i) => <path key={i} d={d} fill="none" strokeWidth={2.5} className="stroke-primary" />)}
+          {comparing ? (
+            series!.map((line, lineIndex) => {
+              const style = SERIES_STYLES[lineIndex % SERIES_STYLES.length];
+              return buildPaths(line.points, x, y).segments.map((d, i) => (
+                <path key={`${line.id}-${i}`} d={d} fill="none" strokeWidth={2.5}
+                  stroke={style.color} strokeDasharray={style.dash} strokeLinecap="round" />
+              ));
+            })
+          ) : (
+            <>
+              {bands.map((d, i) => <path key={i} d={d} className="fill-primary/10" />)}
+              {segments.map((d, i) => <path key={i} d={d} fill="none" strokeWidth={2.5} className="stroke-primary" />)}
+            </>
+          )}
 
           {active !== null && (
             <line x1={x(active)} x2={x(active)} y1={PADDING.top} y2={PADDING.top + plotHeight} className="stroke-gray-300" strokeDasharray="4 4" />
           )}
-          {points.map((point, i) => point.median !== null && (
+          {!comparing && points.map((point, i) => point.median !== null && (
             <circle key={point.month} cx={x(i)} cy={y(point.median)} r={active === i ? 5.5 : 3.5}
               className="fill-white stroke-primary" strokeWidth={2} />
           ))}
@@ -144,7 +177,15 @@ export function PriceTrendChart({ points }: PriceTrendChartProps) {
             left: Math.min(Math.max(x(active) - 112, 0), Math.max(width - 224, 0)),
           }}>
           <p className="mb-1.5 font-semibold text-gray-900">Tháng {formatMonth(activePoint.month)}</p>
-          {activePoint.count === 0 ? (
+          {comparing ? (
+            <dl className="space-y-1">
+              {series!.map((line, lineIndex) => (
+                <TooltipRow key={line.id} label={line.name}
+                  value={formatPerM2(line.points[active]?.median ?? null)}
+                  color={SERIES_STYLES[lineIndex % SERIES_STYLES.length].color} />
+              ))}
+            </dl>
+          ) : activePoint.count === 0 ? (
             <p className="text-gray-500">Không có tin ghi nhận.</p>
           ) : (
             <dl className="space-y-1">
@@ -160,11 +201,34 @@ export function PriceTrendChart({ points }: PriceTrendChartProps) {
   );
 }
 
-function TooltipRow({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+function TooltipRow({ label, value, strong, color }: { label: string; value: string; strong?: boolean; color?: string }) {
   return (
     <div className="flex justify-between gap-3">
-      <dt className="text-gray-500">{label}</dt>
+      <dt className="flex min-w-0 items-center gap-1.5 text-gray-500">
+        {color && <span aria-hidden className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />}
+        <span className="truncate">{label}</span>
+      </dt>
       <dd className={strong ? 'font-semibold text-primary' : 'text-gray-900'}>{value}</dd>
     </div>
+  );
+}
+
+/** Chú giải các đường trên biểu đồ so sánh — dùng kèm dưới biểu đồ. */
+export function ChartLegend({ series }: { series: AreaSeries[] }) {
+  return (
+    <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
+      {series.map((line, index) => {
+        const style = SERIES_STYLES[index % SERIES_STYLES.length];
+        return (
+          <li key={line.id} className="flex items-center gap-2 text-xs text-gray-600">
+            <svg width="22" height="8" aria-hidden className="shrink-0">
+              <line x1="0" y1="4" x2="22" y2="4" stroke={style.color} strokeWidth={2.5}
+                strokeDasharray={style.dash} strokeLinecap="round" />
+            </svg>
+            {line.name}
+          </li>
+        );
+      })}
+    </ul>
   );
 }

@@ -33,7 +33,12 @@ export interface PriceReportFilters {
   areaMax: number | null;
   priceMin: number | null;
   priceMax: number | null;
+  /** Các khu vực được chọn để vẽ chung một biểu đồ (Notion "So sánh biểu đồ"). */
+  compare: bigint[];
 }
+
+/** Nhiều đường cùng lúc thì biểu đồ rối và truy vấn nặng — chốt tối đa 5 khu vực. */
+export const MAX_COMPARE_AREAS = 5;
 
 export interface MonthPoint {
   month: string; // YYYY-MM
@@ -51,7 +56,15 @@ export interface AreaRow {
   median: number | null;
   count: number;
   change3m: number | null;
+  change6m: number | null;
   change12m: number | null;
+}
+
+/** Một đường giá trên biểu đồ so sánh nhiều khu vực (Notion "So sánh biểu đồ"). */
+export interface AreaSeries {
+  id: string;
+  name: string;
+  points: MonthPoint[];
 }
 
 const idParam = (value: string | null) => (value && /^\d+$/.test(value) ? BigInt(value) : null);
@@ -60,6 +73,13 @@ function numberParam(value: string | null): number | null {
   if (value === null || value.trim() === '') return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
+
+/** "12,34,56" → danh sách id khu vực, bỏ trùng và giới hạn số lượng. */
+function parseCompare(raw: string | null): bigint[] {
+  if (!raw) return [];
+  const ids = raw.split(',').map((part) => part.trim()).filter((part) => /^\d+$/.test(part));
+  return [...new Set(ids)].slice(0, MAX_COMPARE_AREAS).map((id) => BigInt(id));
 }
 
 export function parsePriceReportFilters(params: URLSearchParams): PriceReportFilters {
@@ -75,6 +95,7 @@ export function parsePriceReportFilters(params: URLSearchParams): PriceReportFil
     areaMax: numberParam(params.get('area_max')),
     priceMin: numberParam(params.get('price_min')),
     priceMax: numberParam(params.get('price_max')),
+    compare: parseCompare(params.get('compare')),
   };
 }
 
@@ -180,11 +201,56 @@ async function loadAreaRows(filters: PriceReportFilters, fromMonth: string, refe
         median,
         count: current?.count ?? 0,
         change3m: percentChange(median, medianAt(months, shiftMonth(referenceMonth, -3))),
+        change6m: percentChange(median, medianAt(months, shiftMonth(referenceMonth, -6))),
         change12m: percentChange(median, medianAt(months, shiftMonth(referenceMonth, -12))),
       };
     })
     .filter((row) => row.count > 0)
     .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'vi'));
+}
+
+/**
+ * Chuỗi giá theo tháng cho TỪNG khu vực đã chọn (Notion "So sánh biểu đồ") — mỗi khu vực một
+ * đường trên cùng biểu đồ. Bỏ qua bộ lọc khu vực đơn lẻ, chỉ lấy đúng các khu vực được chọn.
+ */
+async function loadCompareSeries(
+  filters: PriceReportFilters,
+  fromMonth: string,
+  visibleMonths: string[]
+): Promise<AreaSeries[]> {
+  if (filters.compare.length === 0) return [];
+  const where = buildWhere(filters, fromMonth, { withArea: false });
+  const rows = await db.$queryRaw<{ id: string; name: string; month: string; median: number; count: number }[]>`
+    SELECT o.area_id::text AS id, d.name, to_char(o.period_month, 'YYYY-MM') AS month,
+           (percentile_cont(0.5) WITHIN GROUP (ORDER BY o.price_per_m2))::float8 AS median,
+           count(*)::int AS count
+    FROM price_observations o
+    JOIN districts d ON d.id = o.area_id
+    WHERE ${where} AND o.area_id IN (${Prisma.join(filters.compare)})
+    GROUP BY o.area_id, d.name, o.period_month`;
+
+  const byArea = new Map<string, { name: string; months: Map<string, { median: number; count: number }> }>();
+  rows.forEach((row) => {
+    const entry = byArea.get(row.id) ?? { name: row.name, months: new Map() };
+    entry.months.set(row.month, { median: row.median, count: row.count });
+    byArea.set(row.id, entry);
+  });
+
+  // Giữ đúng thứ tự khu vực người dùng chọn, kể cả khu vực chưa có dữ liệu (vẽ đường trống).
+  return filters.compare.map((areaId) => {
+    const key = areaId.toString();
+    const entry = byArea.get(key);
+    return {
+      id: key,
+      name: entry?.name ?? `Khu vực ${key}`,
+      points: visibleMonths.map((month) => {
+        const cell = entry?.months.get(month);
+        return cell
+          ? { month, median: cell.median, min: null, max: null, average: null, count: cell.count, outliers: 0 }
+          : emptyPoint(month);
+      }),
+    };
+  });
 }
 
 export async function buildPriceReport(filters: PriceReportFilters) {
@@ -199,8 +265,9 @@ export async function buildPriceReport(filters: PriceReportFilters) {
   const reference = referenceMonth ? series.get(referenceMonth)! : null;
   const medianAt = (month: string) => series.get(month)?.median ?? null;
 
-  const [areas, firstMonthRow] = await Promise.all([
+  const [areas, compareSeries, firstMonthRow] = await Promise.all([
     referenceMonth ? loadAreaRows(filters, fromMonth, referenceMonth) : Promise.resolve([]),
+    loadCompareSeries(filters, fromMonth, visibleMonths),
     db.$queryRaw<{ month: string | null }[]>`
       SELECT to_char(min(period_month), 'YYYY-MM') AS month
       FROM price_observations WHERE data_source = ${filters.source}`,
@@ -224,6 +291,47 @@ export async function buildPriceReport(filters: PriceReportFilters) {
         }
       : null,
     areas,
+    compare: compareSeries,
+  };
+}
+
+/**
+ * Dữ liệu cho Bản đồ giá (Notion "Price Map – Phase 2"): mỗi khu vực một điểm, kèm giá trung vị,
+ * số tin và % biến động 3/6/12 tháng. Giao diện bản đồ chưa làm ở giai đoạn này — endpoint này là
+ * phần dữ liệu để gắn vào sau.
+ *
+ * Toạ độ khu vực: bảng districts không lưu toạ độ, nên lấy trung bình toạ độ các tin đang hiển thị
+ * trong khu vực đó. Khu vực chưa tin nào ghim bản đồ thì trả null, bản đồ bỏ qua điểm đó.
+ */
+export async function buildPriceMap(filters: PriceReportFilters) {
+  const current = currentMonthKey();
+  const windowMonths = Math.max(filters.months, MIN_WINDOW_MONTHS);
+  const fromMonth = shiftMonth(current, -(windowMonths - 1));
+  const visibleMonths = monthRange(current, filters.months);
+
+  const series = await loadMonthlySeries(filters, fromMonth);
+  const referenceMonth = [...visibleMonths].reverse().find((m) => (series.get(m)?.count ?? 0) > 0) ?? null;
+  if (!referenceMonth) return { month: null, areas: [] };
+
+  const [areas, centroids] = await Promise.all([
+    loadAreaRows(filters, fromMonth, referenceMonth),
+    db.$queryRaw<{ id: string; latitude: number; longitude: number }[]>`
+      SELECT district_id::text AS id,
+             avg(latitude)::float8 AS latitude,
+             avg(longitude)::float8 AS longitude
+      FROM properties
+      WHERE district_id IS NOT NULL AND latitude IS NOT NULL AND longitude IS NOT NULL
+      GROUP BY district_id`,
+  ]);
+
+  const byId = new Map(centroids.map((row) => [row.id, row]));
+  return {
+    month: referenceMonth,
+    areas: areas.map((area) => ({
+      ...area,
+      latitude: byId.get(area.id)?.latitude ?? null,
+      longitude: byId.get(area.id)?.longitude ?? null,
+    })),
   };
 }
 

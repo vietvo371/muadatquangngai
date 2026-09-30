@@ -22,9 +22,9 @@ export function useReportQuery() {
   return { query, setQuery };
 }
 
-/** Chuỗi query giữ bộ lọc hiện tại (trừ khu vực) để gắn vào link. */
+/** Chuỗi query giữ bộ lọc hiện tại (trừ khu vực và danh sách so sánh) để gắn vào link. */
 export function carryFilters(query: PriceReportQuery): string {
-  const qs = new URLSearchParams(toQueryParams({ ...query, area: '' }));
+  const qs = new URLSearchParams(toQueryParams({ ...query, area: '', compare: '' }));
   if (qs.get('months') === '12') qs.delete('months');
   if (qs.get('source') === 'listing') qs.delete('source');
   const suffix = qs.toString();

@@ -212,7 +212,8 @@ function AdminLayoutContent({
 
         {/* Main Content */}
         <div
-          className={`transition-all duration-300 ${
+          // print:ml-0 — khi in, thanh bên bị ẩn nên bỏ luôn phần lề chừa chỗ cho nó.
+          className={`transition-all duration-300 print:ml-0 ${
             sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-72'
           }`}
         >

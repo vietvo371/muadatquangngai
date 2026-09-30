@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
-import { formatChange, formatPerM2, type AreaRow } from '@/lib/price-report-api';
+import { formatChange, formatPerM2, MAX_COMPARE_AREAS, type AreaRow } from '@/lib/price-report-api';
 
 /** Dưới ngưỡng này, một tin đổi giá cũng làm % biến động nhảy mạnh — gắn nhãn để người xem biết. */
 const MIN_RELIABLE_COUNT = 3;
@@ -10,21 +10,31 @@ interface AreaComparisonTableProps {
   /** Tạo link trang chi tiết, giữ nguyên bộ lọc đang xem. */
   detailHref: (areaId: string) => string;
   selectedAreaId?: string;
+  /** Các khu vực đang được vẽ trên biểu đồ so sánh. */
+  comparedIds: string[];
+  onToggleCompare: (areaId: string) => void;
 }
 
-export function AreaComparisonTable({ rows, detailHref, selectedAreaId }: AreaComparisonTableProps) {
+export function AreaComparisonTable({
+  rows, detailHref, selectedAreaId, comparedIds, onToggleCompare,
+}: AreaComparisonTableProps) {
+  const isFull = comparedIds.length >= MAX_COMPARE_AREAS;
   if (rows.length === 0) {
     return <p className="py-10 text-center text-sm text-gray-500">Chưa có khu vực nào có dữ liệu với bộ lọc này.</p>;
   }
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[560px] text-sm">
+      <table className="w-full min-w-[720px] text-sm">
         <thead>
           <tr className="border-b border-gray-100 text-left text-xs font-medium text-gray-500">
+            <th className="w-12 px-4 py-3 text-center" title={`Chọn tối đa ${MAX_COMPARE_AREAS} khu vực để vẽ chung biểu đồ`}>
+              So sánh
+            </th>
             <th className="px-4 py-3">Khu vực</th>
             <th className="px-4 py-3 text-right">Giá trung vị/m²</th>
             <th className="px-4 py-3 text-right">Số tin</th>
             <th className="px-4 py-3 text-right">Biến động 3 tháng</th>
+            <th className="px-4 py-3 text-right">Biến động 6 tháng</th>
             <th className="px-4 py-3 text-right">Biến động 12 tháng</th>
             <th className="w-10 px-2 py-3" aria-hidden />
           </tr>
@@ -33,6 +43,16 @@ export function AreaComparisonTable({ rows, detailHref, selectedAreaId }: AreaCo
           {rows.map((row) => (
             <tr key={row.id} data-testid="area-row"
               className={`border-b border-gray-50 transition hover:bg-gray-50 ${row.id === selectedAreaId ? 'bg-primary-light' : ''}`}>
+              <td className="px-4 py-3 text-center">
+                <input
+                  type="checkbox"
+                  checked={comparedIds.includes(row.id)}
+                  onChange={() => onToggleCompare(row.id)}
+                  disabled={isFull && !comparedIds.includes(row.id)}
+                  aria-label={`So sánh ${row.name} trên biểu đồ`}
+                  className="h-4 w-4 cursor-pointer accent-[#1075b1] disabled:cursor-not-allowed disabled:opacity-40"
+                />
+              </td>
               <td className="px-4 py-3 font-medium text-gray-900">
                 <Link href={detailHref(row.id)} className="hover:text-primary">{row.name}</Link>
               </td>
@@ -48,6 +68,9 @@ export function AreaComparisonTable({ rows, detailHref, selectedAreaId }: AreaCo
               </td>
               <td className={`px-4 py-3 text-right ${row.count < MIN_RELIABLE_COUNT ? 'text-gray-400' : 'text-gray-700'}`}>
                 {formatChange(row.change3m)}
+              </td>
+              <td className={`px-4 py-3 text-right ${row.count < MIN_RELIABLE_COUNT ? 'text-gray-400' : 'text-gray-700'}`}>
+                {formatChange(row.change6m)}
               </td>
               <td className={`px-4 py-3 text-right ${row.count < MIN_RELIABLE_COUNT ? 'text-gray-400' : 'text-gray-700'}`}>
                 {formatChange(row.change12m)}
