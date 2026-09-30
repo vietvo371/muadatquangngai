@@ -43,12 +43,14 @@ export function ListingsSection({ sale, rent }: ListingsSectionProps) {
               Bất động sản dành cho bạn
             </h2>
             {/* Tab switcher */}
-            <div className="flex gap-0 border border-gray-200 rounded-lg overflow-hidden bg-white self-start">
+            {/* max-w-full + cuộn ngang: 2 nhãn dài ("Tin nhà đất cho thuê mới nhất") cộng lại
+                377px, vượt bề ngang điện thoại 375px và làm cả trang trượt ngang. */}
+            <div className="flex gap-0 max-w-full overflow-x-auto scrollbar-hide border border-gray-200 rounded-lg bg-white self-start">
               {tabs.map((tab, i) => (
                 <button
                   key={tab.label}
                   onClick={() => setActiveTab(i)}
-                  className={`px-4 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
+                  className={`shrink-0 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
                     activeTab === i
                       ? 'bg-primary text-white'
                       : 'text-gray-600 hover:bg-gray-50'

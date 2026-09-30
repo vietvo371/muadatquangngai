@@ -45,13 +45,23 @@ export function Header() {
               alt="Muadatquangngai.com"
               width={220}
               height={60}
-              className="object-contain h-14 w-auto"
+              // Trên điện thoại logo cao 56px chiếm 186px — quá nửa màn hình 375px, cộng nhóm
+              // nút bên phải là tràn ra ngoài. Thu còn 36px cho máy nhỏ, giữ nguyên từ 640px lên.
+              className="object-contain h-9 sm:h-14 w-auto"
               priority
             />
           </Link>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center flex-1 justify-center">
+          {/*
+            Menu ngang chỉ hiện khi màn hình ĐỦ RỘNG cho cả hàng, dưới ngưỡng đó dùng nút menu.
+
+            Trước đây đặt ở lg (1024px) nhưng hàng cần: logo 186 + menu 553 + nhóm nút phải 300
+            + 2 khoảng cách 16 + lề hai bên 48 ≈ 1119px, cộng thanh cuộn ≈ 1134px. Vì menu là ô
+            flex có min-width mặc định nên không co lại được, nó đẩy nhóm nút bên phải ra ngoài
+            → MỌI trang bị trượt ngang ở bề rộng 1024–1134px (màn 1024x768, 1152x864, hoặc cửa
+            sổ trình duyệt không phóng hết). Đo lại nếu sau này thêm/bớt mục menu.
+          */}
+          <nav className="hidden min-[1140px]:flex items-center flex-1 justify-center">
             {mainNavLinks.map((link) => {
               const isActive = pathname === link.href ||
                 (pathname && link.href !== '/' && pathname.startsWith(link.href));
@@ -100,8 +110,9 @@ export function Header() {
           {/* Right Actions */}
           <div className="flex items-center gap-2 shrink-0">
             {/* Tin yêu thích */}
+            {/* Máy 320px không đủ chỗ cho cả hàng — ẩn lối tắt này, vẫn vào được từ menu. */}
             {isAuthenticated && (
-              <Link href="/dashboard/tin-da-luu">
+              <Link href="/dashboard/tin-da-luu" className="hidden min-[360px]:block">
                 <Button variant="ghost" size="icon" className="relative" aria-label="Tin yêu thích">
                   <Heart className="h-5 w-5" />
                   {savedCount > 0 && (
@@ -127,7 +138,16 @@ export function Header() {
                       <User className="h-4 w-4 text-gray-500" />
                     )}
                   </div>
-                  <span className="hidden sm:inline text-sm">{user?.name || 'Tài khoản'}</span>
+                  {/*
+                    CHỈ hiện ảnh đại diện, KHÔNG hiện tên.
+
+                    Khung nội dung khoá ở 1152px nên hàng đầu trang chỉ có 1104px: logo 186 +
+                    menu 553 + 2 khoảng cách 32 = 771, còn đúng 333px cho nhóm nút bên phải.
+                    Nhóm nút khi đã đăng nhập (tim + chuông + tài khoản + Đăng tin) đã chiếm
+                    254px, thêm tên người dùng là vượt → mọi tài khoản đã đăng nhập đều làm
+                    trang trượt ngang, ở MỌI bề rộng màn hình. Tên đầy đủ xem ở trang Hồ sơ.
+                  */}
+                  <span className="sr-only">{user?.name || 'Tài khoản'}</span>
                 </Button>
               </Link>
             ) : (
@@ -146,8 +166,10 @@ export function Header() {
             )}
 
             {/* Post Button */}
-            <Link href={isAuthenticated ? '/dashboard/dang-tin' : '/login'}>
-              <Button variant="cta" size="lg" className="hidden px-5 text-sm font-bold shadow-md sm:flex">
+            {/* Ẩn ở chính thẻ Link: nếu chỉ ẩn nút bên trong thì thẻ bọc vẫn là một ô flex và
+                vẫn ăn một khoảng cách 8px trên điện thoại. */}
+            <Link href={isAuthenticated ? '/dashboard/dang-tin' : '/login'} className="hidden sm:block">
+              <Button variant="cta" size="lg" className="flex px-5 text-sm font-bold shadow-md">
                 + Đăng tin
               </Button>
             </Link>
@@ -155,7 +177,7 @@ export function Header() {
             {/* Mobile Menu */}
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
               <SheetTrigger
-                className="lg:hidden inline-flex items-center justify-center rounded-md p-2 text-gray-700 hover:bg-gray-100 transition-colors"
+                className="min-[1140px]:hidden inline-flex items-center justify-center rounded-md p-2 text-gray-700 hover:bg-gray-100 transition-colors"
                 aria-label="Mở menu"
               >
                 <Menu className="h-5 w-5" />
