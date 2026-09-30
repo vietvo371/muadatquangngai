@@ -6,7 +6,7 @@ import { formatPrice, formatPriceByMode, timeAgo, derivePrices } from '@/lib/for
 import { CONFIG } from '@/lib/config';
 import { useFavorite } from '@/hooks/useFavorite';
 
-interface PropertyCardProps {
+export interface PropertyCardProps {
   property: {
     id: number | string;
     slug: string;

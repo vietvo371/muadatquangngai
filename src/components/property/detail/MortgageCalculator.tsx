@@ -71,19 +71,19 @@ export function MortgageCalculator({ totalPrice }: MortgageCalculatorProps) {
   ];
 
   return (
-    <div className="mb-8 pt-8 border-t border-gray-100">
+    <div className="mb-8 border-t border-gray-100 pt-6">
       <h2 className="text-[18px] font-bold text-gray-900 mb-4 tracking-tight flex items-center gap-2">
         <Calculator className="h-[18px] w-[18px] text-primary" />
         Tính khoản vay
       </h2>
 
-      <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 sm:p-5">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           {fields.map((field) => (
             <div key={field.label}>
               <label
                 htmlFor={`loan-${field.label}`}
-                className="block text-[13px] font-semibold text-gray-700 mb-1.5"
+                className="mb-1 block text-[12.5px] font-semibold text-gray-700"
               >
                 {field.label} <span className="text-gray-400 font-medium">({field.suffix})</span>
               </label>
@@ -100,7 +100,7 @@ export function MortgageCalculator({ totalPrice }: MortgageCalculatorProps) {
                   if (Number.isNaN(next)) return;
                   field.onChange(Math.min(Math.max(next, field.min), field.max));
                 }}
-                className="w-full h-11 rounded-xl border border-gray-200 bg-white px-3 text-[15px] font-semibold text-gray-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-[14px] font-semibold text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
               <input
                 type="range"
@@ -110,14 +110,14 @@ export function MortgageCalculator({ totalPrice }: MortgageCalculatorProps) {
                 step={field.step}
                 value={field.value}
                 onChange={(e) => field.onChange(Number(e.target.value))}
-                className="w-full mt-2 accent-[#1075b1]"
+                className="mt-1.5 w-full accent-[#1075b1]"
               />
             </div>
           ))}
         </div>
 
-        <div className="mt-5 pt-5 border-t border-gray-200 grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="rounded-xl bg-white border border-primary/20 p-4 sm:col-span-1">
+        <div className="mt-4 grid grid-cols-2 gap-3 border-t border-gray-200 pt-4">
+          <div className="col-span-2 rounded-xl border border-primary/20 bg-white p-3.5">
             <div className="text-[12px] text-gray-500 uppercase tracking-wide mb-1">Trả hàng tháng</div>
             <div className="text-[20px] font-extrabold text-primary leading-tight">
               {formatVnd(result.monthly)}
@@ -126,14 +126,14 @@ export function MortgageCalculator({ totalPrice }: MortgageCalculatorProps) {
               trong {result.months} tháng ({termYears} năm)
             </div>
           </div>
-          <div className="rounded-xl bg-white border border-gray-100 p-4">
+          <div className="rounded-xl border border-gray-100 bg-white p-3.5">
             <div className="text-[12px] text-gray-500 uppercase tracking-wide mb-1">Số tiền vay</div>
             <div className="text-[16px] font-bold text-gray-900">{formatVnd(result.loanAmount)}</div>
             <div className="text-[12px] text-gray-400 mt-0.5">
               Trả trước {formatPrice(price - result.loanAmount)}
             </div>
           </div>
-          <div className="rounded-xl bg-white border border-gray-100 p-4">
+          <div className="rounded-xl border border-gray-100 bg-white p-3.5">
             <div className="text-[12px] text-gray-500 uppercase tracking-wide mb-1">Tổng tiền lãi</div>
             <div className="text-[16px] font-bold text-gray-900">{formatVnd(result.totalInterest)}</div>
             <div className="text-[12px] text-gray-400 mt-0.5">
@@ -142,7 +142,7 @@ export function MortgageCalculator({ totalPrice }: MortgageCalculatorProps) {
           </div>
         </div>
 
-        <p className="mt-4 text-[12px] text-gray-500 leading-relaxed">
+        <p className="mt-3 text-[12px] leading-relaxed text-gray-500">
           Kết quả chỉ là ước tính tham khảo theo phương pháp trả góp đều (niên kim), chưa gồm phí,
           bảo hiểm khoản vay và các thay đổi lãi suất theo từng thời kỳ. Đây không phải cam kết cho
           vay của bất kỳ ngân hàng nào.

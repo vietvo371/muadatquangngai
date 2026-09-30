@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { shareCurrentPage } from '@/lib/share';
 import {
   Heart,
@@ -21,6 +22,13 @@ import { SimilarListings } from '@/components/property/detail/SimilarListings';
 import { DescriptionCollapse } from '@/components/property/detail/DescriptionCollapse';
 import { FeatureList } from '@/components/property/detail/FeatureList';
 import { MortgageCalculator } from '@/components/property/detail/MortgageCalculator';
+import { PropertyDetailsGrid } from '@/components/property/detail/PropertyDetailsGrid';
+
+// Bản đồ là iframe của Google — nạp động, không cần có mặt lúc dựng trang trên máy chủ.
+const GoogleMapEmbed = dynamic(
+  () => import('@/components/map/GoogleMapEmbed').then((m) => m.GoogleMapEmbed),
+  { ssr: false, loading: () => <div className="h-[280px] w-full animate-pulse rounded-xl bg-gray-100" /> }
+);
 import { MobileStickyCta } from '@/components/property/detail/MobileStickyCta';
 import { timeAgo, derivePrices } from '@/lib/formatters';
 import { CONFIG } from '@/lib/config';
@@ -110,8 +118,21 @@ const mapApiPropertyDetail = (apiProp: any) => {
     bedrooms: Number(apiProp.bedrooms || 0),
     bathrooms: Number(apiProp.bathrooms || 0),
     direction: apiProp.direction || 'Không xác định',
+    // Thông số cho mục "Thông tin chi tiết" (Notion 30/09) — API đã trả sẵn, trước đây chưa dùng.
+    balconyDirection: apiProp.balcony_direction ?? null,
+    areaLand: apiProp.area_land != null ? Number(apiProp.area_land) : null,
+    areaFloor: apiProp.area_floor != null ? Number(apiProp.area_floor) : null,
+    floors: apiProp.floors ?? null,
+    toilets: apiProp.toilets ?? null,
+    parking: Boolean(apiProp.parking),
+    facade: apiProp.facade != null ? Number(apiProp.facade) : null,
+    roadWidth: apiProp.road_width != null ? Number(apiProp.road_width) : null,
+    furniture: apiProp.furniture ?? null,
     legal: apiProp.legal || 'other',
-    legalNote: null,
+    // Giá trị THÔ: tin không khai pháp lý thì bảng "Thông tin chi tiết" bỏ hẳn dòng đó, thay vì
+    // hiện "Khác" làm người xem tưởng người đăng đã chọn.
+    legalRaw: apiProp.legal ?? null,
+    legalNote: apiProp.legal_note ?? null,
     description: apiProp.description || '',
     media: mediaUrls,
     images,
@@ -151,6 +172,7 @@ const mapApiPropertyDetail = (apiProp: any) => {
       avatar: apiProp.owner?.avatar || null,
       phone: apiProp.contact_phone || apiProp.owner?.phone || '',
       role: isBrokerRole(apiProp.owner?.role) ? 'Môi giới' : 'Cá nhân',
+      company: apiProp.owner?.company ?? null,
     },
     features: apiProp.features || [],
   };
@@ -307,7 +329,10 @@ export function PropertyDetailView({ slug, listingType }: PropertyDetailViewProp
         />
 
         {/* Desktop: 70% nội dung + 30% sidebar — Mobile: 1 cột */}
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,7fr)_minmax(0,3fr)] gap-8 items-start">
+        {/* KHÔNG dùng items-start: khi đó cột phải chỉ cao bằng nội dung của nó, sticky không còn
+            khoảng nào để chạy nên thẻ liên hệ trôi mất khi cuộn (Notion 30/09 "Sticky Sidebar").
+            Để mặc định stretch thì cột phải cao bằng cả hàng, thẻ bên trong mới dính lại được. */}
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,7fr)_minmax(0,3fr)]">
           {/* Main Content */}
           <div className="min-w-0">
             {/* Header Info */}
@@ -419,8 +444,49 @@ export function PropertyDetailView({ slug, listingType }: PropertyDetailViewProp
               </div>
             )}
 
+            {/* Thông tin chi tiết — lưới 2 cột (Notion 30/09) */}
+            <PropertyDetailsGrid
+              data={{
+                id: propertyData.id,
+                categoryName: propertyData.category.name,
+                type: isSell ? 'sell' : 'rent',
+                area: propertyData.area,
+                areaLand: propertyData.areaLand,
+                areaFloor: propertyData.areaFloor,
+                floors: propertyData.floors,
+                bedrooms: propertyData.bedrooms,
+                bathrooms: propertyData.bathrooms,
+                toilets: propertyData.toilets,
+                parking: propertyData.parking,
+                direction: propertyData.direction,
+                balconyDirection: propertyData.balconyDirection,
+                facade: propertyData.facade,
+                roadWidth: propertyData.roadWidth,
+                furniture: propertyData.furniture,
+                legal: propertyData.legalRaw,
+                projectName: propertyData.projectName,
+              }}
+            />
+
             {/* Tiện ích & Đặc điểm */}
             <FeatureList features={propertyData.features} />
+
+            {/* Vị trí — bản đồ xem trước GỌN trong cột trái (Notion 30/09 "Main Content – Map
+                Preview"); bản đồ toàn màn hình vẫn mở được từ thanh Thumbnail phía trên. */}
+            {propertyData.latitude != null && propertyData.longitude != null && (
+              <section className="mb-8">
+                <h2 className="mb-4 text-[18px] font-bold tracking-tight text-gray-900">Vị trí</h2>
+                <p className="mb-3 flex items-center gap-2 text-[13.5px] text-gray-500">
+                  <MapPin className="h-4 w-4 shrink-0 text-gray-400" />
+                  {propertyData.address}
+                </p>
+                <GoogleMapEmbed
+                  latitude={propertyData.latitude}
+                  longitude={propertyData.longitude}
+                  className="h-[280px] w-full overflow-hidden rounded-xl border border-gray-200"
+                />
+              </section>
+            )}
 
             {/* Legal — chỉ tin bán */}
             {isSell && propertyData.legal && (

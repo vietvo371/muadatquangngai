@@ -27,6 +27,8 @@ interface ContactSidebarProps {
     is_verified?: boolean;
     role?: string;
     joinDate?: string;
+    /** Công ty / Sàn giao dịch của người đăng, chỉ có khi sàn đã được duyệt. */
+    company?: string | null;
   };
   /** Slug tin đang xem — để gắn yêu cầu tư vấn vào đúng tin và đúng chủ tin. */
   propertySlug?: string;
@@ -64,6 +66,7 @@ export function ContactSidebar({ user, propertySlug, propertyTitle }: ContactSid
   // Form yêu cầu tư vấn — trước đây chỉ là 3 ô input và nút bấm không nối gì.
   const [leadName, setLeadName] = useState('');
   const [leadPhone, setLeadPhone] = useState('');
+  const [leadEmail, setLeadEmail] = useState('');
   const [leadMessage, setLeadMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -126,6 +129,7 @@ export function ContactSidebar({ user, propertySlug, propertyTitle }: ContactSid
       const res = await api.post('/api/v2/leads', {
         name: leadName.trim() || undefined,
         phone: leadPhone.trim(),
+        email: leadEmail.trim() || undefined,
         message: (leadMessage.trim() || defaultMessage),
         property_slug: propertySlug,
       });
@@ -165,6 +169,9 @@ export function ContactSidebar({ user, propertySlug, propertyTitle }: ContactSid
           <div className="flex-1 min-w-0">
             <div className="text-[15px] font-bold text-gray-900 leading-tight mb-0.5 truncate">{user.name}</div>
             {user.role && <div className="text-[13px] text-gray-500">{user.role}</div>}
+            {user.company && (
+              <div className="truncate text-[12.5px] font-medium text-primary">{user.company}</div>
+            )}
             {user.joinDate && (
               <div className="text-[12px] text-gray-400 mt-0.5">Thành viên từ {user.joinDate}</div>
             )}
@@ -252,6 +259,13 @@ export function ContactSidebar({ user, propertySlug, propertyTitle }: ContactSid
               type="tel"
               value={leadPhone}
               onChange={(e) => setLeadPhone(e.target.value)}
+              className="mb-2 h-11 text-[14px]"
+            />
+            <Input
+              placeholder="Email"
+              type="email"
+              value={leadEmail}
+              onChange={(e) => setLeadEmail(e.target.value)}
               className="mb-2 h-11 text-[14px]"
             />
             <Textarea

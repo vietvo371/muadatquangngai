@@ -14,7 +14,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
       districts: { select: { id: true, name: true, slug: true } },
       categories: { select: { id: true, name: true, slug: true, icon: true } },
       users: {
-        select: { id: true, name: true, phone: true, avatar: true, role: true, rating: true, total_listings: true },
+        // broker_company: để thẻ người đăng hiện Công ty/Sàn (Notion 30/09 "Sidebar – Broker Info").
+        select: {
+          id: true, name: true, phone: true, avatar: true, role: true, rating: true, total_listings: true,
+          broker_company: { select: { name: true, status: true } },
+        },
       },
       property_media: {
         select: { id: true, type: true, image_type: true, url: true, thumbnail: true, caption: true, is_primary: true, sort_order: true },

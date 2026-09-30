@@ -76,6 +76,8 @@ export interface PropertyRow {
     role: string;
     rating: unknown;
     total_listings: number;
+    /** Chỉ route chi tiết tin mới nạp quan hệ này; các route khác để trống. */
+    broker_company?: { name: string; status: string } | null;
   };
   property_media?: Array<{
     id: bigint;
@@ -225,6 +227,11 @@ export function mapPropertyResource(
             role: property.users.role,
             rating: toFloat(property.users.rating),
             total_listings: property.users.total_listings,
+            // Chỉ hiện Công ty/Sàn đã được duyệt — sàn đang chờ duyệt không phải thông tin xác thực.
+            company:
+              property.users.broker_company?.status === 'active'
+                ? property.users.broker_company.name
+                : null,
           },
         }
       : {}),

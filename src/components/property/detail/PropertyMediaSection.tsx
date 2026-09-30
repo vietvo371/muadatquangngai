@@ -3,22 +3,10 @@
 import { useState } from 'react';
 import { Camera } from 'lucide-react';
 import Image from 'next/image';
-import dynamic from 'next/dynamic';
 import { IMAGE_CATEGORY_OPTIONS, VALID_IMAGE_CATEGORIES } from '@/lib/property-form-config';
 import { PropertyImageSlider } from './PropertyImageSlider';
 import { PropertyGalleryLightbox, type GalleryTabKey } from './PropertyGalleryLightbox';
 import { PropertyMediaThumbnails, type MediaThumbnail } from './PropertyMediaThumbnails';
-
-// Bản đồ + ảnh đường phố nhúng từ Google, không cần API key (xem src/lib/google-embed.ts).
-// Nạp động vì cả hai là iframe của bên thứ ba, không cần có mặt lúc dựng trang trên máy chủ.
-const GoogleMapEmbed = dynamic(
-  () => import('@/components/map/GoogleMapEmbed').then((m) => m.GoogleMapEmbed),
-  { ssr: false, loading: () => <div className="h-[360px] rounded-xl bg-gray-100 animate-pulse" /> }
-);
-const GoogleStreetViewEmbed = dynamic(
-  () => import('@/components/map/GoogleStreetViewEmbed').then((m) => m.GoogleStreetViewEmbed),
-  { ssr: false, loading: () => <div className="aspect-video w-full rounded-xl bg-gray-100 animate-pulse" /> }
-);
 
 export interface PropertyMediaImage {
   id?: number;
@@ -194,31 +182,8 @@ export function PropertyMediaSection({
       {/* Thanh Thumbnail Media — thay lưới ảnh bày hết ra trang (Notion 29/09). */}
       <PropertyMediaThumbnails thumbnails={thumbnails} onSelect={openThumbnail} />
 
-      {/* Bản đồ — Google Maps theo yêu cầu khách, hiện luôn tên tiện ích quanh khu vực. */}
-      {latitude != null && longitude != null && (
-        <div className="mb-8">
-          <h3 className="text-[15px] font-bold text-gray-900 mb-3">Bản đồ</h3>
-          <GoogleMapEmbed
-            latitude={latitude}
-            longitude={longitude}
-            className="w-full h-[360px] rounded-xl overflow-hidden border border-gray-200"
-          />
-        </div>
-      )}
-
-      {/* Ảnh đường phố tại đúng vị trí tin đăng. */}
-      {latitude != null && longitude != null && (
-        <div className="mb-8">
-          <h3 className="text-[15px] font-bold text-gray-900 mb-3">Ảnh đường phố</h3>
-          {/* Cùng chiều cao với khối bản đồ ngay trên: nơi Google chưa chụp ảnh sẽ là một khung
-              tối, để nguyên tỉ lệ 16:9 full width thì mảng tối đó chiếm gần hết màn hình. */}
-          <GoogleStreetViewEmbed
-            latitude={latitude}
-            longitude={longitude}
-            frameClassName="w-full h-[360px]"
-          />
-        </div>
-      )}
+      {/* Bản đồ và Ảnh đường phố KHÔNG còn hiện ở đây (Notion 30/09 "Gallery – Map/Street View"):
+          bản đồ chuyển vào mục "Vị trí" trong cột trái, ảnh đường phố mở từ ô trên thanh Thumbnail. */}
 
       {/* Album ảnh toàn màn hình — thanh điều hướng cố định, tab media, lưới bất đối xứng. */}
       <PropertyGalleryLightbox
