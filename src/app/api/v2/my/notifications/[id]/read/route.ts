@@ -1,4 +1,5 @@
 import { db } from '@/lib/db';
+import { dbNow } from '@/lib/db-time';
 import { apiError, apiSuccess } from '@/lib/api-response';
 import { getAuthUser, unauthenticatedResponse } from '@/lib/auth';
 
@@ -14,7 +15,7 @@ export async function PUT(request: Request, ctx: { params: Promise<{ id: string 
   const { id } = await ctx.params;
   if (!/^\d+$/.test(id)) return apiError('Không tìm thấy thông báo.', 404);
 
-  const now = new Date();
+  const now = dbNow();
   const result = await db.notifications.updateMany({
     where: { id: BigInt(id), user_id: user.id },
     data: { is_read: true, read_at: now, updated_at: now },

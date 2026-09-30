@@ -4,10 +4,11 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { Menu, User, Bell, Heart, ChevronDown } from 'lucide-react';
+import { Menu, User, Heart, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useAuthStore } from '@/stores/authStore';
+import { NotificationBell } from './NotificationBell';
 import { useFavorite } from '@/hooks/useFavorite';
 import { SELL_CATEGORIES, RENT_CATEGORIES, PROJECT_CATEGORIES, type CategoryMenuItem } from '@/lib/category-menu';
 
@@ -113,14 +114,7 @@ export function Header() {
             )}
 
             {/* Notifications */}
-            {isAuthenticated && (
-              <Link href="/dashboard/thong-bao">
-                <Button variant="ghost" size="icon" className="relative">
-                  <Bell className="h-5 w-5" />
-                  <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-primary" />
-                </Button>
-              </Link>
-            )}
+            {isAuthenticated && <NotificationBell />}
 
             {/* Auth Buttons or User */}
             {isAuthenticated ? (

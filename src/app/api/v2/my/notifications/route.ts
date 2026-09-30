@@ -1,5 +1,6 @@
 import { db } from '@/lib/db';
 import { apiSuccess } from '@/lib/api-response';
+import { toVietnamIso8601 } from '@/lib/api-resources/carbon-format';
 import { getAuthUser, unauthenticatedResponse } from '@/lib/auth';
 
 const DEFAULT_LIMIT = 50;
@@ -36,5 +37,14 @@ export async function GET(request: Request) {
     db.notifications.count({ where: { user_id: user.id, is_read: false } }),
   ]);
 
-  return apiSuccess({ data: rows, unread_count: unreadCount });
+  // created_at/read_at trong DB là giờ VN dạng thô: phải gắn +07:00 khi trả ra, nếu không
+  // trình duyệt hiểu là UTC và "x giây trước" ra số âm (lệch 7 tiếng).
+  const data = rows.map((row) => ({
+    ...row,
+    id: Number(row.id),
+    created_at: toVietnamIso8601(row.created_at),
+    read_at: toVietnamIso8601(row.read_at),
+  }));
+
+  return apiSuccess({ data, unread_count: unreadCount });
 }

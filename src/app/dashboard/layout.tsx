@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
-import { Bell, Menu, Plus, Home, Building2, MessageSquare, User } from 'lucide-react';
+import { NotificationBell } from '@/components/layout/NotificationBell';
+import { Menu, Plus, Home, Building2, MessageSquare, User } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 
@@ -55,12 +56,7 @@ export default function DashboardLayout({
 
           <div className="flex items-center gap-3">
             {/* Notifications */}
-            <Link href="/dashboard/thong-bao">
-              <button className="relative p-2 rounded-full text-gray-500 hover:bg-gray-100 transition-colors">
-                <Bell className="h-5 w-5" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-cta border-2 border-white"></span>
-              </button>
-            </Link>
+            <NotificationBell variant="dashboard" />
 
             <div className="w-px h-6 bg-gray-200 mx-1"></div>
 

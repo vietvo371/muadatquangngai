@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -27,22 +27,17 @@ import {
   UserPlus,
 } from 'lucide-react';
 import api from '@/lib/axios';
+import {
+  NOTIFICATIONS_QUERY_KEY,
+  notificationActionUrl,
+  useNotificationActions,
+  type AppNotification,
+} from '@/hooks/useNotifications';
 import { formatDistanceToNow } from '@/lib/formatters';
 import { UnderlineTabs } from '@/components/ui/underline-tabs';
 
-interface Notification {
-  id: number;
-  type: string;
-  title: string;
-  body: string | null;
-  data: Record<string, unknown> | null;
-  is_read: boolean;
-  read_at: string | null;
-  created_at: string | null;
-}
-
 interface NotificationsResponse {
-  data: Notification[];
+  data: AppNotification[];
   unread_count: number;
 }
 
@@ -56,40 +51,17 @@ const typeConfig = {
   lead: { icon: UserPlus, color: 'bg-[#e8f4fb] text-[#1075b1]' },
 };
 
-/**
- * Link đi kèm thông báo nằm trong cột JSON `data` — chỉ nhận chuỗi bắt đầu bằng "/" để
- * không biến dữ liệu do hệ thống ghi thành link ra ngoài ngoài ý muốn.
- */
-function getActionUrl(notification: Notification): string | null {
-  const raw = notification.data?.['action_url'] ?? notification.data?.['url'];
-  return typeof raw === 'string' && raw.startsWith('/') ? raw : null;
-}
-
 export default function NotificationsPage() {
   const [activeTab, setActiveTab] = useState('all');
-  const queryClient = useQueryClient();
 
+  // Cùng cache + cùng cơ chế đồng bộ nhiều tab với chuông ở đầu trang (hooks/useNotifications).
   const { data, isLoading, isError } = useQuery<NotificationsResponse>({
-    queryKey: ['my-notifications'],
+    queryKey: [...NOTIFICATIONS_QUERY_KEY, 'page'],
     queryFn: () => api.get('/api/v2/my/notifications').then((res) => res.data.data),
+    refetchOnWindowFocus: true,
   });
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['my-notifications'] });
-
-  const markAsRead = useMutation({
-    mutationFn: (id: number) => api.put(`/api/v2/my/notifications/${id}/read`),
-    onSuccess: invalidate,
-  });
-
-  const markAllAsRead = useMutation({
-    mutationFn: () => api.put('/api/v2/my/notifications/read-all'),
-    onSuccess: invalidate,
-  });
-
-  const removeNotification = useMutation({
-    mutationFn: (id: number) => api.delete(`/api/v2/my/notifications/${id}`),
-    onSuccess: invalidate,
-  });
+  const { markAsRead, markAllAsRead, remove: removeNotification } = useNotificationActions();
 
   const notifications = data?.data ?? [];
   const unreadCount = data?.unread_count ?? 0;
@@ -181,7 +153,7 @@ export default function NotificationsPage() {
                 const config = typeConfig[notification.type as keyof typeof typeConfig] ?? typeConfig.system;
                 const Icon = config.icon;
                 const isUnread = !notification.is_read;
-                const actionUrl = getActionUrl(notification);
+                const actionUrl = notificationActionUrl(notification);
 
                 return (
                   <div
