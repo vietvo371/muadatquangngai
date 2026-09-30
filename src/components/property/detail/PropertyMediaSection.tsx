@@ -93,9 +93,12 @@ export function PropertyMediaSection({
     if (!byType.has(key)) byType.set(key, []);
     byType.get(key)!.push(img);
   }
+  // Tin chưa phân loại ảnh: mọi ảnh rơi vào một nhóm duy nhất, trùng hệt "Tất cả ảnh" —
+  // bỏ ô nhóm đó đi cho đỡ thừa.
+  const onlyOneGroup = byType.size <= 1;
   for (const option of IMAGE_CATEGORY_OPTIONS) {
     const items = byType.get(option.value);
-    if (!items?.length) continue;
+    if (!items?.length || onlyOneGroup) continue;
     thumbnails.push({
       key: option.value,
       label: option.label,
