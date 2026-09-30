@@ -19,6 +19,26 @@ function youtubeThumbnail(url: string): string | undefined {
   return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : undefined;
 }
 
+/**
+ * Khung hình đầu của video tải lên Cloudinary: đổi đuôi file sang .jpg là Cloudinary tự dựng
+ * ảnh, không tốn thêm dịch vụ và không cần khoá API.
+ */
+function cloudinaryVideoFrame(url: string): string | undefined {
+  if (!/^https:\/\/res\.cloudinary\.com\/[^/]+\/video\/upload\//.test(url)) return undefined;
+  return `${url.replace(/\.[A-Za-z0-9]+$/, '')}.jpg`;
+}
+
+/** Ảnh đại diện của video, theo thứ tự nguồn đáng tin cậy nhất. */
+function videoCover(video: PropertyMediaFile): string | undefined {
+  return (
+    youtubeThumbnail(video.url) ??
+    cloudinaryVideoFrame(video.url) ??
+    // `thumbnail` của API rơi về chính đường dẫn video khi người đăng không tải ảnh riêng —
+    // dùng thẳng thì ô video trống trơn, nên chỉ nhận khi nó thực sự khác đường dẫn video.
+    (video.thumbnail && video.thumbnail !== video.url ? video.thumbnail : undefined)
+  );
+}
+
 export interface PropertyMediaImage {
   id?: number;
   url: string;
@@ -126,12 +146,7 @@ export function PropertyMediaSection({
       key: 'videos',
       label: 'Video',
       count: videos.length,
-      // Ưu tiên ảnh đại diện lấy theo mã video YouTube. Trường `thumbnail` của API rơi về chính
-      // đường dẫn video khi người đăng không tải ảnh riêng — dùng thẳng là ô video trống trơn,
-      // nên chỉ nhận khi nó THỰC SỰ khác đường dẫn video.
-      cover:
-        youtubeThumbnail(video.url) ??
-        (video.thumbnail && video.thumbnail !== video.url ? video.thumbnail : undefined),
+      cover: videoCover(video),
       icon: 'video',
     });
   }
