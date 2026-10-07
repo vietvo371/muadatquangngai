@@ -5,6 +5,7 @@ import { apiPaginated, apiSuccess, apiError, buildPaginationMeta } from '@/lib/a
 import { getAuthUser, unauthenticatedResponse } from '@/lib/auth';
 import { mapPropertyResource, type WardRow } from '@/lib/api-resources/property-resource';
 import { toVietnamIso8601 } from '@/lib/api-resources/carbon-format';
+import { dbNow } from '@/lib/db-time';
 import { validateFeatureIds } from '@/lib/api-resources/property-validation';
 import { normalizeCustomFeatures } from '@/lib/custom-features';
 import { FieldError, validationErrorResponse, isNumeric, isInteger, isBoolean, inList, isString } from '@/lib/validation';
@@ -80,21 +81,56 @@ export async function GET(request: Request) {
   if (!user) return unauthenticatedResponse();
 
   const { searchParams } = new URL(request.url);
-  const perPage = 20; // Laravel: ->paginate(20), không nhận per_page qua query ở route này
+  const perPageParam = parseInt(searchParams.get('per_page') ?? '20', 10);
+  const perPage = Math.min(Number.isFinite(perPageParam) && perPageParam > 0 ? perPageParam : 20, 100);
   const pageParam = parseInt(searchParams.get('page') ?? '1', 10);
   const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1;
 
-  const where = { user_id: user.id };
-  const [total, rows] = await Promise.all([
-    db.properties.count({ where }),
-    db.properties.findMany({
-      where,
-      orderBy: { created_at: 'desc' },
-      skip: (page - 1) * perPage,
-      take: perPage,
-      include: PROPERTY_INCLUDE,
-    }),
-  ]);
+  // Trang "Quản lý tin đăng" vẫn gửi `status` và `search` từ lâu nhưng route bỏ qua cả hai:
+  // bấm tab nào cũng ra cùng một danh sách, còn ô tìm kiếm chỉ lọc trong 20 tin đã tải về.
+  const statusFilter = searchParams.get('status');
+  const search = (searchParams.get('search') ?? '').trim().slice(0, 100);
+  const now = dbNow();
+
+  // "Hết hạn" không phải một giá trị của cột status mà là expired_at đã qua — và ngược lại,
+  // tin hết hạn KHÔNG còn được tính là "Đang hiển thị", nếu không bộ đếm trên tab lại to hơn
+  // số tin thực sự thấy được ngoài trang chủ.
+  const expiredWhere = { expired_at: { not: null, lte: now } };
+  const notExpiredWhere = { OR: [{ expired_at: null }, { expired_at: { gt: now } }] };
+  const statusWhere =
+    statusFilter === 'expired'
+      ? expiredWhere
+      : statusFilter === 'active'
+        ? { status: 'active', ...notExpiredWhere }
+        : statusFilter && statusFilter !== 'all'
+          ? { status: statusFilter }
+          : {};
+
+  const where = {
+    user_id: user.id,
+    ...statusWhere,
+    ...(search ? { title: { contains: search, mode: 'insensitive' as const } } : {}),
+  };
+
+  // Số trên mỗi tab phải đếm trên TOÀN BỘ tin của chủ tin, không phải trên trang đang xem.
+  const countsWhere = { user_id: user.id, ...(search ? { title: { contains: search, mode: 'insensitive' as const } } : {}) };
+  const [total, rows, countAll, countActive, countPending, countInactive, countExpired, countRejected] =
+    await Promise.all([
+      db.properties.count({ where }),
+      db.properties.findMany({
+        where,
+        orderBy: { created_at: 'desc' },
+        skip: (page - 1) * perPage,
+        take: perPage,
+        include: PROPERTY_INCLUDE,
+      }),
+      db.properties.count({ where: countsWhere }),
+      db.properties.count({ where: { ...countsWhere, status: 'active', ...notExpiredWhere } }),
+      db.properties.count({ where: { ...countsWhere, status: 'pending' } }),
+      db.properties.count({ where: { ...countsWhere, status: 'inactive' } }),
+      db.properties.count({ where: { ...countsWhere, ...expiredWhere } }),
+      db.properties.count({ where: { ...countsWhere, status: 'rejected' } }),
+    ]);
 
   const wardIds = [...new Set(rows.map((r) => r.ward_id).filter((id): id is bigint => id !== null))];
   const wards: WardRow[] = wardIds.length
@@ -112,7 +148,16 @@ export async function GET(request: Request) {
     is_expired: row.expired_at !== null && row.expired_at.getTime() <= nowTs,
   }));
 
-  return apiPaginated(data, buildPaginationMeta(total, page, perPage));
+  return apiPaginated(data, buildPaginationMeta(total, page, perPage), {
+    counts: {
+      all: countAll,
+      active: countActive,
+      pending: countPending,
+      inactive: countInactive,
+      expired: countExpired,
+      rejected: countRejected,
+    },
+  });
 }
 
 /** POST /api/v2/my/properties — port của PropertyController@store + StorePropertyRequest. */

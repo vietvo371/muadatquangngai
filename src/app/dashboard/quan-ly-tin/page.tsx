@@ -28,10 +28,12 @@ import api from '@/lib/axios';
 import { readBrokerIneligible, type BrokerEligibilityInfo } from '@/lib/broker-api';
 import { BrokerEligibilityDialog } from '@/components/broker/BrokerEligibilityDialog';
 import { formatPrice } from '@/lib/formatters';
+import { ListingPagination } from '@/components/listing/ListingPagination';
 
 export default function PropertyManagementPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [page, setPage] = useState(1);
   /**
    * Đăng lại tin THƯỜNG đã hết hạn (miễn phí, thêm 30 ngày).
    * Trước đây tin thường hết hạn là hết đường — nút "Đẩy tin"/"VIP" chỉ dành cho gói trả phí,
@@ -88,23 +90,32 @@ export default function PropertyManagementPage() {
   const [boostProperty, setBoostProperty] = useState<{ id: number; title: string } | null>(null);
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['my-properties', statusFilter, searchQuery],
+    queryKey: ['my-properties', statusFilter, searchQuery, page],
     queryFn: () =>
       api.get('/api/v2/my/properties', {
         params: {
           status: statusFilter === 'all' ? undefined : statusFilter,
           search: searchQuery || undefined,
+          page,
         },
       }),
     select: (res) => res.data,
   });
 
-  const properties = data?.data || [];
+  // Lọc tab và tìm kiếm chạy ở server — lọc lại ở đây chỉ bỏ sót tin nằm ở các trang sau.
+  const filtered = data?.data || [];
+  const meta = data?.meta ?? { current_page: 1, last_page: 1, per_page: 20, total: 0 };
+  const counts = data?.counts ?? {};
 
-  const filtered = properties.filter((p: any) => {
-    if (searchQuery && !p.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    return true;
-  });
+  /** Đổi tab hoặc gõ tìm kiếm thì phải về trang 1, nếu không sẽ rơi vào trang trống. */
+  const changeStatusFilter = (next: string) => {
+    setStatusFilter(next);
+    setPage(1);
+  };
+  const changeSearch = (next: string) => {
+    setSearchQuery(next);
+    setPage(1);
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -132,7 +143,7 @@ export default function PropertyManagementPage() {
             <Input
               placeholder="Tìm kiếm theo tiêu đề tin..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => changeSearch(e.target.value)}
               className="pl-10 h-11 bg-white border-gray-200 rounded-xl"
             />
           </div>
@@ -162,10 +173,14 @@ export default function PropertyManagementPage() {
               { id: 'pending', label: 'Chờ duyệt' },
               { id: 'inactive', label: 'Tạm ẩn' },
               { id: 'expired', label: 'Hết hạn' },
-              { id: 'rejected', label: 'Bị từ chối' }
-            ]}
+              { id: 'rejected', label: 'Bị từ chối' },
+            ].map((tab) => ({
+              ...tab,
+              // Số đếm lấy từ server trên TOÀN BỘ tin, không phải trang đang xem.
+              label: counts[tab.id] === undefined ? tab.label : `${tab.label} (${counts[tab.id]})`,
+            }))}
             activeTab={statusFilter}
-            onChange={setStatusFilter}
+            onChange={changeStatusFilter}
           />
         </div>
       </div>
@@ -337,6 +352,20 @@ export default function PropertyManagementPage() {
             ))}
           </div>
         </Card>
+      )}
+
+      {/* Phân trang — trước đây trang này chỉ tải 20 tin đầu và không có đường nào xem tin thứ 21. */}
+      {!isLoading && (
+        <ListingPagination
+          currentPage={meta.current_page}
+          lastPage={meta.last_page}
+          total={meta.total}
+          perPage={meta.per_page}
+          onChange={(next) => {
+            setPage(next);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+        />
       )}
 
       {/* Xác nhận xóa tin — API xóa vĩnh viễn nên nói rõ không khôi phục được */}

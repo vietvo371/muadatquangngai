@@ -48,8 +48,8 @@ export function apiErrorWithCode(message: string, status: number, code: string, 
   return jsonResponse({ success: false, message, code, errors: [], data }, status);
 }
 
-export function apiPaginated(items: unknown[], meta: PaginationMeta) {
-  return jsonResponse({ success: true, data: items, meta }, 200);
+export function apiPaginated(items: unknown[], meta: PaginationMeta, extra?: Record<string, unknown>) {
+  return jsonResponse({ success: true, data: items, meta, ...extra }, 200);
 }
 
 /** Cùng công thức current_page/last_page/from/to như LengthAwarePaginator của Laravel. */
