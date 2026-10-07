@@ -15,7 +15,10 @@ export async function GET(request: NextRequest) {
   const typeParam = searchParams.get('type');
   const pageParam = parseInt(searchParams.get('page') ?? '1', 10);
   const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1;
-  const perPage = 20; // Laravel: ->paginate(20) — không nhận per_page qua query cho route này
+  // Mặc định 20 như bản Laravel cũ; nhận thêm per_page (tối đa 100) vì trang danh sách dự án
+  // lọc ở phía trình duyệt — chỉ tải 20 dòng đầu thì dự án thứ 21 trở đi không bao giờ hiện.
+  const perPageParam = parseInt(searchParams.get('per_page') ?? '20', 10);
+  const perPage = Math.min(Number.isFinite(perPageParam) && perPageParam > 0 ? perPageParam : 20, 100);
 
   const provinceId = provinceParam && /^\d+$/.test(provinceParam) ? BigInt(provinceParam) : null;
 

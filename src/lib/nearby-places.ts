@@ -1,3 +1,5 @@
+import { isAcceptableNearbyName } from '@/lib/nearby-filters';
+
 /**
  * Geocode địa chỉ dự án (Nominatim) + tra cứu tiện ích thật lân cận (trường học, siêu thị,
  * công viên, bệnh viện) bằng Goong Place API (Autocomplete + Detail) — dữ liệu địa phương
@@ -19,7 +21,7 @@ export type NearbyCategory = 'school' | 'supermarket' | 'park' | 'hospital';
  * lại ở lượt xem sau — nếu không, mọi tin đã tra trước đó giữ nguyên kết quả rác vĩnh viễn
  * và phải sửa tay trong DB.
  */
-export const NEARBY_PLACES_VERSION = 2;
+export const NEARBY_PLACES_VERSION = 3;
 
 export interface NearbyPlace {
   name: string;
@@ -66,21 +68,6 @@ const CATEGORY_KEYWORDS: Record<NearbyCategory, string[]> = {
 // "Chuyên Sỉ Thời Trang Trường Học" (shop quần áo, không phải trường). Trường thật ở Việt
 // Nam hầu như luôn đặt tên bắt đầu bằng "Trường ..." — lọc lại để loại các khớp nhầm kiểu
 // tên doanh nghiệp chứa từ khoá nhưng không phải trường học.
-const CATEGORY_NAME_FILTER: Partial<Record<NearbyCategory, RegExp>> = {
-  school: /^Trường\b/i,
-  hospital: /^Bệnh viện\b/i,
-};
-
-/**
- * Loại các khớp nhầm mà bộ lọc tên ở trên không bắt được vì chúng MỞ ĐẦU đúng từ khoá:
- * "Bệnh viện laptop Hưng Hải" là tiệm sửa máy tính, "Bệnh viện thú y" chữa cho vật nuôi —
- * cả hai đều vô nghĩa với người đang chọn chỗ ở. Chỉ loại những thứ chắc chắn sai; cố lọc
- * sạch hơn nữa sẽ làm trống danh sách ở các xã vốn đã ít địa điểm.
- */
-const CATEGORY_NAME_EXCLUDE: Partial<Record<NearbyCategory, RegExp>> = {
-  hospital: /\b(laptop|máy tính|điện thoại|xe máy|ô ?tô|thú y|cây|điện máy)\b/i,
-};
-
 // Tâm điểm Quảng Ngãi (bờ biển) — dùng để loại kết quả Nominatim khớp NHẦM sang phần đất
 // cũ Kon Tum, vốn đã gộp chung vào "Tỉnh Quảng Ngãi" sau sáp nhập 2025 nhưng OSM vẫn gắn
 // tên đường/địa danh cũ trùng tên (vd "Đường Phan Đình Phùng" khớp cả ở Măng Đen, Kon Tum).
@@ -217,13 +204,11 @@ async function queryCategory(cat: NearbyCategory, lat: number, lng: number): Pro
     return true;
   });
 
-  const nameFilter = CATEGORY_NAME_FILTER[cat];
-  const nameExclude = CATEGORY_NAME_EXCLUDE[cat];
+
   const withDistance: Array<NearbyPlace & { _km: number }> = [];
   for (const p of predictions) {
     const name = p.structured_formatting?.main_text ?? p.description;
-    if (nameFilter && !nameFilter.test(name.trim())) continue;
-    if (nameExclude && nameExclude.test(name)) continue;
+    if (!isAcceptableNearbyName(cat, name)) continue;
 
     const coords = await placeDetailCoords(p.place_id);
     if (!coords) continue;

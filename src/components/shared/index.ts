@@ -3,3 +3,5 @@ export { EmptyState } from './EmptyState';
 export { LoadingSpinner, LoadingOverlay, PageLoader } from './LoadingSpinner';
 export { PhoneVerification } from './PhoneVerification';
 export { BoostModal } from './BoostModal';
+export { ErrorState } from './ErrorState';
+export { UnitStatusBadge } from './UnitStatusBadge';

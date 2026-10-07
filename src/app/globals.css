@@ -56,6 +56,38 @@
   --brand-cta: #e03131;            /* đỏ — chỉ nút Đăng tin, badge VIP */
   --brand-cta-dark: #b91c1c;       /* hover */
 
+  /* === Trạng thái căn/lô trong dự án (Notion 07/10 "Design Token") ===
+     Bốn trạng thái này là NGHĨA, không phải màu tự chọn: sửa ở đây thì mọi nơi đổi theo.
+     Nằm ngoài bảng màu 2 màu brand vì người mua cần phân biệt còn hàng / đã bán ngay từ
+     màu sắc, mà primary và CTA đã mang nghĩa khác (điều hướng và "Đăng tin"). */
+  --unit-available: #15803d;       /* Còn hàng */
+  --unit-available-bg: #f0fdf4;
+  --unit-reserved: #b45309;        /* Giữ chỗ */
+  --unit-reserved-bg: #fffbeb;
+  --unit-sold: #6b7280;            /* Đã bán */
+  --unit-sold-bg: #f9fafb;
+  --unit-unknown: #64748b;         /* Chưa rõ — KHÔNG đoán thành "còn hàng" */
+  --unit-unknown-bg: #f8fafc;
+
+  /* === Khoảng cách dọc giữa các khối nội dung === */
+  --space-section: 2rem;           /* khoảng cách giữa 2 section trong một trang */
+  --space-block: 1.25rem;          /* giữa các khối nhỏ trong cùng section */
+
+  /* === Bo góc === */
+  --radius-card: 0.75rem;          /* thẻ, khung bản đồ, khung ảnh */
+  --radius-pill: 9999px;           /* chip, badge, nút tròn */
+
+  /* === Đổ bóng === */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-card-hover: 0 4px 16px rgba(0, 0, 0, 0.1);
+  --shadow-float: 0 6px 20px rgba(0, 0, 0, 0.25);   /* nút nổi, lightbox */
+
+  /* === Chiều cao thanh điều hướng ===
+     Dùng cho `scroll-margin-top` của các mốc neo và cho `top` của phần tử dính, để nội dung
+     không bị header che khi nhảy tới mốc. */
+  --header-height: 64px;
+  --header-height-lg: 88px;
+
   /* === shadcn tokens === */
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);

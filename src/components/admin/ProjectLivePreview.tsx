@@ -43,7 +43,9 @@ function toApiShape(d: LivePreviewData) {
     id: 'preview',
     slug: d.slug || 'preview',
     name: d.name || 'Tên dự án',
-    developer: d.investor || 'Chưa cập nhật',
+    // Để trống đúng là trống: trang công khai ẩn ô thiếu dữ liệu, bản xem trước phải y hệt
+    // thay vì hiện chữ giữ chỗ "Chưa cập nhật" mà trang thật không bao giờ hiện.
+    developer: d.investor || null,
     description: d.description || '',
     type: d.type || DEFAULT_PROJECT_TYPE,
     status: d.status || 'selling',
@@ -61,7 +63,7 @@ function toApiShape(d: LivePreviewData) {
       total_floors: d.total_floors || 0,
     },
     price: { from: d.min_price || 0, to: d.max_price || 0 },
-    legal: d.legal || 'Đang cập nhật',
+    legal: d.legal || null,
     handover_date: d.handover_date || '',
     construction_progress: d.construction_progress || 0,
     construction_note: d.construction_note || '',

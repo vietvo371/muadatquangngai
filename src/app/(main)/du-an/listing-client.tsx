@@ -3,7 +3,6 @@
 import { useState, useMemo, useEffect, Suspense } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import {
   MapPin,
   Building,
@@ -12,141 +11,21 @@ import {
   Search,
   RotateCcw,
 } from 'lucide-react';
-import { formatPrice, slugify } from '@/lib/formatters';
 import { ProjectListCard } from '@/components/project/ProjectListCard';
 import { ContactDialog } from '@/components/shared/ContactDialog';
-import { useProjects } from '@/hooks/useProjects';
-import { PROJECT_TYPE_OPTIONS, DEFAULT_PROJECT_TYPE } from '@/lib/project-type';
+import { ErrorState } from '@/components/shared';
+import { Skeleton } from '@/components/ui/skeleton';
+import { PROJECT_TYPE_OPTIONS } from '@/lib/project-type';
+import { apiGet, toApiError, type ApiError } from '@/lib/api-client';
+import { adaptList, adaptProject } from '@/lib/project/adapters';
+import { projectDistrictKey } from '@/lib/project/links';
+import { projectAddress } from '@/lib/project/fields';
+import { formatMoney } from '@/lib/display-format';
+import { urlParam, useUrlState } from '@/hooks/useUrlState';
+import type { Project } from '@/lib/project/types';
 
 const PAGE_SIZE = 4;
 
-const projects = [
-  {
-    id: '1',
-    slug: 'de-palace-river-nam-song-tra-khuc',
-    name: 'De Palace River - Nam Sông Trà Khúc',
-    developer: 'Công ty CP Địa Ốc Quảng Ngãi',
-    thumbnail: '/images/image_data/nha-pho-de-palace-river.jpg',
-    status: 'selling',
-    type: 'khu-do-thi-moi',
-    district: 'tp-quang-ngai',
-    address: 'Đầu cầu Thạch Bích, Quảng Ngãi',
-    priceFrom: 4500000000,
-    priceTo: 8500000000,
-    totalUnits: 256,
-    totalBlocks: 2,
-    totalFloors: 18,
-    handoverDate: '2025-12-31',
-    description: 'Khu căn hộ cao cấp ven sông Trà Khúc, tầm view đẹp, tiện ích đầy đủ. Vị trí đắc địa ngay đầu cầu Thạch Bích, kết nối giao thông thuận tiện.',
-    area: '2.5 ha',
-    featured: true,
-  },
-  {
-    id: '2',
-    slug: 'starlight-bac-huynh-thuc-khang',
-    name: 'Starlight - Bắc Huỳnh Thúc Kháng',
-    developer: 'Công ty CP Đầu tư Starlight',
-    thumbnail: '/images/image_data/Starlight---suc-hut-den-tu-vi-tri-dac-dia-nhat-trung-tam-Quang-Ngai-suc-hut-3-1733900371-424-width1000height563.jpg',
-    status: 'upcoming',
-    type: 'khu-do-thi-moi',
-    district: 'tp-quang-ngai',
-    address: 'Huỳnh Thúc Kháng, Ngọc Bảo Viên, Quảng Ngãi',
-    priceFrom: 3200000000,
-    priceTo: 6000000000,
-    totalUnits: 400,
-    totalBlocks: 3,
-    totalFloors: 22,
-    handoverDate: '2026-06-30',
-    description: 'Dự án căn hộ cao cấp tại vị trí đắc địa bậc nhất trung tâm Quảng Ngãi, tiện ích hiện đại, không gian sống xanh.',
-    area: '3.2 ha',
-    featured: true,
-  },
-  {
-    id: '3',
-    slug: 'kdc-nghia-giang',
-    name: 'Khu dân cư Nghĩa Giang',
-    developer: 'Công ty TNHH Đầu tư Nghĩa Giang',
-    thumbnail: '/images/image_data/z7727089471705_b45383cbfb0c02dbb327ef0ea9fd2f7e.jpg',
-    status: 'selling',
-    type: 'khu-dan-cu',
-    district: 'tu-nghia',
-    address: 'Nghĩa Thuận, Tư Nghĩa, Quảng Ngãi',
-    priceFrom: 300000000,
-    priceTo: 800000000,
-    totalUnits: 150,
-    totalBlocks: 1,
-    totalFloors: 1,
-    handoverDate: '2025-06-30',
-    description: 'Khu đất nền phân lô sổ đỏ từng nền, hạ tầng hoàn chỉnh, giá hợp lý, pháp lý rõ ràng.',
-    area: '5 ha',
-    featured: false,
-  },
-  {
-    id: '4',
-    slug: 'nha-pho-phan-dinh-phung',
-    name: 'Nhà phố thương mại Phan Đình Phùng',
-    developer: 'Công ty CP Xây dựng Hoàng Long',
-    thumbnail: '/images/image_data/banner_hero.jpg',
-    status: 'selling',
-    type: 'shophouse-du-an',
-    district: 'tp-quang-ngai',
-    address: 'Phan Đình Phùng, Quảng Ngãi',
-    priceFrom: 4500000000,
-    priceTo: 7000000000,
-    totalUnits: 40,
-    totalBlocks: 1,
-    totalFloors: 5,
-    handoverDate: '2025-03-31',
-    description: 'Nhà phố thương mại mặt tiền đường lớn, vị trí kinh doanh sầm uất trung tâm Quảng Ngãi.',
-    area: '0.8 ha',
-    featured: false,
-  },
-  {
-    id: '5',
-    slug: 'haus-coastal-duc-pho',
-    name: 'Haus Coastal - Đức Phổ',
-    developer: 'Công ty CP BĐS Haus',
-    thumbnail: '/images/image_data/Haus-Coastal.jpg',
-    status: 'upcoming',
-    type: 'khu-nghi-duong-sinh-thai',
-    district: 'duc-pho',
-    address: 'Ven biển Sa Huỳnh, TX Đức Phổ, Quảng Ngãi',
-    priceFrom: 8000000000,
-    priceTo: 20000000000,
-    totalUnits: 60,
-    totalBlocks: 1,
-    totalFloors: 3,
-    handoverDate: '2027-01-01',
-    description: 'Biệt thự nghỉ dưỡng ven biển Sa Huỳnh, phong cách kiến trúc Địa Trung Hải, không gian sống đẳng cấp.',
-    area: '4 ha',
-    featured: true,
-  },
-];
-
-const statusConfig = {
-  upcoming: { label: 'Sắp mở bán', bg: 'bg-amber-100', text: 'text-amber-700', dot: 'bg-amber-400' },
-  selling:  { label: 'Đang mở bán', bg: 'bg-green-100', text: 'text-green-700', dot: 'bg-green-500' },
-  completed:{ label: 'Đã bàn giao', bg: 'bg-gray-100',  text: 'text-gray-600',  dot: 'bg-gray-400'  },
-  paused:   { label: 'Tạm dừng',    bg: 'bg-yellow-100',text: 'text-yellow-700',dot: 'bg-yellow-400' },
-  draft:     { label: 'Bản nháp',    bg: 'bg-gray-100',  text: 'text-gray-600',  dot: 'bg-gray-400'  },
-  published: { label: 'Đã xuất bản',  bg: 'bg-green-100', text: 'text-green-700', dot: 'bg-green-500' },
-  archived:  { label: 'Đã lưu trữ',  bg: 'bg-yellow-100', text: 'text-yellow-700', dot: 'bg-yellow-400' },
-};
-
-const typeConfig: Record<string, string> = Object.fromEntries(
-  PROJECT_TYPE_OPTIONS.map((opt) => [opt.value, opt.label])
-);
-
-const districts = [
-  { value: 'all', label: 'Tất cả khu vực' },
-  { value: 'tp-quang-ngai', label: 'Quảng Ngãi' },
-  { value: 'tu-nghia', label: 'Tư Nghĩa' },
-  { value: 'son-tinh', label: 'Sơn Tịnh' },
-  { value: 'binh-son', label: 'Bình Sơn' },
-  { value: 'duc-pho', label: 'TX Đức Phổ' },
-  { value: 'mo-duc', label: 'Mộ Đức' },
-  { value: 'minh-long', label: 'Minh Long' },
-];
 
 const types = [
   { value: 'all', label: 'Tất cả loại hình' },
@@ -168,8 +47,10 @@ const priceRanges = [
   { value: 'over5b', label: 'Trên 5 tỷ' },
 ];
 
-function matchPrice(priceFrom: number, range: string) {
+function matchPrice(priceFrom: number | null, range: string) {
   if (range === 'all') return true;
+  // Dự án chưa công bố giá không khớp khoảng giá nào — không xếp đại vào "Dưới 1 tỷ".
+  if (priceFrom === null) return false;
   if (range === 'under1b') return priceFrom < 1_000_000_000;
   if (range === '1b-3b')   return priceFrom >= 1_000_000_000 && priceFrom < 3_000_000_000;
   if (range === '3b-5b')   return priceFrom >= 3_000_000_000 && priceFrom < 5_000_000_000;
@@ -177,116 +58,97 @@ function matchPrice(priceFrom: number, range: string) {
   return true;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const mapApiProject = (apiProj: any) => {
-  return {
-    id: apiProj.id.toString(),
-    slug: apiProj.slug,
-    name: apiProj.name,
-    developer: apiProj.developer || 'Chủ đầu tư',
-    thumbnail: apiProj.thumbnail || '/images/image_data/nha-pho-de-palace-river.jpg',
-    status: apiProj.status || 'selling',
-    type: apiProj.type || DEFAULT_PROJECT_TYPE,
-    district: (() => {
-      const name = apiProj.location?.district?.name || apiProj.district;
-      if (!name) return 'tp-quang-ngai';
-      const clean = name
-        .toLowerCase()
-        .replace(/huyện/g, '')
-        .replace(/thành phố/g, '')
-        .replace(/thị xã/g, '')
-        .replace(/tp\./g, '')
-        .replace(/tx\./g, '')
-        .trim();
-      const slug = slugify(clean);
-      if (slug === 'quang-ngai') return 'tp-quang-ngai';
-      return slug;
-    })(),
-    address: apiProj.location?.address || 'Quảng Ngãi',
-    priceFrom: Number(apiProj.price?.from || 0),
-    priceTo: apiProj.price?.to ? Number(apiProj.price.to) : undefined,
-    totalUnits: apiProj.scale?.total_units || 0,
-    totalBlocks: apiProj.scale?.total_blocks || 0,
-    totalFloors: apiProj.scale?.total_floors || 0,
-    handoverDate: apiProj.handover_date || '2025-12-31',
-    description: apiProj.description || 'Dự án bất động sản Quảng Ngãi',
-    area: apiProj.scale?.total_area ? `${apiProj.scale.total_area} ha` : 'N/A',
-    featured: true,
-  };
+/**
+ * Bộ lọc lưu trên URL (Notion 07/10 "URL State"). Khai báo ở cấp module để tham chiếu không
+ * đổi giữa các lần render.
+ */
+const URL_PARAMS = {
+  type: urlParam.text('type', 40),
+  district: urlParam.text('district', 60),
+  status: urlParam.text('status', 20),
+  price: urlParam.oneOf('price', ['all', 'under1b', '1b-3b', '3b-5b', 'over5b'] as const, 'all'),
+  q: urlParam.text('q'),
+  page: urlParam.page('page'),
 };
 
-function DuAnPageContent() {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+type LoadState =
+  | { status: 'loading' }
+  | { status: 'ready'; projects: Project[] }
+  | { status: 'error'; error: ApiError };
 
+function DuAnPageContent() {
   const [slide, setSlide] = useState(0);
   const [contactOpen, setContactOpen] = useState(false);
 
-  // Khởi tạo bộ lọc trực tiếp từ URL Query Parameters nếu có (ngăn mất dữ liệu khi F5)
-  const [typeFilter, setTypeFilter] = useState(() => searchParams?.get('type') || 'all');
-  const [districtFilter, setDistrictFilter] = useState(() => searchParams?.get('district') || 'all');
-  const [statusFilter, setStatusFilter] = useState(() => searchParams?.get('status') || 'all');
-  const [priceFilter, setPriceFilter] = useState(() => searchParams?.get('price') || 'all');
-  const [search, setSearch] = useState(() => searchParams?.get('q') || '');
-  const [page, setPage] = useState(() => Number(searchParams?.get('page') || '1'));
+  const [filters, setFilters] = useUrlState(URL_PARAMS);
+  const typeFilter = filters.type || 'all';
+  const districtFilter = filters.district || 'all';
+  const statusFilter = filters.status || 'all';
+  const priceFilter = filters.price;
+  const search = filters.q;
+  const page = filters.page;
 
-  // Đồng bộ hóa trạng thái bộ lọc ngược lại URL Search Params bất cứ khi nào thay đổi
+  // Đổi bộ lọc nào cũng về trang 1, nếu không dễ rơi vào một trang trống.
+  const setTypeFilter = (v: string) => setFilters({ type: v === 'all' ? '' : v, page: 1 });
+  const setDistrictFilter = (v: string) => setFilters({ district: v === 'all' ? '' : v, page: 1 });
+  const setStatusFilter = (v: string) => setFilters({ status: v === 'all' ? '' : v, page: 1 });
+  const setPriceFilter = (v: string) => setFilters({ price: v as typeof filters.price, page: 1 });
+  const setSearch = (v: string) => setFilters({ q: v, page: 1 });
+  const setPage = (next: number | ((p: number) => number)) =>
+    setFilters({ page: typeof next === 'function' ? next(page) : next });
+
+  // Chỉ dữ liệu thật. Trước đây API lỗi hoặc trả rỗng thì trang lặng lẽ hiện một danh sách dự án
+  // viết cứng trong code (tên, giá, ảnh bịa) — người xem không có cách nào biết đó là giả.
+  // "Đang tải" suy ra từ việc kết quả đang giữ có thuộc lượt tải hiện tại hay không, thay vì
+  // setState ngay đầu effect (bắt React render thêm một lượt).
+  const [reloadKey, setReloadKey] = useState(0);
+  const [result, setResult] = useState<{ key: number; state: LoadState } | null>(null);
   useEffect(() => {
-    const params = new URLSearchParams();
-    if (typeFilter !== 'all') params.set('type', typeFilter);
-    if (districtFilter !== 'all') params.set('district', districtFilter);
-    if (statusFilter !== 'all') params.set('status', statusFilter);
-    if (priceFilter !== 'all') params.set('price', priceFilter);
-    if (search.trim()) params.set('q', search.trim());
-    if (page > 1) params.set('page', String(page));
+    const controller = new AbortController();
+    const key = reloadKey;
+    apiGet<{ data?: unknown }>('/api/v2/projects', { params: { per_page: 100 }, signal: controller.signal })
+      .then((res) => setResult({ key, state: { status: 'ready', projects: adaptList(res?.data, adaptProject) } }))
+      .catch((error: unknown) => {
+        const apiError = toApiError(error);
+        if (apiError.code !== 'ABORTED') setResult({ key, state: { status: 'error', error: apiError } });
+      });
+    return () => controller.abort();
+  }, [reloadKey]);
+  const load = useMemo<LoadState>(
+    () => (result?.key === reloadKey ? result.state : { status: 'loading' }),
+    [result, reloadKey]
+  );
 
-    const currentPath = pathname || '/du-an';
-    const queryString = params.toString();
-    const newUrl = queryString ? `${currentPath}?${queryString}` : currentPath;
-    router.replace(newUrl, { scroll: false });
-  }, [typeFilter, districtFilter, statusFilter, priceFilter, search, page, pathname, router]);
-
-  // Real API integration state
-  const { fetchProjects } = useProjects();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [apiProjects, setApiProjects] = useState<any[]>([]);
-  const [useRealApi, setUseRealApi] = useState(true);
-
-  useEffect(() => {
-    const loadProjects = async () => {
-      const res = await fetchProjects();
-      if (res.success && res.data && res.data.length > 0) {
-        setApiProjects(res.data.map(mapApiProject));
-        setUseRealApi(true);
-      } else {
-        setUseRealApi(false);
-      }
-    };
-    loadProjects();
-  }, [fetchProjects]);
-
-  const resetFilters = () => {
-    setTypeFilter('all'); setDistrictFilter('all');
-    setStatusFilter('all'); setPriceFilter('all');
-    setSearch(''); setPage(1);
-  };
+  const resetFilters = () => setFilters({ type: '', district: '', status: '', price: 'all', q: '', page: 1 });
 
   const isDirty = typeFilter !== 'all' || districtFilter !== 'all' || statusFilter !== 'all' || priceFilter !== 'all' || search !== '';
 
-  const activeProjectsList = useMemo(() => {
-    return useRealApi ? apiProjects : projects;
-  }, [useRealApi, apiProjects]);
+  const activeProjectsList = useMemo(() => (load.status === 'ready' ? load.projects : []), [load]);
+
+  // Khu vực lấy từ chính các dự án đang có — tên xã/phường MỚI sau sáp nhập 2025. Danh sách cũ
+  // gõ cứng tên huyện trước sáp nhập (Tư Nghĩa, Sơn Tịnh...) nên chọn mục nào cũng ra rỗng.
+  const districts = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const p of activeProjectsList) {
+      const key = projectDistrictKey(p.location.district);
+      if (key && p.location.district && !seen.has(key)) seen.set(key, p.location.district);
+    }
+    const options = [...seen.entries()]
+      .sort((a, b) => a[1].localeCompare(b[1], 'vi'))
+      .map(([value, label]) => ({ value, label }));
+    return [{ value: 'all', label: 'Tất cả khu vực' }, ...options];
+  }, [activeProjectsList]);
 
   const filtered = useMemo(() => {
     return activeProjectsList.filter((p) => {
       if (typeFilter !== 'all' && p.type !== typeFilter) return false;
-      if (districtFilter !== 'all' && p.district !== districtFilter) return false;
+      if (districtFilter !== 'all' && projectDistrictKey(p.location.district) !== districtFilter) return false;
       if (statusFilter !== 'all' && p.status !== statusFilter) return false;
       if (!matchPrice(p.priceFrom, priceFilter)) return false;
       if (search.trim()) {
         const q = search.toLowerCase();
-        if (!p.name.toLowerCase().includes(q) && !p.address.toLowerCase().includes(q)) return false;
+        const address = (projectAddress(p) ?? '').toLowerCase();
+        if (!p.name.toLowerCase().includes(q) && !address.includes(q)) return false;
       }
       return true;
     });
@@ -295,20 +157,19 @@ function DuAnPageContent() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const featured = useMemo(() => {
-    return activeProjectsList.filter((p) => p.featured).slice(0, 4);
-  }, [activeProjectsList]);
+  // API không có cờ "nổi bật" — gọi đúng tên là dự án mới, thay vì gắn nhãn nổi bật cho tất cả.
+  const featured = useMemo(() => activeProjectsList.slice(0, 4), [activeProjectsList]);
 
-  const sliderProjects = useMemo(() => {
-    return activeProjectsList.filter((p) => p.featured);
-  }, [activeProjectsList]);
+  // Băng chuyền đầu trang chỉ dùng dự án có ảnh thật.
+  const sliderProjects = useMemo(() => activeProjectsList.filter((p) => p.images.length > 0), [activeProjectsList]);
 
   const prevSlide = () => setSlide((s) => (s - 1 + sliderProjects.length) % sliderProjects.length);
   const nextSlide = () => setSlide((s) => (s + 1) % sliderProjects.length);
   return (
     <div className="min-h-screen bg-gray-50">
 
-      {/* ══ HERO SLIDER ══ */}
+      {/* ══ HERO SLIDER ══ — chỉ hiện khi có dự án có ảnh thật. */}
+      {sliderProjects.length > 0 && (
       <div className="relative w-full h-[320px] md:h-[420px] overflow-hidden bg-gray-900 select-none">
         {sliderProjects.map((p, i) => (
           <div
@@ -316,7 +177,7 @@ function DuAnPageContent() {
             className={`absolute inset-0 transition-opacity duration-700 ${i === slide ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
           >
             <Image
-              src={p.thumbnail}
+              src={p.images[0]}
               alt={p.name}
               fill
               className="object-cover object-center"
@@ -328,22 +189,20 @@ function DuAnPageContent() {
             {/* Slide content */}
             <div className="absolute bottom-0 left-0 right-0 px-6 md:px-10 pb-8 md:pb-10 z-10">
               <div className="max-w-[1152px] mx-auto">
-                {(() => {
-                  const st = statusConfig[p.status as keyof typeof statusConfig] || statusConfig['selling'];
-                  return (
-                    <span className={`inline-flex items-center gap-1.5 ${st.bg} ${st.text} text-xs font-semibold px-3 py-1 rounded-full mb-3`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />
-                      {st.label}
-                    </span>
-                  );
-                })()}
+                {p.statusLabel && (
+                  <span className="mb-3 inline-flex items-center rounded-full bg-white/95 px-3 py-1 text-xs font-semibold text-primary">
+                    {p.statusLabel}
+                  </span>
+                )}
                 <h2 className="text-2xl md:text-3xl font-black text-white drop-shadow-lg leading-tight mb-1">
                   {p.name}
                 </h2>
-                <p className="text-white/80 text-sm flex items-center gap-1">
-                  <MapPin className="h-3.5 w-3.5 shrink-0" />
-                  {p.address}
-                </p>
+                {projectAddress(p) && (
+                  <p className="text-white/80 text-sm flex items-center gap-1">
+                    <MapPin className="h-3.5 w-3.5 shrink-0" />
+                    {projectAddress(p)}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -374,6 +233,8 @@ function DuAnPageContent() {
           ))}
         </div>
       </div>
+
+      )}
 
       {/* ══ FILTER BAR ══ */}
       <div className="sticky top-[60px] z-30 border-b border-gray-200 bg-gray-50">
@@ -472,18 +333,23 @@ function DuAnPageContent() {
 
           {/* ── Project list ── */}
           <div className="flex-1 min-w-0">
+            {load.status === 'loading' && (
+              <div className="flex flex-col gap-4">
+                {Array.from({ length: 3 }, (_, i) => (
+                  <Skeleton key={i} className="h-52 w-full rounded-2xl" />
+                ))}
+              </div>
+            )}
+            {load.status === 'error' && <ErrorState error={load.error} onRetry={() => setReloadKey((k) => k + 1)} />}
+            {load.status === 'ready' && (
+            <>
             <p className="text-sm text-gray-500 mb-4">
               Tìm thấy <span className="font-semibold text-gray-900">{filtered.length}</span> dự án tại Quảng Ngãi
             </p>
 
             <div className="flex flex-col gap-4">
               {paginated.map((project) => (
-                <ProjectListCard
-                  key={project.id}
-                  project={project}
-                  status={statusConfig[project.status as keyof typeof statusConfig] || statusConfig['selling']}
-                  typeLabel={typeConfig[project.type]}
-                />
+                <ProjectListCard key={project.id} project={project} />
               ))}
             </div>
 
@@ -533,40 +399,44 @@ function DuAnPageContent() {
                 </button>
               </div>
             )}
+            </>
+            )}
           </div>
 
           {/* ── RIGHT SIDEBAR ── */}
           <aside className="hidden xl:block w-64 shrink-0 space-y-4">
-            {/* Dự án nổi bật */}
+            {/* Dự án mới cập nhật */}
             <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
               <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
                 <div className="w-1 h-4 bg-primary rounded-full" />
-                <h3 className="text-sm font-semibold text-gray-800">Dự án nổi bật</h3>
+                <h3 className="text-sm font-semibold text-gray-800">Dự án mới cập nhật</h3>
               </div>
               <div className="divide-y divide-gray-50">
                 {featured.map((project) => {
-                  const st = statusConfig[project.status as keyof typeof statusConfig] || statusConfig['selling'];
+                  const price = formatMoney(project.priceFrom);
                   return (
                     <Link
                       key={project.id}
                       href={`/du-an/${project.slug}`}
                       className="flex gap-3 p-3 hover:bg-gray-50 transition-colors group"
                     >
-                      <div className="relative w-20 h-16 shrink-0 rounded-lg overflow-hidden">
-                        <Image
-                          src={project.thumbnail}
-                          alt={project.name}
-                          fill
-                          className="object-cover group-hover:scale-105 transition-transform duration-300"
-                          sizes="80px"
-                        />
+                      <div className="relative w-20 h-16 shrink-0 overflow-hidden rounded-lg bg-gray-100">
+                        {project.images[0] && (
+                          <Image
+                            src={project.images[0]}
+                            alt={project.name}
+                            fill
+                            className="object-cover group-hover:scale-105 transition-transform duration-300"
+                            sizes="80px"
+                          />
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-semibold text-gray-800 line-clamp-2 group-hover:text-primary transition-colors leading-snug mb-1">
                           {project.name}
                         </p>
-                        <p className={`text-xs font-medium ${st.text}`}>{st.label}</p>
-                        <p className="mt-0.5 text-xs font-bold text-primary">{formatPrice(project.priceFrom)}</p>
+                        {project.statusLabel && <p className="text-xs font-medium text-gray-500">{project.statusLabel}</p>}
+                        {price && <p className="mt-0.5 text-xs font-bold text-primary">Từ {price}</p>}
                       </div>
                     </Link>
                   );

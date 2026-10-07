@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Map as MapIcon } from 'lucide-react';
+import { BREAKPOINTS } from '@/lib/design-tokens';
 
 /**
  * Nút "Xem bản đồ" nổi giữa cạnh dưới trang danh sách (Notion 06/10 "Nhà đất bán – Floating
@@ -18,8 +19,6 @@ import { Map as MapIcon } from 'lucide-react';
 
 /** Dưới ngưỡng này coi như vẫn ở đầu trang, chưa cần nút. */
 const MIN_SCROLL_PX = 400;
-/** Bề ngang từ đây trở lên coi là máy tính: cuộn về bản đồ thay vì mở toàn màn hình. */
-const DESKTOP_MIN_WIDTH = 768;
 
 interface FloatingMapButtonProps {
   /** Khối bản đồ xem trước trên trang. */
@@ -53,7 +52,7 @@ export function FloatingMapButton({ targetRef, onOpenFullMap }: FloatingMapButto
   }, [targetRef]);
 
   const handleClick = () => {
-    if (window.innerWidth >= DESKTOP_MIN_WIDTH && targetRef.current) {
+    if (window.innerWidth >= BREAKPOINTS.md && targetRef.current) {
       targetRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
