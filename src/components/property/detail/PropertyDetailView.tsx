@@ -21,6 +21,7 @@ import { ContactSidebar } from '@/components/property/detail/ContactSidebar';
 import { SimilarListings } from '@/components/property/detail/SimilarListings';
 import { DescriptionCollapse } from '@/components/property/detail/DescriptionCollapse';
 import { FeatureList } from '@/components/property/detail/FeatureList';
+import { readCustomFeatures } from '@/lib/custom-features';
 import { MortgageCalculator } from '@/components/property/detail/MortgageCalculator';
 import { PropertyDetailsGrid } from '@/components/property/detail/PropertyDetailsGrid';
 
@@ -174,7 +175,12 @@ const mapApiPropertyDetail = (apiProp: any) => {
       role: isBrokerRole(apiProp.owner?.role) ? 'Môi giới' : 'Cá nhân',
       company: apiProp.owner?.company ?? null,
     },
-    features: apiProp.features || [],
+    // Tiện ích mặc định (bảng dùng chung) + tiện ích người đăng tự nhập cho riêng tin này.
+    // Hiển thị chung một danh sách: với người xem thì cả hai đều chỉ là "tin này có gì".
+    features: [
+      ...(apiProp.features || []),
+      ...readCustomFeatures(apiProp.custom_features).map((name) => ({ name })),
+    ],
   };
 };
 

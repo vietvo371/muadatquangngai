@@ -18,6 +18,7 @@
  * lược bỏ khoá (đúng chuẩn JsonResource) cho cả hai route, thay vì replicate `{}`.
  */
 
+import { readCustomFeatures } from '@/lib/custom-features';
 import { toVietnamIso8601 } from './carbon-format';
 
 export interface PropertyRow {
@@ -50,6 +51,7 @@ export interface PropertyRow {
   furniture: string;
   legal: string | null;
   legal_note: string | null;
+  custom_features?: unknown;
   contact_name: string | null;
   contact_phone: string | null;
   contact_email: string | null;
@@ -263,6 +265,9 @@ export function mapPropertyResource(
           })),
         }
       : {}),
+
+    // Tiện ích người đăng tự nhập, riêng cho tin này (Notion 06/10).
+    custom_features: readCustomFeatures(property.custom_features),
 
     stats: {
       view_count: property.view_count,

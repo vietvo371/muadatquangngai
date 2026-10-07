@@ -6,6 +6,7 @@ import { getAuthUser, unauthenticatedResponse } from '@/lib/auth';
 import { mapPropertyResource, type WardRow } from '@/lib/api-resources/property-resource';
 import { toVietnamIso8601 } from '@/lib/api-resources/carbon-format';
 import { validateFeatureIds } from '@/lib/api-resources/property-validation';
+import { normalizeCustomFeatures } from '@/lib/custom-features';
 import { FieldError, validationErrorResponse, isNumeric, isInteger, isBoolean, inList, isString } from '@/lib/validation';
 import { slugify } from '@/lib/formatters';
 import {
@@ -466,6 +467,10 @@ export async function POST(request: Request) {
           ],
         },
       }),
+      // Tiện ích tự nhập: chỉ nhận khi danh mục có bật phần tiện ích (Notion 06/10).
+      custom_features: visibleFields.includes('utilities')
+        ? normalizeCustomFeatures(body.custom_features)
+        : [],
     },
     include: PROPERTY_INCLUDE,
     });

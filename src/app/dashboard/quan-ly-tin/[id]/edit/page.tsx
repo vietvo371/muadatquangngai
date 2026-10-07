@@ -74,6 +74,7 @@ const emptyFormData: PropertyFormData = {
   legal: '',
   legal_note: '',
   features: [],
+  custom_features: [],
   // Không dùng ở trang sửa tin — trang này không có bước liên hệ / chọn gói qua thanh toán.
   // Giữ giá trị rỗng chỉ để khớp kiểu PropertyFormData dùng chung với trang đăng tin.
   contact_name: '',
@@ -203,6 +204,7 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
           legal_note: data.legal_note || '',
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           features: (data.features ?? []).map((f: any) => f.id ?? f),
+          custom_features: Array.isArray(data.custom_features) ? data.custom_features : [],
           contact_name: '',
           contact_phone: '',
           contact_email: '',
@@ -372,6 +374,7 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
       address,
       categoryName: apiCategories.find((c) => String(c.id) === formData.category_id)?.name ?? 'Bất động sản',
       features: features.filter((f) => formData.features.includes(f.id)).map((f) => f.name),
+      customFeatures: formData.custom_features,
       user: { name: 'Người đăng', avatar: null, phone: '' },
     };
   };
@@ -506,6 +509,8 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
                 features={features}
                 selectedFeatureIds={formData.features}
                 onToggleFeature={toggleFeature}
+                customFeatures={formData.custom_features}
+                onChangeCustomFeatures={(next) => updateFormData({ custom_features: next })}
               />
             </div>
           )}

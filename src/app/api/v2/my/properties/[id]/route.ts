@@ -3,6 +3,7 @@ import { apiError, apiSuccess } from '@/lib/api-response';
 import { getAuthUser, unauthenticatedResponse } from '@/lib/auth';
 import { mapPropertyResource } from '@/lib/api-resources/property-resource';
 import { validateFeatureIds } from '@/lib/api-resources/property-validation';
+import { normalizeCustomFeatures } from '@/lib/custom-features';
 import { FieldError, validationErrorResponse, isNumeric, isInteger, isBoolean, inList, isString } from '@/lib/validation';
 import { slugify } from '@/lib/formatters';
 import { VALID_IMAGE_CATEGORIES, VALID_PRICE_DISPLAY_FORMATS, isValidTour360Url } from '@/lib/property-form-config';
@@ -264,6 +265,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   if ('depth' in body) data.depth = body.depth != null ? String(body.depth) : null;
   if ('meta_title' in body) data.meta_title = body.meta_title;
   if ('meta_description' in body) data.meta_description = body.meta_description;
+  // Tiện ích tự nhập — giữ nguyên khi sửa tin mà client không gửi field này lên.
+  if ('custom_features' in body) data.custom_features = normalizeCustomFeatures(body.custom_features);
 
   await db.properties.update({ where: { id: existing.id }, data });
 

@@ -108,6 +108,7 @@ export function usePostForm({
           legal_note: has('legal') ? formData.legal_note : '',
           furniture: has('furniture') ? formData.furniture : 'none',
           features: has('utilities') ? formData.features : [],
+          custom_features: has('utilities') ? formData.custom_features : [],
         } as Partial<PropertyFormData>;
       })()
     );

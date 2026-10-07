@@ -51,6 +51,8 @@ export interface ListingPreviewData {
   address: string;
   categoryName: string;
   features: string[];
+  /** Tiện ích người đăng tự nhập — xem trước cũng phải thấy, giống trang thật. */
+  customFeatures?: string[];
   user: { name: string; avatar?: string | null; phone?: string };
 }
 
@@ -288,7 +290,9 @@ export function ListingPreview({
                 </div>
 
                 {/* Tiện ích & Đặc điểm */}
-                <FeatureList features={data.features.map((name) => ({ name }))} />
+                <FeatureList
+                  features={[...data.features, ...(data.customFeatures ?? [])].map((name) => ({ name }))}
+                />
 
                 {/* Pháp lý — chỉ tin bán, giống trang thật. */}
                 {isSell && data.legalLabel && (

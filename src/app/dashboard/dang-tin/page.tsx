@@ -130,6 +130,7 @@ export default function DangTinPage() {
     legal: '',
     legal_note: '',
     features: [],
+    custom_features: [],
     contact_name: '',
     contact_phone: '',
     contact_email: '',
@@ -257,6 +258,7 @@ export default function DangTinPage() {
       address,
       categoryName: apiCategories.find((c) => String(c.id) === formData.category_id)?.name ?? 'Bất động sản',
       features: features.filter((f) => formData.features.includes(f.id)).map((f) => f.name),
+      customFeatures: formData.custom_features,
       user: {
         name: formData.contact_name || authUser?.name || 'Người đăng',
         avatar: authUser?.avatar ?? null,
@@ -562,6 +564,8 @@ export default function DangTinPage() {
                 features={features}
                 selectedFeatureIds={formData.features}
                 onToggleFeature={toggleFeature}
+                customFeatures={formData.custom_features}
+                onChangeCustomFeatures={(next) => updateFormData({ custom_features: next })}
               />
 
               {/* Thông tin liên hệ (spec mục 4.5) — điền sẵn từ tài khoản, cho sửa. */}

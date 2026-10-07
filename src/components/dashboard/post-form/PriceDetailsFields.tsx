@@ -1,5 +1,8 @@
 'use client';
 
+import { useState } from 'react';
+import { Plus, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -15,6 +18,7 @@ import {
   type GroupField,
 } from '@/lib/property-form-config';
 import { derivePrices, formatMoneyShort } from '@/lib/formatters';
+import { CUSTOM_FEATURE_MAX_COUNT, CUSTOM_FEATURE_MAX_LENGTH } from '@/lib/custom-features';
 
 /**
  * Base UI `Select.Value` in ra GIÁ TRỊ THÔ khi không truyền children dạng hàm — với mọi
@@ -82,6 +86,9 @@ interface PriceDetailsFieldsProps {
   /** Field hiển thị cho danh mục đang chọn (feedback #4, admin config qua detail_fields). */
   visibleFields: GroupField[];
   features: Array<{ id: number; name: string }>;
+  /** Tiện ích người đăng tự nhập cho riêng tin này. */
+  customFeatures: string[];
+  onChangeCustomFeatures: (next: string[]) => void;
   selectedFeatureIds: number[];
   onToggleFeature: (featureId: number) => void;
 }
@@ -99,6 +106,8 @@ export function PriceDetailsFields({
   features,
   selectedFeatureIds,
   onToggleFeature,
+  customFeatures,
+  onChangeCustomFeatures,
 }: PriceDetailsFieldsProps) {
   const showField = (f: GroupField) => visibleFields.includes(f);
   /** Quy đổi giá hiển thị ngay dưới ô nhập (feedback mục 3.3). Chỉ trả về khi có tổng giá
@@ -445,8 +454,114 @@ export function PriceDetailsFields({
               ))}
             </div>
           )}
+
+          {/* Tiện ích người đăng tự nhập (Notion 06/10) — lưu riêng theo tin, không thêm vào
+              danh sách tiện ích dùng chung của website. */}
+          <CustomFeaturesField
+            values={customFeatures}
+            onChange={onChangeCustomFeatures}
+          />
         </section>
       )}
     </>
+  );
+}
+
+/** Ô "Thêm tiện ích khác": gõ tên rồi bấm Thêm, tiện ích đã thêm hiện thành thẻ xoá được. */
+function CustomFeaturesField({
+  values,
+  onChange,
+}: {
+  values: string[];
+  onChange: (next: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState('');
+
+  const add = () => {
+    const name = draft.trim().replace(/\s+/g, ' ').slice(0, CUSTOM_FEATURE_MAX_LENGTH);
+    if (!name) return;
+    // Trùng tên (không phân biệt hoa thường) thì bỏ qua, không thêm hai thẻ giống nhau.
+    if (values.some((v) => v.toLowerCase() === name.toLowerCase())) {
+      setDraft('');
+      return;
+    }
+    if (values.length >= CUSTOM_FEATURE_MAX_COUNT) return;
+    onChange([...values, name]);
+    setDraft('');
+  };
+
+  const full = values.length >= CUSTOM_FEATURE_MAX_COUNT;
+
+  return (
+    <div className="mt-5 border-t border-gray-100 pt-4">
+      {values.length > 0 && (
+        <div className="mb-3 flex flex-wrap gap-2">
+          {values.map((name) => (
+            <span
+              key={name}
+              className="inline-flex items-center gap-1.5 rounded-full bg-primary-light px-3 py-1.5 text-[13px] font-medium text-primary"
+            >
+              {name}
+              <button
+                type="button"
+                onClick={() => onChange(values.filter((v) => v !== name))}
+                aria-label={`Bỏ tiện ích ${name}`}
+                className="text-primary/70 transition-colors hover:text-cta"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {open ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <Input
+            value={draft}
+            autoFocus
+            maxLength={CUSTOM_FEATURE_MAX_LENGTH}
+            placeholder="Ví dụ: Gần chợ, có giếng khoan..."
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              // Enter để thêm nhanh — nhưng phải chặn, nếu không form đăng tin tự gửi đi.
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                add();
+              }
+            }}
+            className="h-10 w-full max-w-xs text-[14px]"
+          />
+          <Button type="button" onClick={add} disabled={!draft.trim() || full} className="h-10">
+            Thêm
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => { setOpen(false); setDraft(''); }}
+            className="h-10 text-gray-500"
+          >
+            Xong
+          </Button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          disabled={full}
+          className="inline-flex items-center gap-1.5 text-[14px] font-semibold text-primary transition-colors hover:underline disabled:cursor-not-allowed disabled:text-gray-400 disabled:no-underline"
+        >
+          <Plus className="h-4 w-4" />
+          Thêm tiện ích khác
+        </button>
+      )}
+
+      {full && (
+        <p className="mt-2 text-[12px] text-gray-500">
+          Đã đạt tối đa {CUSTOM_FEATURE_MAX_COUNT} tiện ích tự nhập.
+        </p>
+      )}
+    </div>
   );
 }

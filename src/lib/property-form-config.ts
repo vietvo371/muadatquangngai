@@ -338,6 +338,8 @@ export interface PropertyFormData {
   /** Mô tả pháp lý tự do — chỉ dùng khi legal = 'other'. */
   legal_note?: string;
   features: number[];
+  /** Tiện ích người đăng tự nhập, lưu riêng theo tin này — xem src/lib/custom-features.ts. */
+  custom_features: string[];
 
   // Chỉ dùng ở form đăng tin (create) — form sửa tin không có bước liên hệ.
   contact_name: string;
@@ -414,5 +416,7 @@ export function buildPropertyPayload(
       visibleFields.includes('utilities') && formData.features.length > 0
         ? formData.features
         : options.featureIdsWhenEmpty,
+    // Luôn gửi (kể cả mảng rỗng) để người đăng xoá hết tiện ích tự nhập thì tin cũng sạch theo.
+    custom_features: visibleFields.includes('utilities') ? formData.custom_features : [],
   };
 }
