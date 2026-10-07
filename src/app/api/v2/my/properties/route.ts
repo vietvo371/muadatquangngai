@@ -6,7 +6,7 @@ import { getAuthUser, unauthenticatedResponse } from '@/lib/auth';
 import { mapPropertyResource, type WardRow } from '@/lib/api-resources/property-resource';
 import { toVietnamIso8601 } from '@/lib/api-resources/carbon-format';
 import { dbNow } from '@/lib/db-time';
-import { validateFeatureIds } from '@/lib/api-resources/property-validation';
+import { resolveProjectId, validateFeatureIds } from '@/lib/api-resources/property-validation';
 import { normalizeCustomFeatures } from '@/lib/custom-features';
 import { FieldError, validationErrorResponse, isNumeric, isInteger, isBoolean, inList, isString } from '@/lib/validation';
 import { slugify } from '@/lib/formatters';
@@ -264,6 +264,10 @@ export async function POST(request: Request) {
     }
   }
   errors.push(...(await validateFeatureIds(body.feature_ids)));
+  // Tin thuộc dự án nào (không bắt buộc) — trước đây form không có ô này nên chưa tin nào
+  // từng gắn được với dự án.
+  const projectCheck = await resolveProjectId(body.project_id);
+  if (projectCheck.error) errors.push(projectCheck.error);
 
   // Thông tin liên hệ (spec mục 4.5): SĐT bắt buộc, email không bắt buộc nhưng nếu có
   // thì phải đúng định dạng. Mặc định form lấy từ tài khoản nhưng cho người đăng sửa.
@@ -516,6 +520,7 @@ export async function POST(request: Request) {
       custom_features: visibleFields.includes('utilities')
         ? normalizeCustomFeatures(body.custom_features)
         : [],
+      project_id: projectCheck.projectId,
     },
     include: PROPERTY_INCLUDE,
     });

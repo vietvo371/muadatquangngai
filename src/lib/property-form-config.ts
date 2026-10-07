@@ -337,6 +337,8 @@ export interface PropertyFormData {
   features: number[];
   /** Tiện ích người đăng tự nhập, lưu riêng theo tin này — xem src/lib/custom-features.ts. */
   custom_features: string[];
+  /** Tin thuộc dự án nào: id dạng chuỗi, '' = không thuộc dự án nào. */
+  project_id: string;
 
   // Chỉ dùng ở form đăng tin (create) — form sửa tin không có bước liên hệ.
   contact_name: string;
@@ -415,5 +417,7 @@ export function buildPropertyPayload(
         : options.featureIdsWhenEmpty,
     // Luôn gửi (kể cả mảng rỗng) để người đăng xoá hết tiện ích tự nhập thì tin cũng sạch theo.
     custom_features: visibleFields.includes('utilities') ? formData.custom_features : [],
+    // Luôn gửi, kể cả null: bỏ chọn dự án khi sửa tin thì tin phải được gỡ khỏi dự án.
+    project_id: formData.project_id || null,
   };
 }

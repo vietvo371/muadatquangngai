@@ -1,6 +1,7 @@
 import { db } from '@/lib/db';
 import { apiError, apiSuccess } from '@/lib/api-response';
 import { mapPropertyResource } from '@/lib/api-resources/property-resource';
+import { PROJECT_ACTIVE_EXCLUDED_STATUSES } from '@/lib/api-resources/project-status';
 
 /** GET /api/v2/properties/[slug] — port của PropertyController@show (Laravel). */
 export async function GET(request: Request, { params }: { params: Promise<{ slug: string }> }) {
@@ -31,10 +32,19 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
     return apiError('Không tìm thấy tin đăng.', 404);
   }
 
-  const ward =
+  const [ward, project] = await Promise.all([
     property.ward_id !== null
-      ? await db.wards.findUnique({ where: { id: property.ward_id }, select: { id: true, name: true, slug: true } })
-      : null;
+      ? db.wards.findUnique({ where: { id: property.ward_id }, select: { id: true, name: true, slug: true } })
+      : Promise.resolve(null),
+    // Tin thuộc dự án: kèm tên + slug để trang chi tiết hiện "Thuộc dự án ..." có link. Dự án
+    // đã ẩn thì không hiện link (dẫn tới trang 404).
+    property.project_id !== null
+      ? db.projects.findFirst({
+          where: { id: property.project_id, deleted_at: null, status: { notIn: PROJECT_ACTIVE_EXCLUDED_STATUSES } },
+          select: { name: true, slug: true },
+        })
+      : Promise.resolve(null),
+  ]);
 
   const forwardedFor = request.headers.get('x-forwarded-for');
   const ipAddress = forwardedFor?.split(',')[0]?.trim() ?? request.headers.get('x-real-ip') ?? null;
@@ -49,5 +59,5 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
     }),
   ]);
 
-  return apiSuccess(mapPropertyResource(property, ward));
+  return apiSuccess({ ...mapPropertyResource(property, ward), project: project ?? null });
 }

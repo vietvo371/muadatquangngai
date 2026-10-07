@@ -394,13 +394,19 @@ export function PropertyDetailView({ slug, listingType }: PropertyDetailViewProp
               </h1>
               {propertyData.projectName && (
                 <div className="mb-2 text-[14px] font-semibold text-primary">
-                  {propertyData.projectSlug ? (
-                    <Link href={`/du-an/${propertyData.projectSlug}`} className="hover:underline">
-                      Dự án {propertyData.projectName}
-                    </Link>
-                  ) : (
-                    <span>Dự án {propertyData.projectName}</span>
-                  )}
+                  {/* Nhiều dự án tự đặt tên bắt đầu bằng "Dự án ..." — đừng thêm chữ thành "Dự án Dự án". */}
+                  {(() => {
+                    const label = /^dự án\b/i.test(propertyData.projectName)
+                      ? propertyData.projectName
+                      : `Dự án ${propertyData.projectName}`;
+                    return propertyData.projectSlug ? (
+                      <Link href={`/du-an/${propertyData.projectSlug}`} className="hover:underline">
+                        {label}
+                      </Link>
+                    ) : (
+                      <span>{label}</span>
+                    );
+                  })()}
                 </div>
               )}
               <div className="flex items-center gap-2 text-[14px] text-gray-500 font-medium">

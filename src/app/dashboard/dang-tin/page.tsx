@@ -15,6 +15,7 @@ import { PostStepper } from '@/components/dashboard/PostStepper';
 import { PackageCard } from '@/components/dashboard/PackageCard';
 import { BasicInfoFields, AddressMapFields } from '@/components/dashboard/post-form/BasicInfoFields';
 import { TitleDescriptionFields } from '@/components/dashboard/post-form/TitleDescriptionFields';
+import { ProjectSelectField } from '@/components/dashboard/post-form/ProjectSelectField';
 import { PriceDetailsFields } from '@/components/dashboard/post-form/PriceDetailsFields';
 import { MediaFields } from '@/components/dashboard/post-form/MediaFields';
 import { ContactFields } from '@/components/dashboard/post-form/ContactFields';
@@ -131,6 +132,7 @@ export default function DangTinPage() {
     legal_note: '',
     features: [],
     custom_features: [],
+    project_id: '',
     contact_name: '',
     contact_phone: '',
     contact_email: '',
@@ -498,6 +500,11 @@ export default function DangTinPage() {
                 onTypeChange={(type) => updateFormData({ type, category_id: '' })}
                 onCategoryChange={handleCategoryChange}
                 categoriesEmpty={apiCategories.filter((c) => c.type === formData.type).length === 0}
+              />
+
+              <ProjectSelectField
+                value={formData.project_id ?? ''}
+                onChange={(project_id) => updateFormData({ project_id })}
               />
 
               <AddressMapFields

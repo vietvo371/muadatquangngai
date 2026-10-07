@@ -2,7 +2,7 @@ import { db } from '@/lib/db';
 import { apiError, apiSuccess } from '@/lib/api-response';
 import { getAuthUser, unauthenticatedResponse } from '@/lib/auth';
 import { mapPropertyResource } from '@/lib/api-resources/property-resource';
-import { validateFeatureIds } from '@/lib/api-resources/property-validation';
+import { resolveProjectId, validateFeatureIds } from '@/lib/api-resources/property-validation';
 import { normalizeCustomFeatures } from '@/lib/custom-features';
 import { FieldError, validationErrorResponse, isNumeric, isInteger, isBoolean, inList, isString } from '@/lib/validation';
 import { slugify } from '@/lib/formatters';
@@ -155,6 +155,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     errors.push(new FieldError('parking', 'Trường chỗ để xe phải là đúng hoặc sai.'));
   }
   if ('feature_ids' in body) errors.push(...(await validateFeatureIds(body.feature_ids)));
+  const projectCheck =
+    'project_id' in body ? await resolveProjectId(body.project_id, { currentProjectId: existing.project_id }) : null;
+  if (projectCheck?.error) errors.push(projectCheck.error);
   if ('price_display_format' in body && body.price_display_format !== null && !inList(body.price_display_format, VALID_PRICE_DISPLAY_FORMATS)) {
     errors.push(new FieldError('price_display_format', 'Giá trị đã chọn trong trường định dạng giá không hợp lệ.'));
   }
@@ -273,6 +276,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   if ('meta_description' in body) data.meta_description = body.meta_description;
   // Tiện ích tự nhập — giữ nguyên khi sửa tin mà client không gửi field này lên.
   if ('custom_features' in body) data.custom_features = normalizeCustomFeatures(body.custom_features);
+  if (projectCheck) data.project_id = projectCheck.projectId;
 
   await db.properties.update({ where: { id: existing.id }, data });
 

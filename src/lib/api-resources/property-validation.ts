@@ -39,3 +39,33 @@ export async function validateFeatureIds(featureIds: unknown): Promise<FieldErro
 
   return errors;
 }
+
+/**
+ * `project_id` — tin thuộc dự án nào (không bắt buộc). Rỗng/null = không thuộc dự án nào.
+ *
+ * Chỉ nhận dự án đang hiển thị công khai, để người đăng không gắn tin vào dự án nháp hay đã
+ * ẩn. Ngoại lệ: khi sửa tin, giữ nguyên dự án đang gắn sẵn thì luôn hợp lệ — dự án đó có bị ẩn
+ * sau này cũng không được làm hỏng việc sửa các trường khác của tin.
+ */
+export async function resolveProjectId(
+  raw: unknown,
+  { currentProjectId = null }: { currentProjectId?: bigint | null } = {}
+): Promise<{ projectId: bigint | null; error: FieldError | null }> {
+  if (raw === undefined || raw === null || raw === '') return { projectId: null, error: null };
+
+  const text = typeof raw === 'number' ? String(raw) : typeof raw === 'string' ? raw.trim() : '';
+  if (!/^\d{1,18}$/.test(text)) {
+    return { projectId: null, error: new FieldError('project_id', 'Dự án đã chọn không hợp lệ.') };
+  }
+  const id = BigInt(text);
+  if (currentProjectId !== null && id === currentProjectId) return { projectId: id, error: null };
+
+  const { PROJECT_ACTIVE_EXCLUDED_STATUSES } = await import('@/lib/api-resources/project-status');
+  const project = await db.projects.findFirst({
+    where: { id, deleted_at: null, status: { notIn: PROJECT_ACTIVE_EXCLUDED_STATUSES } },
+    select: { id: true },
+  });
+  return project
+    ? { projectId: project.id, error: null }
+    : { projectId: null, error: new FieldError('project_id', 'Dự án đã chọn không tồn tại hoặc đã ngừng hiển thị.') };
+}

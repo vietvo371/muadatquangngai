@@ -52,6 +52,7 @@ export interface PropertyRow {
   legal: string | null;
   legal_note: string | null;
   custom_features?: unknown;
+  project_id?: bigint | null;
   contact_name: string | null;
   contact_phone: string | null;
   contact_email: string | null;
@@ -268,6 +269,8 @@ export function mapPropertyResource(
 
     // Tiện ích người đăng tự nhập, riêng cho tin này (Notion 06/10).
     custom_features: readCustomFeatures(property.custom_features),
+    // Chuỗi chứ không phải số: id BigInt có thể vượt giới hạn số an toàn của JavaScript.
+    project_id: property.project_id != null ? property.project_id.toString() : null,
 
     stats: {
       view_count: property.view_count,

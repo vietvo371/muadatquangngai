@@ -11,6 +11,7 @@ import api from '@/lib/axios';
 import { usePostForm } from '@/hooks/usePostForm';
 import { BasicInfoFields, AddressMapFields } from '@/components/dashboard/post-form/BasicInfoFields';
 import { TitleDescriptionFields } from '@/components/dashboard/post-form/TitleDescriptionFields';
+import { ProjectSelectField } from '@/components/dashboard/post-form/ProjectSelectField';
 import { PriceDetailsFields } from '@/components/dashboard/post-form/PriceDetailsFields';
 import { MediaFields } from '@/components/dashboard/post-form/MediaFields';
 import {
@@ -75,6 +76,7 @@ const emptyFormData: PropertyFormData = {
   legal_note: '',
   features: [],
   custom_features: [],
+  project_id: '',
   // Không dùng ở trang sửa tin — trang này không có bước liên hệ / chọn gói qua thanh toán.
   // Giữ giá trị rỗng chỉ để khớp kiểu PropertyFormData dùng chung với trang đăng tin.
   contact_name: '',
@@ -205,6 +207,7 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           features: (data.features ?? []).map((f: any) => f.id ?? f),
           custom_features: Array.isArray(data.custom_features) ? data.custom_features : [],
+          project_id: data.project_id ? String(data.project_id) : '',
           contact_name: '',
           contact_phone: '',
           contact_email: '',
@@ -449,6 +452,11 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
                   descriptionMin={50}
                 />
               </BasicInfoFields>
+
+              <ProjectSelectField
+                value={formData.project_id ?? ''}
+                onChange={(project_id) => updateFormData({ project_id })}
+              />
 
               <AddressMapFields
                 location={{
