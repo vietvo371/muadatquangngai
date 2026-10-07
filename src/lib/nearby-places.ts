@@ -19,6 +19,13 @@ export interface NearbyPlace {
   address: string;
   dist: string;
   time: string;
+  /**
+   * Toạ độ địa điểm — để ghim marker lên bản đồ. Tuỳ chọn vì dữ liệu lưu trước 07/10 chưa
+   * có trường này (lúc đó toạ độ chỉ dùng để tính khoảng cách rồi bỏ đi); nơi hiển thị phải
+   * chịu được thiếu, chỉ bớt marker chứ không vỡ danh sách.
+   */
+  lat?: number;
+  lng?: number;
 }
 
 export type NearbyPlacesResult = Record<NearbyCategory, NearbyPlace[]>;
@@ -209,6 +216,8 @@ async function queryCategory(cat: NearbyCategory, lat: number, lng: number): Pro
       address: p.structured_formatting?.secondary_text ?? '',
       dist: formatDist(km),
       time: formatTime(km),
+      lat: coords.lat,
+      lng: coords.lng,
       _km: km,
     });
   }
@@ -216,7 +225,14 @@ async function queryCategory(cat: NearbyCategory, lat: number, lng: number): Pro
   return withDistance
     .sort((a, b) => a._km - b._km)
     .slice(0, RESULTS_PER_CATEGORY)
-    .map(({ name, address, dist, time }) => ({ name, address, dist, time }));
+    .map(({ name, address, dist, time, lat: placeLat, lng: placeLng }) => ({
+      name,
+      address,
+      dist,
+      time,
+      lat: placeLat,
+      lng: placeLng,
+    }));
 }
 
 /**

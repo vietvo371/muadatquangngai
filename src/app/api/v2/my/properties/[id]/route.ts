@@ -260,6 +260,12 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   if ('address' in body) data.address = body.address;
   if ('latitude' in body) data.latitude = body.latitude != null ? String(body.latitude) : null;
   if ('longitude' in body) data.longitude = body.longitude != null ? String(body.longitude) : null;
+  // Dời ghim bản đồ thì tiện ích xung quanh đã tra không còn đúng nữa — xoá đi để lượt xem
+  // sau tra lại theo toạ độ mới, thay vì gắn tiện ích của địa điểm cũ cho địa chỉ mới.
+  if ('latitude' in body || 'longitude' in body) {
+    data.nearby_places = null;
+    data.nearby_places_at = null;
+  }
   if ('road_width' in body) data.road_width = body.road_width != null ? String(body.road_width) : null;
   if ('facade' in body) data.facade = body.facade != null ? String(body.facade) : null;
   if ('depth' in body) data.depth = body.depth != null ? String(body.depth) : null;

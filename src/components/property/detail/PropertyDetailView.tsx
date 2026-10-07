@@ -30,12 +30,20 @@ const GoogleMapEmbed = dynamic(
   () => import('@/components/map/GoogleMapEmbed').then((m) => m.GoogleMapEmbed),
   { ssr: false, loading: () => <div className="h-[280px] w-full animate-pulse rounded-xl bg-gray-100" /> }
 );
+
+// Bản đồ tiện ích dùng maplibre — thư viện nặng, chỉ nạp khi thực sự có tin để hiển thị.
+const NearbyPlacesSection = dynamic(
+  () => import('@/components/map/NearbyPlacesSection').then((m) => m.NearbyPlacesSection),
+  { ssr: false, loading: () => <div className="h-[280px] w-full animate-pulse rounded-xl bg-gray-100" /> }
+);
 import { MobileStickyCta } from '@/components/property/detail/MobileStickyCta';
 import { timeAgo, derivePrices } from '@/lib/formatters';
 import { CONFIG } from '@/lib/config';
 import { useProperties } from '@/hooks/useProperties';
 import { useFavorite } from '@/hooks/useFavorite';
 import { isBrokerRole } from '@/lib/roles';
+import api from '@/lib/axios';
+import type { NearbyPlacesData } from '@/components/map/NearbyPlacesSection';
 
 const CONTACT_ANCHOR_ID = 'lien-he-nguoi-dang';
 
@@ -205,6 +213,10 @@ export function PropertyDetailView({ slug, listingType }: PropertyDetailViewProp
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [similarData, setSimilarData] = useState<any[]>([]);
   const [loadError, setLoadError] = useState(false);
+  // Tiện ích xung quanh gọi riêng, KHÔNG chờ chung với tin: lần tra đầu tiên của một tin mất
+  // vài giây (gọi Goong Place API), gộp vào thì cả trang chi tiết đứng im chờ theo.
+  const [nearbyPlaces, setNearbyPlaces] = useState<NearbyPlacesData | null>(null);
+  const [nearbyLoading, setNearbyLoading] = useState(true);
 
   useEffect(() => {
     const loadDetail = async () => {
@@ -228,6 +240,26 @@ export function PropertyDetailView({ slug, listingType }: PropertyDetailViewProp
 
     loadDetail();
   }, [slug, fetchProperty, fetchSimilar]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setNearbyLoading(true);
+    api
+      .get(`/api/v2/properties/${slug}/nearby`)
+      .then((res) => {
+        if (!cancelled) setNearbyPlaces(res.data?.data?.places ?? null);
+      })
+      .catch(() => {
+        // Không có tiện ích thì phần đó tự ẩn — không chặn phần còn lại của trang.
+        if (!cancelled) setNearbyPlaces(null);
+      })
+      .finally(() => {
+        if (!cancelled) setNearbyLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [slug]);
 
   const { isSaved: isFavorite, toggle: toggleFavorite } = useFavorite(propertyData?.id);
 
@@ -490,6 +522,22 @@ export function PropertyDetailView({ slug, listingType }: PropertyDetailViewProp
                   latitude={propertyData.latitude}
                   longitude={propertyData.longitude}
                   className="h-[280px] w-full overflow-hidden rounded-xl border border-gray-200"
+                />
+              </section>
+            )}
+
+            {/* Tiện ích xung quanh (Notion 06/10) — 4 nhóm trong bán kính 5 km, ghim sẵn trên
+                bản đồ. Ẩn hẳn khi tin chưa ghim toạ độ hoặc chưa tra được tiện ích nào, thay
+                vì hiện một khối rỗng. */}
+            {propertyData.latitude != null && propertyData.longitude != null && (nearbyLoading || nearbyPlaces) && (
+              <section className="mb-8">
+                <h2 className="mb-4 text-[18px] font-bold tracking-tight text-gray-900">Tiện ích xung quanh</h2>
+                <NearbyPlacesSection
+                  latitude={propertyData.latitude}
+                  longitude={propertyData.longitude}
+                  centerLabel={propertyData.title}
+                  places={nearbyPlaces}
+                  isLoading={nearbyLoading}
                 />
               </section>
             )}

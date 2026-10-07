@@ -452,6 +452,8 @@ model properties {
   legal             String?                   @db.VarChar(20)
   legal_note        String?                   @db.VarChar(500)
   custom_features   Json                @default("[]")
+  nearby_places     Json?
+  nearby_places_at  DateTime?           @db.Timestamp(0)
   province_id       BigInt
   district_id       BigInt
   ward_id           BigInt?
