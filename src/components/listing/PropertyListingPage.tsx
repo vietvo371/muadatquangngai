@@ -16,6 +16,7 @@ import {
   type ListingView,
 } from '@/lib/filter-url-sync';
 import type { MapBounds } from '@/components/map/PropertyMapView';
+import { FloatingMapButton } from '@/components/listing/FloatingMapButton';
 import { ListingPagination } from '@/components/listing/ListingPagination';
 
 // Bản đồ Goong nạp phía client.
@@ -128,6 +129,8 @@ function PropertyListingContent({ type }: { type: ListingType }) {
   // Tìm theo khung nhìn bản đồ, chỉ dùng ở chế độ bản đồ toàn màn hình: `bbox` = vùng đang lọc;
   // `pendingBounds` = vùng người dùng vừa kéo tới, chờ bấm "Tìm khu vực này".
   const [bbox, setBbox] = useState<MapBounds | null>(null);
+  // Khối bản đồ xem trước — nút bản đồ nổi bám theo nó để biết lúc nào cần hiện.
+  const mapPreviewRef = useRef<HTMLDivElement>(null);
   const [pendingBounds, setPendingBounds] = useState<MapBounds | null>(null);
 
   const { fetchProperties, isLoading } = useProperties();
@@ -424,7 +427,10 @@ function PropertyListingContent({ type }: { type: ListingType }) {
                     <FeaturedPropertyCard property={featured} />
                   </div>
 
-                  <div className="relative min-h-[280px] overflow-hidden rounded-2xl border border-gray-200 shadow-sm md:col-span-1">
+                  <div
+                    ref={mapPreviewRef}
+                    className="relative min-h-[280px] overflow-hidden rounded-2xl border border-gray-200 shadow-sm md:col-span-1"
+                  >
                     {/* Xem trước: có nút +/- và kéo được, nhưng tắt zoom bằng con lăn để không cướp
                         thao tác cuộn trang. Muốn đầy đủ thì mở chế độ bản đồ. */}
                     <PropertyMapView
@@ -475,6 +481,9 @@ function PropertyListingContent({ type }: { type: ListingType }) {
           </>
         )}
       </div>
+
+      {/* Nút bản đồ nổi — chỉ ở chế độ danh sách; chế độ bản đồ đã có lối quay lại riêng. */}
+      {!isMapView && <FloatingMapButton targetRef={mapPreviewRef} onOpenFullMap={showMapView} />}
     </div>
   );
 }
