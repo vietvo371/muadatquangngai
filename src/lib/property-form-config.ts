@@ -1,3 +1,5 @@
+import { EMBED_PROVIDERS, isAllowedEmbedUrl } from '@/lib/embed-allowlist';
+
 // Cấu hình form đăng tin — nguồn sự thật duy nhất cho việc "hiển thị trường nào theo
 // danh mục nào". Theo yêu cầu mục 11 của spec: KHÔNG dựng 3 trang đăng tin riêng, mà
 // dùng 1 form chung + 1 danh sách trường chung + cấu hình riêng theo nhóm.
@@ -267,15 +269,10 @@ export const PRICE_DISPLAY_FORMAT_OPTIONS: readonly SelectOption[] = [
 ];
 export const VALID_PRICE_DISPLAY_FORMATS = PRICE_DISPLAY_FORMAT_OPTIONS.map((o) => o.value);
 
-/** Domain hợp lệ cho link Tour 360 (feedback I.12) — chỉ 2 nền tảng phổ biến ở VN. */
-export const TOUR360_DOMAINS = ['matterport.com', 'kuula.co'];
+/** Domain hợp lệ cho link Tour 360 (feedback I.12) — danh sách nằm ở src/lib/embed-allowlist.ts. */
+export const TOUR360_DOMAINS = EMBED_PROVIDERS.tour360;
 export function isValidTour360Url(url: string): boolean {
-  try {
-    const host = new URL(url).hostname.replace(/^www\./, '');
-    return TOUR360_DOMAINS.some((d) => host === d || host.endsWith(`.${d}`));
-  } catch {
-    return false;
-  }
+  return isAllowedEmbedUrl(url, 'tour360');
 }
 
 // ---------------------------------------------------------------------------

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { renderPlainWithBold } from '@/lib/sanitize-html';
 
 interface DescriptionCollapseProps {
   description: string;
@@ -44,7 +45,9 @@ export function DescriptionCollapse({ description, collapsedHeight = 220 }: Desc
         >
           {description.split('\n').map((line, i) => {
             if (!line.trim()) return <div key={i} className="h-1" />;
-            const rendered = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            // Mô tả do người đăng tin gõ tự do: PHẢI mã hoá trước khi dựng lại **in đậm**, nếu không
+            // một người gõ <img onerror=...> vào mô tả là mã đó chạy trên máy mọi người xem tin.
+            const rendered = renderPlainWithBold(line);
             if (line.trim().startsWith('- ')) {
               return (
                 <div key={i} className="flex gap-2">

@@ -1,5 +1,6 @@
 'use client';
 
+import { isAllowedEmbedUrl } from '@/lib/embed-allowlist';
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
@@ -385,7 +386,9 @@ export function PropertyGalleryLightbox({
               </div>
             )}
 
-            {activeTab === 'tour360' && tour360Url && (
+            {/* Kiểm tra lại lúc hiển thị chứ không chỉ lúc nhập: link lưu từ trước khi có bước
+                kiểm tra vẫn còn trong DB, và chỉ iframe từ nhà cung cấp được duyệt mới được nhúng. */}
+            {activeTab === 'tour360' && tour360Url && isAllowedEmbedUrl(tour360Url, 'tour360') && (
               <div className="w-full h-[60vh] rounded-xl overflow-hidden border border-gray-200">
                 <iframe src={tour360Url} width="100%" height="100%" style={{ border: 0 }} allowFullScreen loading="lazy" />
               </div>

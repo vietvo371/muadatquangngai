@@ -1,5 +1,6 @@
 'use client';
 
+import { sanitizeArticle } from '@/lib/sanitize-html';
 import { useRef, use } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -176,7 +177,7 @@ export default function BlogDetailPage({ params }: { params: Promise<{ slug: str
               className="prose prose-lg md:prose-xl max-w-none prose-headings:font-bold prose-headings:text-gray-900 prose-h2:text-2xl md:prose-h2:text-3xl prose-p:text-gray-600 prose-p:leading-relaxed prose-a:text-primary hover:prose-a:text-primary-dark prose-img:rounded-2xl prose-img:shadow-md"
             >
               {post.content ? (
-                <div dangerouslySetInnerHTML={{ __html: post.content }} />
+                <div dangerouslySetInnerHTML={{ __html: sanitizeArticle(post.content) }} />
               ) : (
                 <div className="text-center py-20 text-gray-500">Nội dung đang cập nhật...</div>
               )}
