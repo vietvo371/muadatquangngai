@@ -14,6 +14,13 @@
 
 export type NearbyCategory = 'school' | 'supermarket' | 'park' | 'hospital';
 
+/**
+ * Tăng số này mỗi khi đổi cách lọc/chấm điểm địa điểm. Kết quả đã lưu mang số cũ sẽ được tra
+ * lại ở lượt xem sau — nếu không, mọi tin đã tra trước đó giữ nguyên kết quả rác vĩnh viễn
+ * và phải sửa tay trong DB.
+ */
+export const NEARBY_PLACES_VERSION = 2;
+
 export interface NearbyPlace {
   name: string;
   address: string;
@@ -61,6 +68,17 @@ const CATEGORY_KEYWORDS: Record<NearbyCategory, string[]> = {
 // tên doanh nghiệp chứa từ khoá nhưng không phải trường học.
 const CATEGORY_NAME_FILTER: Partial<Record<NearbyCategory, RegExp>> = {
   school: /^Trường\b/i,
+  hospital: /^Bệnh viện\b/i,
+};
+
+/**
+ * Loại các khớp nhầm mà bộ lọc tên ở trên không bắt được vì chúng MỞ ĐẦU đúng từ khoá:
+ * "Bệnh viện laptop Hưng Hải" là tiệm sửa máy tính, "Bệnh viện thú y" chữa cho vật nuôi —
+ * cả hai đều vô nghĩa với người đang chọn chỗ ở. Chỉ loại những thứ chắc chắn sai; cố lọc
+ * sạch hơn nữa sẽ làm trống danh sách ở các xã vốn đã ít địa điểm.
+ */
+const CATEGORY_NAME_EXCLUDE: Partial<Record<NearbyCategory, RegExp>> = {
+  hospital: /\b(laptop|máy tính|điện thoại|xe máy|ô ?tô|thú y|cây|điện máy)\b/i,
 };
 
 // Tâm điểm Quảng Ngãi (bờ biển) — dùng để loại kết quả Nominatim khớp NHẦM sang phần đất
@@ -200,10 +218,12 @@ async function queryCategory(cat: NearbyCategory, lat: number, lng: number): Pro
   });
 
   const nameFilter = CATEGORY_NAME_FILTER[cat];
+  const nameExclude = CATEGORY_NAME_EXCLUDE[cat];
   const withDistance: Array<NearbyPlace & { _km: number }> = [];
   for (const p of predictions) {
     const name = p.structured_formatting?.main_text ?? p.description;
     if (nameFilter && !nameFilter.test(name.trim())) continue;
+    if (nameExclude && nameExclude.test(name)) continue;
 
     const coords = await placeDetailCoords(p.place_id);
     if (!coords) continue;

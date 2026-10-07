@@ -1,7 +1,7 @@
 import { db } from '@/lib/db';
 import { apiSuccess, apiError } from '@/lib/api-response';
 import { dbNow } from '@/lib/db-time';
-import { fetchNearbyPlaces, type NearbyPlacesResult } from '@/lib/nearby-places';
+import { fetchNearbyPlaces, NEARBY_PLACES_VERSION, type NearbyPlacesResult } from '@/lib/nearby-places';
 
 /**
  * GET /api/v2/properties/[slug]/nearby — tiện ích xung quanh tin đăng (Notion 06/10
@@ -21,6 +21,8 @@ const COORD_EPSILON = 0.001;
 interface CachedNearby {
   lat: number;
   lng: number;
+  /** Phiên bản cách lọc địa điểm — xem NEARBY_PLACES_VERSION. Thiếu = lần tra trước 07/10. */
+  v?: number;
   places: NearbyPlacesResult;
 }
 
@@ -28,6 +30,8 @@ function readCache(value: unknown, lat: number, lng: number): NearbyPlacesResult
   if (!value || typeof value !== 'object') return null;
   const cached = value as Partial<CachedNearby>;
   if (typeof cached.lat !== 'number' || typeof cached.lng !== 'number' || !cached.places) return null;
+  // Cách lọc đã đổi kể từ lần tra này — tra lại thay vì giữ kết quả theo luật cũ.
+  if (cached.v !== NEARBY_PLACES_VERSION) return null;
   // Chủ tin dời ghim bản đồ thì tiện ích cũ không còn đúng nữa.
   if (Math.abs(cached.lat - lat) > COORD_EPSILON || Math.abs(cached.lng - lng) > COORD_EPSILON) return null;
   return cached.places;
@@ -66,7 +70,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
   await db.properties.update({
     where: { id: property.id },
     data: {
-      nearby_places: JSON.parse(JSON.stringify({ lat, lng, places })),
+      nearby_places: JSON.parse(JSON.stringify({ lat, lng, v: NEARBY_PLACES_VERSION, places })),
       nearby_places_at: dbNow(),
     },
   });
