@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import { Phone, MessageSquare, ShieldCheck, Flag, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { ZaloIcon } from '@/components/shared/ZaloIcon';
 import api from '@/lib/axios';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -211,22 +212,19 @@ export function ContactSidebar({ user, propertySlug, propertyTitle }: ContactSid
                 toast.error('Người đăng chưa cung cấp số điện thoại.');
               }
             }}
-            className={`flex items-center justify-center gap-2 h-11 rounded-lg border border-[#0068FF] text-[#0068FF] text-[13px] font-bold transition-colors ${
+            className={`flex h-11 items-center justify-center gap-1.5 rounded-lg border border-[#0068FF] text-[13px] font-bold text-[#0068FF] transition-colors ${
               hasPhone ? 'hover:bg-[#0068FF]/5' : 'opacity-50 cursor-not-allowed'
             }`}
           >
-            <svg viewBox="0 0 48 48" className="w-5 h-5" fill="currentColor">
-              <path d="M24 4C13 4 4 12.1 4 22.2c0 5.8 3 11 7.8 14.4L10 42l6.2-3.2A21 21 0 0024 40.4c11 0 20-8.1 20-18.2S35 4 24 4z" />
-              <path d="M14.5 25.5l3.2-4.7h1.5l-2.4 3.6 2.6 4h-1.6l-1.9-2.9-.9 1v1.9H14V20.8h1.5v4.7zm5.8-4.7h1.5v8H20.3zm2.8 0H27a3 3 0 013 3v2a3 3 0 01-3 3h-4v-8zm1.5 1.5v5H27a1.5 1.5 0 001.5-1.5v-2A1.5 1.5 0 0027 22.3h-2.4zm5.2-1.5h4.5v1.5H31v1.7h3v1.5h-3v1.8h3.3v1.5H30V20.8z" fill="white" />
-            </svg>
+            <ZaloIcon className="h-4 w-4 shrink-0" />
             Zalo
           </a>
           <Button
             variant="outline"
             onClick={focusMessageForm}
-            className="border-gray-200 text-gray-700 hover:bg-gray-50 font-bold h-11"
+            className="h-11 gap-1.5 border-gray-200 font-bold text-gray-700 hover:bg-gray-50"
           >
-            <MessageSquare className="w-4 h-4 mr-1.5" />
+            <MessageSquare className="h-4 w-4" />
             Nhắn tin
           </Button>
         </div>
