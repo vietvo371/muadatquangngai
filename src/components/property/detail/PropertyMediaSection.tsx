@@ -1,43 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Camera } from 'lucide-react';
 import Image from 'next/image';
 import { IMAGE_CATEGORY_OPTIONS, VALID_IMAGE_CATEGORIES } from '@/lib/property-form-config';
-import { parseYoutubeId } from '@/components/shared/ImageUploader';
+import { immediateVideoCover, parseVimeoId } from '@/lib/video-sources';
 import { PropertyImageSlider } from './PropertyImageSlider';
 import { PropertyGalleryLightbox, type GalleryTabKey } from './PropertyGalleryLightbox';
 import { PropertyMediaThumbnails, type MediaThumbnail } from './PropertyMediaThumbnails';
-
-/**
- * Ảnh đại diện của video YouTube — lấy theo mã video trên máy chủ ảnh công khai của YouTube,
- * không cần khoá API. Video tự tải lên (mp4...) chưa trích được khung hình nên trả null, ô sẽ
- * hiện nền tối kèm biểu tượng play (Notion 30/09 "Video – Fallback").
- */
-function youtubeThumbnail(url: string): string | undefined {
-  const id = parseYoutubeId(url);
-  return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : undefined;
-}
-
-/**
- * Khung hình đầu của video tải lên Cloudinary: đổi đuôi file sang .jpg là Cloudinary tự dựng
- * ảnh, không tốn thêm dịch vụ và không cần khoá API.
- */
-function cloudinaryVideoFrame(url: string): string | undefined {
-  if (!/^https:\/\/res\.cloudinary\.com\/[^/]+\/video\/upload\//.test(url)) return undefined;
-  return `${url.replace(/\.[A-Za-z0-9]+$/, '')}.jpg`;
-}
-
-/** Ảnh đại diện của video, theo thứ tự nguồn đáng tin cậy nhất. */
-function videoCover(video: PropertyMediaFile): string | undefined {
-  return (
-    youtubeThumbnail(video.url) ??
-    cloudinaryVideoFrame(video.url) ??
-    // `thumbnail` của API rơi về chính đường dẫn video khi người đăng không tải ảnh riêng —
-    // dùng thẳng thì ô video trống trơn, nên chỉ nhận khi nó thực sự khác đường dẫn video.
-    (video.thumbnail && video.thumbnail !== video.url ? video.thumbnail : undefined)
-  );
-}
 
 export interface PropertyMediaImage {
   id?: number;
@@ -94,6 +64,22 @@ export function PropertyMediaSection({
   const [albumOpen, setAlbumOpen] = useState(false);
   const [albumTab, setAlbumTab] = useState<GalleryTabKey>('photos');
   const [albumCategory, setAlbumCategory] = useState<string | null>(null);
+  // Ảnh đại diện video Vimeo phải hỏi Vimeo mới có (xem /api/v2/video-thumbnail) — các nguồn
+  // khác lấy được ngay nên không cần gọi mạng.
+  const [vimeoCover, setVimeoCover] = useState<string | undefined>(undefined);
+
+  const firstVideoUrl = videos[0]?.url;
+  useEffect(() => {
+    if (!firstVideoUrl || !parseVimeoId(firstVideoUrl)) return;
+    let cancelled = false;
+    fetch(`/api/v2/video-thumbnail?url=${encodeURIComponent(firstVideoUrl)}`)
+      .then((r) => r.json())
+      .then((body) => {
+        if (!cancelled && body?.data?.thumbnail) setVimeoCover(body.data.thumbnail);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [firstVideoUrl]);
 
   if (media.length === 0) return null;
 
@@ -146,7 +132,7 @@ export function PropertyMediaSection({
       key: 'videos',
       label: 'Video',
       count: videos.length,
-      cover: videoCover(video),
+      cover: immediateVideoCover(video) ?? vimeoCover,
       icon: 'video',
     });
   }

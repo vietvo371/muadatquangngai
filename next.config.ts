@@ -57,6 +57,11 @@ const nextConfig: NextConfig = {
         hostname: "res.cloudinary.com",
       },
       {
+        // Ảnh đại diện video Vimeo — lấy qua /api/v2/video-thumbnail rồi hiện ở ô "Video".
+        protocol: "https",
+        hostname: "i.vimeocdn.com",
+      },
+      {
         // Ảnh đại diện video YouTube — dùng làm ảnh nền ô "Video" trên thanh Thumbnail của trang
         // chi tiết. Thiếu host này thì next/image từ chối và ô video hiện trống.
         protocol: "https",

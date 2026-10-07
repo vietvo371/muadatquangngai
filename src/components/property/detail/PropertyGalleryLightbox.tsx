@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic';
 import { toast } from 'sonner';
 import { ArrowLeft, Phone, Share2, Heart, FileText, ExternalLink } from 'lucide-react';
 import { IMAGE_CATEGORY_OPTIONS } from '@/lib/property-form-config';
-import { parseYoutubeId } from '@/components/shared/ImageUploader';
+import { videoEmbedUrl } from '@/lib/video-sources';
 import { useFavorite } from '@/hooks/useFavorite';
 import { PropertyImageSlider } from './PropertyImageSlider';
 import type { PropertyMediaImage, PropertyMediaFile } from './PropertyMediaSection';
@@ -352,21 +352,32 @@ export function PropertyGalleryLightbox({
 
             {activeTab === 'videos' && videos.length > 0 && (
               <div className="space-y-4">
-                {videos.map((v) => {
-                  const ytId = parseYoutubeId(v.url);
+                {videos.map((v, index) => {
+                  // Chỉ video ĐẦU TIÊN tự phát khi mở cửa sổ xem (Notion 06/10 "Thumbnail Media
+                  // – Video"); các video sau để người xem tự bấm, tránh nhiều video cùng chạy.
+                  const autoplay = index === 0;
+                  const embed = videoEmbedUrl(v.url, { autoplay });
                   return (
                     <div key={v.id ?? v.url} className="w-full aspect-video rounded-xl overflow-hidden border border-gray-200 bg-black">
-                      {ytId ? (
+                      {embed ? (
                         <iframe
-                          src={`https://www.youtube.com/embed/${ytId}`}
+                          src={embed}
                           className="w-full h-full"
                           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                           allowFullScreen
-                          loading="lazy"
                         />
                       ) : (
+                        // File tự tải lên: tự phát nhưng TẮT TIẾNG, vì trình duyệt chặn tự phát
+                        // có tiếng. Bị chặn thì vẫn còn thanh điều khiển để bấm phát tay.
                         // eslint-disable-next-line jsx-a11y/media-has-caption
-                        <video src={v.url} controls className="w-full h-full" />
+                        <video
+                          src={v.url}
+                          controls
+                          autoPlay={autoplay}
+                          muted={autoplay}
+                          playsInline
+                          className="w-full h-full"
+                        />
                       )}
                     </div>
                   );
