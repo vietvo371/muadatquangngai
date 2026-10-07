@@ -6,7 +6,8 @@ import { isValidPhone, isValidEmail } from '@/lib/property-form-config';
 import { dbNow, dbAgo } from '@/lib/db-time';
 
 /**
- * POST /api/v2/leads — khách gửi "Yêu cầu tư vấn" từ trang chi tiết BĐS.
+ * POST /api/v2/leads — khách gửi "Yêu cầu tư vấn" từ trang chi tiết BĐS hoặc trang dự án
+ * (gửi `property_slug` hoặc `project_slug`).
  *
  * Trước đây form này ở `ContactSidebar` chỉ là 3 ô input + nút bấm KHÔNG nối gì: khách điền
  * xong bấm "Gửi yêu cầu" thì không có gì xảy ra và chủ tin mất luôn khách hàng tiềm năng.
@@ -54,10 +55,34 @@ export async function POST(request: Request) {
     }
   }
 
+  // Lead từ trang DỰ ÁN (Notion 07/10). Bảng leads chưa có cột dự án, nên gắn cho người phụ
+  // trách dự án qua owner_id (môi giới phụ trách, không có thì người tạo dự án) và ghi tên dự
+  // án vào đầu lời nhắn để người nhận biết khách hỏi dự án nào. Trước đây form liên hệ ở trang
+  // dự án chỉ chờ 0,8 giây rồi báo "đã gửi" — không gửi đi đâu, khách để lại số là mất.
+  const projectSlug = !slug && typeof body?.project_slug === 'string' ? body.project_slug.trim() : '';
+  let projectName = '';
+  if (projectSlug) {
+    const project = await db.projects
+      .findFirst({ where: { slug: projectSlug }, select: { name: true, agent_id: true, user_id: true } })
+      .catch(() => null);
+    if (project) {
+      ownerId = project.agent_id ?? project.user_id;
+      projectName = project.name;
+    }
+  }
+  const source = projectSlug ? 'project_detail' : 'property_detail';
+  const fullMessage = projectName ? `[Dự án ${projectName}] ${message ?? ''}`.trim() : message;
+  const subjectTitle = propertyTitle || (projectName ? `Dự án ${projectName}` : '');
+
   // Cùng gốc giờ với lúc ghi (dbNow) — trộn new Date() vào đây làm cửa sổ chống trùng lệch 7 tiếng.
   const since = dbAgo(DEDUPE_MINUTES * 60 * 1000);
   const duplicated = await db.leads.findFirst({
-    where: { phone: phoneRaw, property_id: propertyId, created_at: { gte: since } },
+    where: {
+      phone: phoneRaw,
+      property_id: propertyId,
+      ...(projectSlug ? { owner_id: ownerId, source } : {}),
+      created_at: { gte: since },
+    },
     select: { id: true },
   });
   if (duplicated) {
@@ -84,8 +109,8 @@ export async function POST(request: Request) {
         name: leadName,
         phone: phoneRaw,
         email: email ?? null,
-        message,
-        source: 'property_detail',
+        message: fullMessage,
+        source,
         status: 'new',
         created_at: now,
         updated_at: now,
@@ -98,8 +123,13 @@ export async function POST(request: Request) {
           user_id: ownerId,
           type: 'lead',
           title: 'Khách hàng mới cần tư vấn',
-          body: `${leadName || 'Khách'} · ${phoneRaw}${propertyTitle ? ` — ${propertyTitle}` : ''}`,
-          data: { action_url: '/dashboard/khach-hang', lead_uuid: leadUuid, property_slug: slug || null },
+          body: `${leadName || 'Khách'} · ${phoneRaw}${subjectTitle ? ` — ${subjectTitle}` : ''}`,
+          data: {
+            action_url: '/dashboard/khach-hang',
+            lead_uuid: leadUuid,
+            property_slug: slug || null,
+            project_slug: projectSlug || null,
+          },
           is_read: false,
           created_at: now,
           updated_at: now,

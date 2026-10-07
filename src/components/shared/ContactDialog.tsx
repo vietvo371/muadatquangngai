@@ -1,33 +1,52 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { X } from 'lucide-react';
+import { apiSend, toApiError } from '@/lib/api-client';
 
 interface ContactDialogProps {
   open: boolean;
   onClose: () => void;
   projectName?: string;
+  /** Có thì lead được gắn cho người phụ trách dự án và họ nhận thông báo ngay. */
+  projectSlug?: string;
 }
 
-export function ContactDialog({ open, onClose, projectName }: ContactDialogProps) {
+export function ContactDialog({ open, onClose, projectName, projectSlug }: ContactDialogProps) {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [note, setNote] = useState(projectName ? `Tôi quan tâm đến ${projectName}` : 'Tôi quan tâm đến dự án này');
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (!open) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    await new Promise((r) => setTimeout(r, 800));
-    setSubmitting(false);
-    setSent(true);
+    setError(null);
+    // Trước đây chỗ này chỉ chờ 0,8 giây rồi báo "Gửi thành công" — không gửi đi đâu cả, khách
+    // để lại số điện thoại là mất. Giờ lưu thật vào bảng leads và báo cho người phụ trách.
+    try {
+      await apiSend('post', '/api/v2/leads', {
+        name: name.trim(),
+        phone: phone.trim(),
+        message: note.trim(),
+        ...(projectSlug ? { project_slug: projectSlug } : {}),
+      });
+      setSent(true);
+    } catch (err) {
+      setError(toApiError(err).message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleClose = () => {
     setSent(false);
+    setError(null);
     setName('');
     setPhone('');
     setNote(projectName ? `Tôi quan tâm đến ${projectName}` : 'Tôi quan tâm đến dự án này');
@@ -107,9 +126,15 @@ export function ContactDialog({ open, onClose, projectName }: ContactDialogProps
 
             <p className="text-xs text-gray-400">
               Bằng việc gửi thông tin, bạn đồng ý với{' '}
-              <span className="text-primary underline cursor-pointer">chính sách bảo mật</span>{' '}
+              <Link href="/chinh-sach" target="_blank" className="text-primary underline">chính sách bảo mật</Link>{' '}
               và cho phép BatDongSanQN thu thập, xử lý, chia sẻ thông tin tới môi giới, chủ đầu tư để liên lạc với bạn.
             </p>
+
+            {error && (
+              <p role="alert" className="rounded-lg bg-gray-50 px-3 py-2 text-[13px] text-cta">
+                {error}
+              </p>
+            )}
 
             <button
               type="submit"
