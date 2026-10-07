@@ -9,13 +9,49 @@ interface ErrorProps {
   reset: () => void;
 }
 
+/**
+ * Lỗi "Failed to load chunk ..." gần như luôn có một nguyên nhân: trang đang mở thuộc bản
+ * build cũ, còn máy chủ đã deploy bản mới và xoá các tệp cũ đi. Người dùng không làm gì sai
+ * và cũng chẳng có gì để họ khắc phục — tải lại trang là xong.
+ */
+function isStaleBuildError(error: Error): boolean {
+  const text = `${error.name} ${error.message}`;
+  return /Loading chunk|Failed to load chunk|ChunkLoadError|Loading CSS chunk|error loading dynamically imported module/i.test(
+    text
+  );
+}
+
+/** Chặn vòng lặp tải lại vô tận nếu nguyên nhân thật ra không phải bản build cũ. */
+const RELOAD_GUARD_KEY = 'mdqn:chunk-reload-at';
+const RELOAD_GUARD_MS = 30_000;
+
 export default function ErrorPage({ error, reset }: ErrorProps) {
   const [showDetails, setShowDetails] = useState(false);
+  const [autoReloading, setAutoReloading] = useState(false);
 
   useEffect(() => {
     // Log the error to an error reporting service if available
     console.error("System Error boundary caught error:", error);
+
+    if (!isStaleBuildError(error)) return;
+    try {
+      const last = Number(sessionStorage.getItem(RELOAD_GUARD_KEY) ?? 0);
+      if (Date.now() - last < RELOAD_GUARD_MS) return;
+      sessionStorage.setItem(RELOAD_GUARD_KEY, String(Date.now()));
+    } catch {
+      // Trình duyệt chặn sessionStorage (chế độ ẩn danh): vẫn tải lại, chỉ mất lớp chống lặp.
+    }
+    setAutoReloading(true);
+    window.location.reload();
   }, [error]);
+
+  if (autoReloading) {
+    return (
+      <div className="flex min-h-screen flex-1 items-center justify-center px-6">
+        <p className="text-[14px] text-gray-500">Đang cập nhật phiên bản mới...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-white to-gray-50 px-6 py-12 relative overflow-hidden font-sans">

@@ -11,7 +11,10 @@ import { RefreshCw } from 'lucide-react';
  * "Failed to find Server Action"). Thay vì để họ bấm mãi, hiện thanh nhắc tải lại.
  */
 
-const POLL_MS = 5 * 60 * 1000;
+// 5 phút là quá thưa: giữa hai lần hỏi, người dùng bấm chuyển trang sẽ gặp lỗi "Failed to
+// load chunk" của bản build cũ TRƯỚC khi thanh nhắc kịp hiện. 60 giây thu hẹp khoảng đó mà
+// vẫn chỉ là một yêu cầu nhỏ xíu mỗi phút.
+const POLL_MS = 60 * 1000;
 
 export function NewVersionBanner() {
   const [outdated, setOutdated] = useState(false);
