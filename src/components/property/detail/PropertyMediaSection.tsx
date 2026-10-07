@@ -152,11 +152,16 @@ export function PropertyMediaSection({
     });
   }
   if (latitude != null && longitude != null) {
-    // Bản đồ và Đường phố: ảnh chụp tĩnh theo toạ độ cần khoá API Google có gắn thẻ thanh toán —
-    // khách chốt 22/09 là KHÔNG gắn thẻ, nên hai ô này để nền tối kèm biểu tượng. Bấm vào vẫn mở
-    // bản đồ / ảnh đường phố thật tại đúng vị trí tin. Khi nào khách bật khoá thì gắn ảnh vào đây.
-    thumbnails.push({ key: 'map', label: 'Bản đồ', icon: 'map' });
-    thumbnails.push({ key: 'streetview', label: 'Đường phố', icon: 'streetview' });
+    // Bản đồ và Đường phố: không có ảnh tải lên nào làm bìa, và ảnh tĩnh của Google cần khoá có
+    // gắn thẻ (khách chốt 22/09 KHÔNG gắn). Bìa dựng tại chỗ theo toạ độ bằng bản đồ Goong / khung
+    // Street View không cần khoá — xem ThumbnailLiveCover.tsx (Notion 06/10).
+    thumbnails.push({ key: 'map', label: 'Bản đồ', icon: 'map', live: { kind: 'map', lat: latitude, lng: longitude } });
+    thumbnails.push({
+      key: 'streetview',
+      label: 'Đường phố',
+      icon: 'streetview',
+      live: { kind: 'streetview', lat: latitude, lng: longitude },
+    });
   }
 
   /** Bấm một ô Thumbnail → mở album đúng nhóm/loại media đó. */

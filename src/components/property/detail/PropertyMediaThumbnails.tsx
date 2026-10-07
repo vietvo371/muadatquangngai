@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
+import { MapSnapshotCover, StreetViewCover } from './ThumbnailLiveCover';
 import {
   Bath,
   Bed,
@@ -43,6 +44,11 @@ export interface MediaThumbnail {
   /** Số lượng media trong nhóm; bỏ trống khi nhóm không đếm theo ảnh (vd Tour 360). */
   count?: number;
   cover?: string;
+  /**
+   * Ảnh bìa dựng tại chỗ theo toạ độ cho ô Bản đồ / Đường phố (không có ảnh tải lên nào để làm
+   * bìa) — xem ThumbnailLiveCover.tsx. Lỗi thì ô giữ nền tối + biểu tượng.
+   */
+  live?: { kind: 'map' | 'streetview'; lat: number; lng: number };
   icon: ThumbnailIconKey;
 }
 
@@ -155,8 +161,10 @@ export function PropertyMediaThumbnails({ thumbnails, onSelect }: Props) {
                     className="object-cover transition-transform duration-300 group-hover:scale-105"
                   />
                 )}
-                {thumb.cover && (
-                  <div className="absolute inset-0 bg-black/45 transition-colors group-hover:bg-black/30" />
+                {thumb.live?.kind === 'map' && <MapSnapshotCover lat={thumb.live.lat} lng={thumb.live.lng} />}
+                {thumb.live?.kind === 'streetview' && <StreetViewCover lat={thumb.live.lat} lng={thumb.live.lng} />}
+                {(thumb.cover || thumb.live) && (
+                  <div className="absolute inset-0 bg-black/35 transition-colors group-hover:bg-black/20" />
                 )}
                 <Icon className="absolute inset-0 m-auto h-7 w-7 text-white drop-shadow" strokeWidth={1.75} />
               </div>
