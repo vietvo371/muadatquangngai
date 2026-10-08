@@ -49,3 +49,6 @@ raw_properties.json
 /src/generated/prisma
 
 !.env.example
+
+# Tài khoản thử trên DB LOCAL cho bộ quét giao diện — không commit
+scripts/mobile-scan.local.json

@@ -395,21 +395,23 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
 
   return (
     <div className="max-w-4xl mx-auto py-2">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
+      {/* Header — điện thoại: hai nút xuống hàng riêng dưới tiêu đề. Đặt cạnh tiêu đề như máy
+          tính thì nhóm nút rộng 289px đẩy trang ra 421px trên màn 360px, trình duyệt tự thu nhỏ
+          cả trang. */}
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-4">
           <Link href="/dashboard/quan-ly-tin">
             <Button variant="outline" size="icon" className="rounded-xl h-10 w-10 border-gray-200 text-gray-500 hover:bg-gray-50">
               <ChevronLeft className="h-5 w-5" />
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 leading-tight">Sửa tin đăng</h1>
+            <h1 className="text-xl font-bold text-gray-900 leading-tight sm:text-2xl">Sửa tin đăng</h1>
             <p className="text-gray-500 text-[13px] mt-0.5">Cập nhật thông tin chi tiết của bất động sản</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
           <Button variant="outline" onClick={handleSaveDraft} disabled={isSubmitting} className="h-10 px-4 border-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-50">
             <Save className="h-4 w-4 mr-2" />
             Lưu thay đổi

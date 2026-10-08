@@ -362,10 +362,11 @@ export default function SettingsPage() {
         <p className="text-gray-500 mt-1">Cấu hình cá nhân, thông báo và bảo mật tài khoản</p>
       </div>
 
-      <div className="grid lg:grid-cols-12 gap-6 items-start">
-        {/* Sidebar Tabs */}
-        <div className="lg:col-span-3">
-          <Card className="rounded-2xl border-gray-100 shadow-sm overflow-hidden sticky top-24">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Sidebar Tabs — chỉ dính trên máy tính. Trên điện thoại menu này nằm TRÊN nội dung và
+            cao 254px; dính lại thì che 1/3 màn hình suốt lúc cuộn qua các mục cài đặt. */}
+        <div className="min-w-0 lg:col-span-3">
+          <Card className="rounded-2xl border-gray-100 shadow-sm overflow-hidden lg:sticky lg:top-24">
             <div className="p-3">
               <PillTabs 
                 tabs={[
@@ -383,7 +384,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Main Content */}
-        <div className="lg:col-span-9 space-y-6">
+        <div className="min-w-0 lg:col-span-9 space-y-6">
           {/* Profile Tab */}
           {activeTab === 'profile' && (
             <Card className="rounded-2xl shadow-sm border-gray-100 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300">

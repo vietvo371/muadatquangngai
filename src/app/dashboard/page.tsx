@@ -99,9 +99,11 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6 sm:gap-8">
+      {/* grid-cols-1 + min-w-0: ô lưới không được nở theo nội dung dài (tên tin, hàng nút) — thiếu
+          hai lớp này khối "Tin đăng gần đây" rộng 409px trên điện thoại 360px. */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
         {/* Recent Properties */}
-        <div className="lg:col-span-2">
+        <div className="min-w-0 lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold text-gray-900 tracking-tight">Tin đăng gần đây</h2>
             <Link href="/dashboard/quan-ly-tin">
@@ -183,7 +185,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Sidebar Widgets */}
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           {/* Balance Card */}
           <Card className="bg-gray-900 border-0 rounded-2xl overflow-hidden shadow-lg shadow-gray-900/20 relative">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
