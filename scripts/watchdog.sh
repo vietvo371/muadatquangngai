@@ -22,7 +22,8 @@ log() { echo "$(date '+%Y-%m-%d %H:%M:%S') $*" >> "$LOG"; }
 exec 9>"$LOCK"
 flock -n 9 || exit 0
 
-if pgrep -u "$(id -u)" -f "next build" > /dev/null 2>&1; then
+# "[n]ext build": mẫu này không khớp với chính dòng lệnh nào chứa nguyên văn mẫu tìm kiếm.
+if pgrep -u "$(id -u)" -f "[n]ext build" > /dev/null 2>&1; then
   exit 0
 fi
 
