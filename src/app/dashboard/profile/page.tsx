@@ -104,9 +104,12 @@ export default function ProfilePage() {
         {isBrokerRole(user.role) && <BrokerVerifiedBadge />}
       </div>
 
-      <div className="grid lg:grid-cols-12 gap-6 items-start">
+      {/* grid-cols-1 + min-w-0: không có hai lớp này thì ô lưới nở theo bề rộng ĐẦY ĐỦ của hàng
+          tab bên phải (hàng tab tự vuốt ngang nhưng ô chứa nó vẫn tính theo nội dung), kéo cả
+          trang rộng 444px trên điện thoại 390px. */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Sidebar Profile */}
-        <div className="lg:col-span-4 space-y-6">
+        <div className="min-w-0 lg:col-span-4 space-y-6">
           <Card className="rounded-2xl shadow-sm border-gray-100 overflow-hidden">
             {/* Header background */}
             <div className="h-24 bg-gradient-to-r from-primary/80 to-primary w-full"></div>
@@ -180,7 +183,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Right Main Content */}
-        <div className="lg:col-span-8 space-y-6">
+        <div className="min-w-0 lg:col-span-8 space-y-6">
           <Card className="rounded-2xl shadow-sm border-gray-100">
             <div className="px-6 pt-6 pb-2 border-b border-gray-100">
               <PillTabs 
