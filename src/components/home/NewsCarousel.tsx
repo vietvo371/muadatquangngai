@@ -48,7 +48,7 @@ export function NewsCarousel({ items }: NewsCarouselProps) {
                   className="object-cover group-hover:scale-105 transition-transform duration-500"
                   sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                 />
-                <span className="absolute top-2 left-2 bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-md">
+                <span className="absolute top-2 left-2 bg-primary text-white text-[11px] font-bold px-2 py-0.5 rounded-md">
                   {item.category}
                 </span>
               </div>

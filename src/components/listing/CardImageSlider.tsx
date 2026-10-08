@@ -93,7 +93,7 @@ export function CardImageSlider({
               type="button"
               onClick={(e) => { stop(e); go(-1); }}
               aria-label="Ảnh trước"
-              className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/90 p-1.5 text-gray-800 shadow-md transition-opacity hover:bg-white sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100"
+              className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/90 p-2.5 text-gray-800 sm:p-1.5 shadow-md transition-opacity hover:bg-white sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
@@ -101,7 +101,7 @@ export function CardImageSlider({
               type="button"
               onClick={(e) => { stop(e); go(1); }}
               aria-label="Ảnh sau"
-              className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/90 p-1.5 text-gray-800 shadow-md transition-opacity hover:bg-white sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100"
+              className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/90 p-2.5 text-gray-800 sm:p-1.5 shadow-md transition-opacity hover:bg-white sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100"
             >
               <ChevronRight className="h-4 w-4" />
             </button>

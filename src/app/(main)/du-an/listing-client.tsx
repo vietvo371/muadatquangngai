@@ -236,14 +236,16 @@ function DuAnPageContent() {
 
       )}
 
-      {/* ══ FILTER BAR ══ */}
-      <div className="sticky top-[60px] z-30 border-b border-gray-200 bg-gray-50">
+      {/* ══ FILTER BAR ══
+          Điện thoại: KHÔNG dính trên đầu — khung lọc cao hơn 300px, dính lại thì che hơn nửa màn
+          hình suốt lúc cuộn. Lưới 2 cột cho gọn. Từ md trở lên mới dính và xếp một hàng. */}
+      <div className="border-b border-gray-200 bg-gray-50 md:sticky md:top-[60px] md:z-30">
         <div className="max-w-[1152px] mx-auto px-4 py-3">
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-4 py-3 flex flex-wrap gap-3 items-end">
+          <div className="grid grid-cols-2 gap-2.5 rounded-xl border border-gray-200 bg-white px-3 py-3 shadow-sm md:flex md:flex-wrap md:items-end md:gap-3 md:px-4">
 
           {/* Search */}
-          <div className="relative min-w-[200px] flex-1 max-w-xs">
-            <label className="text-[10px] text-gray-400 font-medium px-1 mb-0.5 block">Tìm kiếm</label>
+          <div className="relative col-span-2 md:min-w-[200px] md:max-w-xs md:flex-1">
+            <label className="text-[11px] text-gray-400 font-medium px-1 mb-0.5 block">Tìm kiếm</label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
               <input
@@ -251,56 +253,56 @@ function DuAnPageContent() {
                 placeholder="Tên dự án, địa chỉ..."
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-primary text-gray-800 placeholder-gray-400"
+                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-primary text-gray-800 placeholder-gray-400 md:py-1.5"
               />
             </div>
           </div>
 
-          <div className="w-px h-8 bg-gray-100 hidden sm:block self-end mb-0.5" />
+          <div className="w-px h-8 bg-gray-100 hidden md:block self-end mb-0.5" />
 
           {/* Khu vực */}
-          <div className="flex flex-col">
-            <label className="text-[10px] text-gray-400 font-medium px-1 mb-0.5">Khu vực</label>
+          <div className="flex min-w-0 flex-col">
+            <label className="text-[11px] text-gray-400 font-medium px-1 mb-0.5">Khu vực</label>
             <select
               value={districtFilter}
               onChange={(e) => { setDistrictFilter(e.target.value); setPage(1); }}
-              className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:border-primary cursor-pointer font-medium min-w-[130px]"
+              className="h-10 w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:border-primary cursor-pointer font-medium md:h-auto md:w-auto md:min-w-[130px]"
             >
               {districts.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
             </select>
           </div>
 
           {/* Loại hình */}
-          <div className="flex flex-col">
-            <label className="text-[10px] text-gray-400 font-medium px-1 mb-0.5">Loại hình</label>
+          <div className="flex min-w-0 flex-col">
+            <label className="text-[11px] text-gray-400 font-medium px-1 mb-0.5">Loại hình</label>
             <select
               value={typeFilter}
               onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}
-              className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:border-primary cursor-pointer font-medium min-w-[130px]"
+              className="h-10 w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:border-primary cursor-pointer font-medium md:h-auto md:w-auto md:min-w-[130px]"
             >
               {types.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
           </div>
 
           {/* Khoảng giá */}
-          <div className="flex flex-col">
-            <label className="text-[10px] text-gray-400 font-medium px-1 mb-0.5">Khoảng giá</label>
+          <div className="flex min-w-0 flex-col">
+            <label className="text-[11px] text-gray-400 font-medium px-1 mb-0.5">Khoảng giá</label>
             <select
               value={priceFilter}
               onChange={(e) => { setPriceFilter(e.target.value); setPage(1); }}
-              className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:border-primary cursor-pointer font-medium min-w-[130px]"
+              className="h-10 w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:border-primary cursor-pointer font-medium md:h-auto md:w-auto md:min-w-[130px]"
             >
               {priceRanges.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
             </select>
           </div>
 
           {/* Trạng thái */}
-          <div className="flex flex-col">
-            <label className="text-[10px] text-gray-400 font-medium px-1 mb-0.5">Trạng thái</label>
+          <div className="flex min-w-0 flex-col">
+            <label className="text-[11px] text-gray-400 font-medium px-1 mb-0.5">Trạng thái</label>
             <select
               value={statusFilter}
               onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-              className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:border-primary cursor-pointer font-medium min-w-[120px]"
+              className="h-10 w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:border-primary cursor-pointer font-medium md:h-auto md:w-auto md:min-w-[120px]"
             >
               {statuses.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
             </select>
@@ -311,9 +313,12 @@ function DuAnPageContent() {
             onClick={resetFilters}
             disabled={!isDirty}
             title="Đặt lại bộ lọc"
-            className="p-2 rounded-lg border border-gray-200 text-gray-400 hover:text-primary hover:border-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors self-end"
+            className={`col-span-2 items-center justify-center gap-1.5 rounded-lg border border-gray-200 py-2 text-sm text-gray-500 transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-30 md:col-auto md:flex md:self-end md:p-2 md:text-gray-400 ${
+              isDirty ? 'flex' : 'hidden'
+            }`}
           >
             <RotateCcw className="h-4 w-4" />
+            <span className="md:hidden">Xoá bộ lọc</span>
           </button>
 
           </div>{/* end card */}

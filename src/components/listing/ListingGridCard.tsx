@@ -63,7 +63,7 @@ export function ListingGridCard({ property }: { property: GridCardProperty }) {
         <button
           type="button"
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggle(); }}
-          className={`absolute right-2.5 top-2.5 rounded-full bg-white/95 p-1.5 shadow-sm transition-colors hover:text-cta ${
+          className={`absolute right-2.5 top-2.5 rounded-full bg-white/95 p-2.5 shadow-sm sm:p-1.5 transition-colors hover:text-cta ${
             isSaved ? 'text-cta' : 'text-gray-500'
           }`}
           aria-label={isSaved ? 'Bỏ lưu tin' : 'Lưu tin'}

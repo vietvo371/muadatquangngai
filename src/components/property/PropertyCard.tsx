@@ -112,7 +112,7 @@ export function PropertyCard({ property, className, variant = 'default' }: Prope
             {/* Heart */}
             <button
               onClick={(e) => { e.preventDefault(); toggleFavorite(); }}
-              className={`absolute right-2 top-2 rounded-full bg-white/90 p-1.5 shadow-sm transition-colors hover:bg-white hover:text-[#e03131] ${
+              className={`absolute right-2 top-2 rounded-full bg-white/90 p-2.5 shadow-sm sm:p-1.5 transition-colors hover:bg-white hover:text-[#e03131] ${
                 isSaved ? 'text-[#e03131]' : 'text-gray-400'
               }`}
               aria-label={isSaved ? 'Bỏ lưu tin' : 'Lưu tin'}
@@ -271,7 +271,7 @@ export function PropertyCard({ property, className, variant = 'default' }: Prope
         {/* Heart Button */}
         <button
           onClick={(e) => { e.preventDefault(); toggleFavorite(); }}
-          className={`absolute top-2 right-2 p-1.5 bg-white/90 hover:bg-white rounded-full shadow-sm transition-colors hover:text-[#e03131] ${
+          className={`absolute top-2 right-2 p-2.5 sm:p-1.5 bg-white/90 hover:bg-white rounded-full shadow-sm transition-colors hover:text-[#e03131] ${
             isSaved ? 'text-[#e03131]' : 'text-gray-400'
           }`}
           aria-label={isSaved ? 'Bỏ lưu tin' : 'Lưu tin'}

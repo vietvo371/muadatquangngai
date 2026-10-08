@@ -78,7 +78,7 @@ export function LoanCalculator({ initialValue }: { initialValue: number | null }
               }}
               className="h-9 w-full rounded-lg border border-gray-200 bg-white px-3 text-xs font-semibold outline-none focus:border-primary focus:ring-1 focus:ring-primary/25"
             />
-            {formatMoney(value) && <span className="text-[10px] font-medium text-primary">Bằng chữ: {formatMoney(value)}</span>}
+            {formatMoney(value) && <span className="text-[11px] font-medium text-primary">Bằng chữ: {formatMoney(value)}</span>}
           </label>
 
           <label className="block space-y-1">
@@ -141,30 +141,30 @@ export function LoanCalculator({ initialValue }: { initialValue: number | null }
             <>
               <div className="space-y-3 text-xs">
                 <div className="border-b border-gray-200/50 pb-2.5">
-                  <p className="mb-0.5 text-[10px] font-bold uppercase tracking-wide text-gray-400">Cần chuẩn bị ({100 - ratio}%)</p>
+                  <p className="mb-0.5 text-[11px] font-bold uppercase tracking-wide text-gray-400">Cần chuẩn bị ({100 - ratio}%)</p>
                   <p className="font-bold text-gray-700">{vnd(value - result.loanAmount)}</p>
                 </div>
                 <div className="border-b border-gray-200/50 pb-2.5">
-                  <p className="mb-0.5 text-[10px] font-bold uppercase tracking-wide text-gray-400">Số tiền vay ({ratio}%)</p>
+                  <p className="mb-0.5 text-[11px] font-bold uppercase tracking-wide text-gray-400">Số tiền vay ({ratio}%)</p>
                   <p className="font-bold text-primary">{vnd(result.loanAmount)}</p>
                 </div>
                 <div className="border-b border-gray-200/50 pb-2.5">
-                  <p className="mb-0.5 text-[10px] font-bold uppercase tracking-wide text-gray-400">Trả tháng đầu (gốc + lãi)</p>
+                  <p className="mb-0.5 text-[11px] font-bold uppercase tracking-wide text-gray-400">Trả tháng đầu (gốc + lãi)</p>
                   <p className="text-sm font-extrabold text-gray-900">{vnd(result.firstMonthPayment)}</p>
-                  <p className="mt-0.5 text-[10px] text-gray-400">
+                  <p className="mt-0.5 text-[11px] text-gray-400">
                     Gốc {vnd(result.monthlyPrincipal)} + Lãi {vnd(result.firstMonthInterest)}
                   </p>
                 </div>
                 <div>
-                  <p className="mb-0.5 text-[10px] font-bold uppercase tracking-wide text-gray-400">Tổng tiền lãi</p>
+                  <p className="mb-0.5 text-[11px] font-bold uppercase tracking-wide text-gray-400">Tổng tiền lãi</p>
                   <p className="font-bold text-gray-700">{vnd(result.totalInterest)}</p>
                 </div>
               </div>
               <div className="rounded-lg border border-primary/10 bg-primary/5 p-2.5 text-center">
-                <p className="mb-0.5 text-[9px] font-bold uppercase tracking-wider text-primary">Tổng phải trả</p>
+                <p className="mb-0.5 text-[11px] font-bold uppercase tracking-wider text-primary">Tổng phải trả</p>
                 <p className="text-sm font-extrabold text-primary">{vnd(result.loanAmount + result.totalInterest)}</p>
               </div>
-              <p className="text-[10px] leading-snug text-gray-400">
+              <p className="text-[12px] leading-snug text-gray-400">
                 Số liệu chỉ để tham khảo. Lãi suất và điều kiện vay thực tế tuỳ từng ngân hàng.
               </p>
             </>

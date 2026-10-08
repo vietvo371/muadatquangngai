@@ -118,7 +118,7 @@ export function ProjectGallery({ project }: { project: Project }) {
             <div key={label} className="flex flex-col items-center px-2 py-3 text-center">
               <Icon className="mb-1 h-4 w-4 text-primary" />
               <span className="text-xs font-semibold text-gray-800 md:text-sm">{value}</span>
-              <span className="text-[10px] text-gray-400 md:text-xs">{label}</span>
+              <span className="text-[11px] text-gray-400 md:text-xs">{label}</span>
             </div>
           ))}
         </div>

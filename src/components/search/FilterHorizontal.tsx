@@ -138,7 +138,9 @@ export function FilterHorizontal({
 
   return (
     <div ref={containerRef} className="sticky top-[60px] z-30 -mx-4 mb-5 border-b border-gray-100 bg-white/95 px-4 py-3 backdrop-blur lg:-mx-6 lg:px-6">
-      <div className="flex flex-wrap items-center gap-2 text-[13px] text-gray-700">
+      {/* Điện thoại: MỘT hàng vuốt ngang. Xuống dòng như trên máy tính thì 7 chip thành 3 hàng,
+          cộng header là thanh dính này che 1/3 màn hình suốt lúc cuộn. */}
+      <div className="-mx-4 flex flex-nowrap items-center gap-2 overflow-x-auto px-4 text-[13px] text-gray-700 scrollbar-hide md:mx-0 md:flex-wrap md:overflow-visible md:px-0">
         {/* Bộ lọc — nút tối, số đếm = số nhóm lọc đang bật; mở phần lọc nâng cao. */}
         <Chip
           dark
@@ -290,7 +292,7 @@ export function FilterHorizontal({
 
         <Chip active={sort !== 'newest'} open={open === 'sort'} onClick={() => toggle('sort')} label={sortLabel}>
           {open === 'sort' && (
-            <div className="absolute left-0 top-[42px] z-40 w-56 rounded-xl border border-gray-150 bg-white p-1.5 shadow-xl">
+            <div className="absolute left-0 top-[42px] z-40 w-56 rounded-xl border border-gray-150 bg-white p-1.5 shadow-xl max-md:fixed max-md:inset-x-3 max-md:top-full max-md:mt-1 max-md:w-auto max-md:max-w-none max-md:max-h-[65vh] max-md:overflow-y-auto">
               {SORT_OPTIONS.map((o) => (
                 <button
                   key={o.value}
@@ -325,13 +327,13 @@ export function FilterHorizontal({
             <button
               type="button"
               onClick={() => { setLocalSearch(''); onSearchQueryChange(''); }}
-              className="rounded-full p-1 text-gray-400 hover:bg-gray-200"
+              className="-my-1.5 rounded-full p-2.5 text-gray-400 hover:bg-gray-200"
               aria-label="Xoá từ khoá"
             >
               <X className="h-3.5 w-3.5" />
             </button>
           )}
-          <button type="submit" className="ml-1 text-gray-500 hover:text-primary" aria-label="Tìm kiếm">
+          <button type="submit" className="-my-2 -mr-2 ml-0 p-2.5 text-gray-500 hover:text-primary" aria-label="Tìm kiếm">
             <Search className="h-4 w-4" />
           </button>
         </form>
@@ -358,7 +360,7 @@ function Chip({
       ? 'border-primary bg-primary-light font-semibold text-primary'
       : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300';
   return (
-    <div className="relative">
+    <div className="relative shrink-0">
       <button
         type="button"
         onClick={onClick}
@@ -387,7 +389,7 @@ function Panel({
     <div
       className={`absolute left-0 top-[42px] z-40 max-w-[calc(100vw-2rem)] rounded-xl border border-gray-150 bg-white p-4 shadow-xl ${
         wide ? 'w-[380px]' : 'w-[290px]'
-      }`}
+      } max-md:fixed max-md:inset-x-3 max-md:top-full max-md:mt-1 max-md:w-auto max-md:max-w-none max-md:max-h-[65vh] max-md:overflow-y-auto`}
     >
       <div className="space-y-4">{children}</div>
       <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3">

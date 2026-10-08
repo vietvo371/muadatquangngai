@@ -197,6 +197,29 @@
   }
 }
 
+/*
+ * iPhone (Safari) tự PHÓNG TO cả trang khi bấm vào ô nhập có chữ nhỏ hơn 16px, rồi không tự
+ * thu lại — người dùng phải dùng hai ngón để thu nhỏ. Phần lớn người dùng xem bằng điện thoại,
+ * nên trên mọi thiết bị cảm ứng ép chữ trong ô nhập tối thiểu 16px. Máy tính (chuột) giữ nguyên
+ * cỡ chữ thiết kế. `!important` vì phải thắng các lớp text-sm/text-xs đặt trực tiếp trên ô.
+ */
+/* Ẩn thanh cuộn của các hàng vuốt ngang (hàng chip lọc, thanh Thumbnail...). Lớp này đã được
+   dùng từ trước nhưng chưa từng được định nghĩa, nên Android vẫn hiện thanh cuộn dưới các hàng. */
+@utility scrollbar-hide {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (pointer: coarse) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
 /* ============================================
    BRAND UTILITY CLASSES
    Dùng các class này thay vì hardcode màu Tailwind.

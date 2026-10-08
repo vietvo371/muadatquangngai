@@ -161,8 +161,9 @@ export default async function HomePage() {
           {/* Quick category pills */}
           <div className="flex flex-wrap justify-center gap-2">
             {quickCategories.map((cat) => (
-              <Link key={cat.label} href={cat.href}>
-                <span className="bg-white/15 hover:bg-white/25 backdrop-blur-sm border border-white/20 text-white text-xs font-medium px-4 py-1.5 rounded-full transition-all hover:border-white/40 cursor-pointer">
+              <Link key={cat.label} href={cat.href} className="inline-flex">
+                {/* Điện thoại: cao 36px cho dễ bấm (trước chỉ 24px); máy tính giữ cỡ gọn cũ. */}
+                <span className="inline-flex h-9 items-center bg-white/15 hover:bg-white/25 backdrop-blur-sm border border-white/20 text-white text-[13px] font-medium px-4 rounded-full transition-all hover:border-white/40 cursor-pointer sm:h-auto sm:py-1.5 sm:text-xs">
                   {cat.label}
                 </span>
               </Link>
