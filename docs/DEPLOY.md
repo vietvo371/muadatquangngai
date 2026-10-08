@@ -2,8 +2,13 @@
 
 Domain: https://muadatquangngai.com
 Server: VPS chung với site suckhoetaman.com (chanan-clone), quản lý qua
-  **CyberPanel** (OpenLiteSpeed). SSH host `139.180.138.113`.
-Site trên CyberPanel: user SSH jailed (CageFS) **`muada4728`**, home
+  **CyberPanel** (OpenLiteSpeed). SSH host `<vps-ip>`.
+> IP gốc của VPS và tên user SSH cố ý không ghi ở đây: repo này public, còn
+> site chạy sau Cloudflare — lộ IP gốc là cho phép đi vòng qua Cloudflare.
+> Lấy giá trị thật trong CyberPanel (Websites → List Websites) hoặc trình
+> quản lý mật khẩu.
+
+Site trên CyberPanel: user SSH jailed (CageFS) **`<ssh-user>`**, home
   `/home/muadatquangngai.com`, docRoot `~/public_html`, cổng Node **3002**
   (3001 đã bị suckhoetaman dùng).
 
@@ -18,7 +23,7 @@ thẳng không cần token).
 ## 0. Việc đã làm 1 lần khi setup ban đầu (22/07/2026)
 
 1. **CyberPanel → site `muadatquangngai.com` → SET UP SSH/SFTP ACCESS**:
-   đặt password cho SSH user của site (`muada4728`) một lần để kích hoạt tài
+   đặt password cho SSH user của site (`<ssh-user>`) một lần để kích hoạt tài
    khoản hệ thống — bắt buộc, nếu chưa đặt password thì API "Add Key" của
    CyberPanel âm thầm KHÔNG ghi được gì vào `~/.ssh/authorized_keys` (tạo
    file rỗng 0 byte, không báo lỗi). Sau khi có password, thêm SSH public
@@ -66,7 +71,7 @@ thẳng không cần token).
    - Trang quản lý site còn có mục **Rewrite Rules** riêng (chưa thử) và
      **Apache Manager** — chưa cần dùng tới vì vHost Conf đã đủ.
 5. **Mở outbound firewall cho Supabase (BẮT BUỘC, xem mục 8) — cần root SSH**,
-   không làm được qua user jailed `muada4728`. Lấy root SSH bằng cách thêm
+   không làm được qua user jailed `<ssh-user>`. Lấy root SSH bằng cách thêm
    SSH public key qua CyberPanel: **Security → Secure SSH → tab "SSH Keys"**
    (`/firewall/secureSSH`, khác hẳn trang "SET UP SSH/SFTP ACCESS" theo site
    ở bước 0.1 — trang này áp dụng cho **root toàn server**) → "Add Key" →
@@ -89,7 +94,7 @@ submodule pointer ở repo `batdongsan` gốc sau khi push nếu cần.
 ## 2. Trên VPS — SSH + biến môi trường
 
 ```bash
-ssh -i ~/.ssh/muadatquangngai_deploy muada4728@139.180.138.113
+ssh -i ~/.ssh/muadatquangngai_deploy <ssh-user>@<vps-ip>
 export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 cd ~/public_html
 ```
@@ -243,7 +248,7 @@ chạy** chưa (đổi config phải build lại, xem mục 5).
 `extprocessor`/`context /` còn nguyên không.
 
 **Không có sudo, không đọc được `/usr/local/lsws/conf/vhosts/`** — tài
-khoản SSH jailed (`muada4728`) không có quyền root, không sửa được config
+khoản SSH jailed (`<ssh-user>`) không có quyền root, không sửa được config
 qua dòng lệnh. Mọi thay đổi vhost phải làm qua CyberPanel web UI (vHost
 Conf), không cần root SSH cho site này.
 
