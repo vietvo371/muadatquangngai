@@ -4,15 +4,19 @@ import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { NotificationBell } from '@/components/layout/NotificationBell';
-import { Menu, Plus, Home, Building2, MessageSquare, User } from 'lucide-react';
+import { Menu, Plus, Home, Building2, MessageSquare, User, Heart } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { isFeatureEnabled } from '@/lib/features';
 
 const mobileNavItems = [
   { href: '/dashboard', icon: Home, label: 'Tổng quan' },
   { href: '/dashboard/dang-tin', icon: Plus, label: 'Đăng tin', isCta: true },
   { href: '/dashboard/quan-ly-tin', icon: Building2, label: 'Quản lý' },
-  { href: '/dashboard/tin-nhan', icon: MessageSquare, label: 'Tin nhắn' },
+  // Tin nhắn đang tạm ẩn (src/lib/features.ts) thì ô này dành cho Tin đã lưu.
+  isFeatureEnabled('messaging')
+    ? { href: '/dashboard/tin-nhan', icon: MessageSquare, label: 'Tin nhắn' }
+    : { href: '/dashboard/tin-da-luu', icon: Heart, label: 'Đã lưu' },
   { href: '/dashboard/profile', icon: User, label: 'Hồ sơ' },
 ];
 

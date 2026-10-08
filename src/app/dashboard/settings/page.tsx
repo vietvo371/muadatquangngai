@@ -38,6 +38,7 @@ import {
   Monitor
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { isFeatureEnabled } from '@/lib/features';
 import { PillTabs } from '@/components/ui/pill-tabs';
 
 export default function SettingsPage() {
@@ -546,17 +547,19 @@ export default function SettingsPage() {
                     Thông báo qua Email
                   </h3>
                   <div className="space-y-4 ml-10">
-                    <div className="flex items-center justify-between p-3 rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors">
-                      <div>
-                        <p className="font-bold text-gray-900 text-[15px]">Tin nhắn mới</p>
-                        <p className="text-sm text-gray-500 font-medium mt-0.5">Nhận email khi có người gửi tin nhắn cho bạn</p>
+                    {isFeatureEnabled('messaging') && (
+                      <div className="flex items-center justify-between p-3 rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors">
+                        <div>
+                          <p className="font-bold text-gray-900 text-[15px]">Tin nhắn mới</p>
+                          <p className="text-sm text-gray-500 font-medium mt-0.5">Nhận email khi có người gửi tin nhắn cho bạn</p>
+                        </div>
+                        <Switch
+                          checked={notifications.email_new_message}
+                          onCheckedChange={(v) => setNotifications({ ...notifications, email_new_message: v })}
+                          className="data-[state=checked]:bg-primary"
+                        />
                       </div>
-                      <Switch
-                        checked={notifications.email_new_message}
-                        onCheckedChange={(v) => setNotifications({ ...notifications, email_new_message: v })}
-                        className="data-[state=checked]:bg-primary"
-                      />
-                    </div>
+                    )}
                     <div className="flex items-center justify-between p-3 rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors">
                       <div>
                         <p className="font-bold text-gray-900 text-[15px]">Thông báo hệ thống</p>
@@ -593,17 +596,19 @@ export default function SettingsPage() {
                     Thông báo đẩy (Push)
                   </h3>
                   <div className="space-y-4 ml-10">
-                    <div className="flex items-center justify-between p-3 rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors">
-                      <div>
-                        <p className="font-bold text-gray-900 text-[15px]">Tin nhắn mới</p>
-                        <p className="text-sm text-gray-500 font-medium mt-0.5">Hiển thị thông báo ngay lập tức trên trình duyệt</p>
+                    {isFeatureEnabled('messaging') && (
+                      <div className="flex items-center justify-between p-3 rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors">
+                        <div>
+                          <p className="font-bold text-gray-900 text-[15px]">Tin nhắn mới</p>
+                          <p className="text-sm text-gray-500 font-medium mt-0.5">Hiển thị thông báo ngay lập tức trên trình duyệt</p>
+                        </div>
+                        <Switch
+                          checked={notifications.push_new_message}
+                          onCheckedChange={(v) => setNotifications({ ...notifications, push_new_message: v })}
+                          className="data-[state=checked]:bg-primary"
+                        />
                       </div>
-                      <Switch
-                        checked={notifications.push_new_message}
-                        onCheckedChange={(v) => setNotifications({ ...notifications, push_new_message: v })}
-                        className="data-[state=checked]:bg-primary"
-                      />
-                    </div>
+                    )}
                     <div className="flex items-center justify-between p-3 rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors">
                       <div>
                         <p className="font-bold text-gray-900 text-[15px]">Thông báo hệ thống</p>
@@ -689,17 +694,19 @@ export default function SettingsPage() {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between p-4 rounded-xl border border-gray-100 bg-white">
-                    <div className="pr-4">
-                      <p className="font-bold text-gray-900 text-[15px]">Cho phép nhắn tin</p>
-                      <p className="text-sm text-gray-500 font-medium mt-0.5">Người dùng khác có thể gửi tin nhắn chat trực tiếp cho bạn</p>
+                  {isFeatureEnabled('messaging') && (
+                    <div className="flex items-center justify-between p-4 rounded-xl border border-gray-100 bg-white">
+                      <div className="pr-4">
+                        <p className="font-bold text-gray-900 text-[15px]">Cho phép nhắn tin</p>
+                        <p className="text-sm text-gray-500 font-medium mt-0.5">Người dùng khác có thể gửi tin nhắn chat trực tiếp cho bạn</p>
+                      </div>
+                      <Switch
+                        checked={privacy.allow_messages}
+                        onCheckedChange={(v) => setPrivacy({ ...privacy, allow_messages: v })}
+                        className="data-[state=checked]:bg-primary shrink-0"
+                      />
                     </div>
-                    <Switch
-                      checked={privacy.allow_messages}
-                      onCheckedChange={(v) => setPrivacy({ ...privacy, allow_messages: v })}
-                      className="data-[state=checked]:bg-primary shrink-0"
-                    />
-                  </div>
+                  )}
                 </div>
 
                 {/* Không có nút "Lưu thay đổi": chưa có cột lưu trong DB — xem banner ở trên. */}

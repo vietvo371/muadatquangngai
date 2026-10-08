@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import api from '@/lib/axios';
 import { formatPrice, formatNumber, formatDate } from '@/lib/formatters';
+import { isFeatureEnabled } from '@/lib/features';
 
 interface RecentProperty {
   id: number;
@@ -198,12 +199,14 @@ export default function DashboardPage() {
               <p className="text-3xl font-extrabold text-white mb-6 tracking-tight">
                 {user?.balance?.toLocaleString('vi-VN') || '0'} đ
               </p>
-              <Link href="/dashboard/nap-tien">
-                <Button className="w-full bg-primary hover:bg-[#0c5d8f] text-white font-bold h-11 border-0 transition-colors">
-                  <CreditCard className="h-4 w-4 mr-2" />
-                  Nạp tiền vào ví
-                </Button>
-              </Link>
+              {isFeatureEnabled('deposit') && (
+                <Link href="/dashboard/nap-tien">
+                  <Button className="w-full bg-primary hover:bg-[#0c5d8f] text-white font-bold h-11 border-0 transition-colors">
+                    <CreditCard className="h-4 w-4 mr-2" />
+                    Nạp tiền vào ví
+                  </Button>
+                </Link>
+              )}
             </CardContent>
           </Card>
 
@@ -225,12 +228,14 @@ export default function DashboardPage() {
                   Tin đã lưu
                 </Button>
               </Link>
-              <Link href="/dashboard/tin-nhan" className="block">
-                <Button variant="outline" className="w-full justify-start h-11 font-medium text-gray-700 bg-white hover:bg-gray-50 border-gray-200">
-                  <MessageSquare className="h-4 w-4 mr-3 text-[#1075b1]" />
-                  Tin nhắn
-                </Button>
-              </Link>
+              {isFeatureEnabled('messaging') && (
+                <Link href="/dashboard/tin-nhan" className="block">
+                  <Button variant="outline" className="w-full justify-start h-11 font-medium text-gray-700 bg-white hover:bg-gray-50 border-gray-200">
+                    <MessageSquare className="h-4 w-4 mr-3 text-[#1075b1]" />
+                    Tin nhắn
+                  </Button>
+                </Link>
+              )}
             </CardContent>
           </Card>
 

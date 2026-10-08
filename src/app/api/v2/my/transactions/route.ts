@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { apiSuccess, apiError } from '@/lib/api-response';
 import { getAuthUser, unauthenticatedResponse } from '@/lib/auth';
 import { toVietnamIso8601 } from '@/lib/api-resources/carbon-format';
+import { isFeatureEnabled } from '@/lib/features';
 
 /**
  * Giao dịch ví của CHÍNH người dùng đang đăng nhập.
@@ -65,6 +66,9 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const user = await getAuthUser(request);
   if (!user) return unauthenticatedResponse();
+
+  // Nạp tiền đang tạm ẩn (src/lib/features.ts) — chặn cả ở API, không chỉ giấu nút.
+  if (!isFeatureEnabled('deposit')) return apiError('Tính năng nạp tiền đang tạm ngưng.', 403);
 
   const body = await request.json().catch(() => ({}));
 

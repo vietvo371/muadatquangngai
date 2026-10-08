@@ -35,16 +35,17 @@ import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@/lib/utils';
 import { isAdminRole } from '@/lib/roles';
+import { isFeatureEnabled, type FeatureName } from '@/lib/features';
 
-const mainNavItems = [
+const mainNavItems: { href: string; label: string; icon: typeof Plus; exact?: boolean; feature?: FeatureName }[] = [
   { href: '/dashboard', label: 'Tổng quan', icon: LayoutDashboard, exact: true },
   { href: '/dashboard/dang-tin', label: 'Đăng tin mới', icon: Plus },
   { href: '/dashboard/quan-ly-tin', label: 'Quản lý tin', icon: List },
   { href: '/dashboard/khach-hang', label: 'Khách hàng', icon: Users },
   { href: '/dashboard/tin-da-luu', label: 'Tin đã lưu', icon: Heart },
   { href: '/dashboard/thong-bao', label: 'Thông báo', icon: Bell },
-  { href: '/dashboard/tin-nhan', label: 'Tin nhắn', icon: MessageSquare },
-  { href: '/dashboard/nap-tien', label: 'Nạp tiền', icon: CreditCard },
+  { href: '/dashboard/tin-nhan', label: 'Tin nhắn', icon: MessageSquare, feature: 'messaging' },
+  { href: '/dashboard/nap-tien', label: 'Nạp tiền', icon: CreditCard, feature: 'deposit' },
   { href: '/dashboard/profile', label: 'Hồ sơ', icon: User },
   { href: '/dashboard/settings', label: 'Cài đặt', icon: Settings },
 ];
@@ -86,7 +87,10 @@ export function Sidebar({
   const { user, logout } = useAuthStore();
   const isAdmin = isAdminRole(user?.role);
   
-  const navItems = variant === 'admin' ? adminNavItems : mainNavItems;
+  const navItems =
+    variant === 'admin'
+      ? adminNavItems
+      : mainNavItems.filter((item) => !item.feature || isFeatureEnabled(item.feature));
 
   const handleLogout = () => {
     logout();

@@ -29,6 +29,7 @@ import {
   type PropertyFormData,
 } from '@/lib/property-form-config';
 import { FORMER_UNITS } from '@/lib/former-admin-units';
+import { isFeatureEnabled } from '@/lib/features';
 import { ListingPreview, type ListingPreviewData } from '@/components/property/detail/ListingPreview';
 import {
   ArrowLeft,
@@ -327,7 +328,11 @@ export default function DangTinPage() {
     } else if (currentStep === 3) {
       if (!selectedPackage) missing.push('Chọn gói đăng tin');
       else if (selectedPackage.price > 0 && balance < selectedPackage.price)
-        missing.push('Nạp thêm tiền vào tài khoản (số dư không đủ)');
+        missing.push(
+          isFeatureEnabled('deposit')
+            ? 'Nạp thêm tiền vào tài khoản (số dư không đủ)'
+            : 'Chọn gói miễn phí (số dư không đủ cho gói này)',
+        );
     }
     return missing;
   };
@@ -673,6 +678,7 @@ export default function DangTinPage() {
                               Số dư không đủ, còn thiếu{' '}
                               <strong>{(selectedPackage.price - balance).toLocaleString('vi-VN')} đ</strong>.
                             </p>
+                            {isFeatureEnabled('deposit') ? (
                             <Button
                               type="button"
                               variant="outline"
@@ -681,6 +687,9 @@ export default function DangTinPage() {
                             >
                               Nạp tiền
                             </Button>
+                            ) : (
+                              <span className="text-[13px] text-red-700">Vui lòng chọn gói miễn phí.</span>
+                            )}
                           </div>
                         )}
                       </>
